@@ -10,9 +10,10 @@ import (
 
 // Server serves the MusterFlow web dashboard.
 type Server struct {
-	registry *app.Registry
-	addr     string
-	mux      *http.ServeMux
+	registry  *app.Registry
+	addr      string
+	mux       *http.ServeMux
+	mcpHandler http.Handler
 }
 
 // NewServer creates a new dashboard server.
@@ -26,11 +27,37 @@ func NewServer(registry *app.Registry, addr string) *Server {
 	return s
 }
 
+// SetMCPHandler sets the HTTP handler for the /mcp JSON-RPC endpoint.
+// If not set, /mcp returns a JSON-RPC error indicating no API is connected.
+func (s *Server) SetMCPHandler(h http.Handler) {
+	s.mcpHandler = h
+}
+
 func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/health", s.handleHealth)
 	s.mux.HandleFunc("/api/apis", s.handleAPIs)
 	s.mux.HandleFunc("/api/apis/", s.handleAPIByID)
+	s.mux.HandleFunc("/mcp", s.handleMCP)
 	s.mux.HandleFunc("/", serveIndex)
+}
+
+// handleMCP dispatches to the MCP handler if configured, otherwise returns
+// a JSON-RPC error indicating the MCP server is not configured.
+func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
+	if s.mcpHandler != nil {
+		s.mcpHandler.ServeHTTP(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      nil,
+		"error": map[string]interface{}{
+			"code":    -32000,
+			"message": "MCP server not configured — connect an API first",
+		},
+	})
 }
 
 // Run starts the HTTP server. Blocks until the server exits.

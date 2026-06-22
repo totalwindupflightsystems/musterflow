@@ -5,7 +5,7 @@
 > **Quality:** GitReins Tier 1 (secrets/lint/build/test) + Tier 2 (LLM evaluator) on every task.
 > **Project:** /home/kara/musterflow — Go 1.26.1, imports muster engine from /home/kara/muster via replace directive.
 
-## [ ] TASK-001: MCP tool registration — register connected APIs as MCP tools
+## [x] TASK-001: MCP tool registration — register connected APIs as MCP tools (completed 2026-06-22)
 - **Priority:** highest
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud

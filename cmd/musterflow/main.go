@@ -15,6 +15,8 @@ import (
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/cli"
 	"github.com/totalwindupflightsystems/musterflow/internal/dashboard"
+	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
+	"github.com/wojons/muster/pkg/mcp/handlers"
 )
 
 var (
@@ -102,17 +104,27 @@ func startServer(registry *app.Registry) error {
 
 	dashServer := dashboard.NewServer(registry, addr)
 
-	// Add MCP endpoint handler
-	mux := http.NewServeMux()
-	mux.Handle("/", dashServer.Handler())
-	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":null,"error":{"code":-32000,"message":"MCP endpoint available — connect via MCP client stdio or SSE"}}`)
-	})
+	// Build MCP handler registry
+	handlerReg := handlers.NewRegistry()
+	handlerReg.Register(handlers.NewInitializeHandler("musterflow-mcp", Version))
+	handlerReg.Register(handlers.NewInitializedHandler())
+
+	// Build tool registry from connected APIs
+	toolRegistry := mcp.NewToolRegistry(registry)
+	if err := toolRegistry.Refresh(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
+	}
+
+	handlerReg.Register(handlers.NewListToolsHandler(toolRegistry))
+	handlerReg.Register(handlers.NewCallToolHandler(toolRegistry))
+
+	// Wire MCP HTTP server into the dashboard
+	mcpHTTPServer := mcp.NewHTTPServer(handlerReg)
+	dashServer.SetMCPHandler(mcpHTTPServer)
 
 	httpServer := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: dashServer.Handler(),
 	}
 
 	var wg sync.WaitGroup
