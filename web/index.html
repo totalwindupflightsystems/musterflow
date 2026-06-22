@@ -6,8 +6,9 @@
 <title>MusterFlow</title>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0d1117; color:#c9d1d9; padding:2rem; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0d1117; color:#c9d1d9; padding:2rem; max-width:960px; margin:0 auto; }
 h1 { color:#58a6ff; margin-bottom:.5rem; }
+h2 { color:#58a6ff; margin-bottom:1rem; }
 .subtitle { color:#8b949e; margin-bottom:2rem; }
 .card { background:#161b22; border:1px solid #30363d; border-radius:6px; padding:1.5rem; margin-bottom:1rem; }
 .card h3 { color:#58a6ff; margin-bottom:.5rem; }
@@ -16,11 +17,59 @@ h1 { color:#58a6ff; margin-bottom:.5rem; }
 .section { margin:2rem 0; }
 code { background:#21262d; padding:.2em .4em; border-radius:3px; font-size:.9em; }
 footer { margin-top:3rem; color:#484f58; font-size:.875rem; text-align:center; }
+
+/* Search box */
+.search-box {
+  background:#0d1117; border:1px solid #30363d; color:#c9d1d9;
+  padding:0.5rem; border-radius:6px; width:300px; font-size:1rem;
+}
+.search-box:focus { outline:none; border-color:#58a6ff; }
+
+/* Search results */
+.search-results { list-style:none; padding:0; margin:1rem 0 0 0; }
+.search-results li {
+  background:#161b22; border:1px solid #30363d; border-radius:6px;
+  padding:1rem; margin-bottom:.5rem;
+}
+
+/* API detail card */
+.api-detail {
+  background:#0d1117; border:1px solid #30363d; border-radius:6px;
+  padding:1.5rem; margin-top:1rem;
+  display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+}
+.api-detail .field-label { color:#8b949e; font-size:.875rem; margin-bottom:.25rem; }
+.api-detail .field-value { color:#c9d1d9; margin-bottom:1rem; }
+
+/* Tool example */
+.tool-example {
+  background:#0d1117; border:1px solid #30363d; border-radius:6px;
+  padding:1rem; margin-top:.5rem; overflow-x:auto;
+  font-family:'SF Mono',Monaco,Consolas,monospace; font-size:.85em;
+  color:#c9d1d9; white-space:pre;
+}
+
+/* Clickable cards */
+.clickable { cursor:pointer; transition:border-color .15s; }
+.clickable:hover { border-color:#58a6ff; }
+
+/* Hidden utility */
+.hidden { display:none; }
+
+/* Badge */
+.badge {
+  display:inline-block; padding:.15rem .5rem; border-radius:3px;
+  font-size:.75rem; margin-right:.4rem;
+}
+.badge-type { background:#1f6feb22; color:#58a6ff; }
+.badge-score { background:#23863622; color:#3fb950; }
+.badge-tier { background:#a371f722; color:#a371f7; }
 </style>
 </head>
 <body>
-<h1>⚡ MusterFlow</h1>
+<h1>&#9889; MusterFlow</h1>
 <p class="subtitle">Turn any API into a CLI, an MCP tool, and a workflow.</p>
+
 <div class="section">
 <h2>Quick Start</h2>
 <div class="card">
@@ -29,38 +78,161 @@ footer { margin-top:3rem; color:#484f58; font-size:.875rem; text-align:center; }
 <p>3. Point your MCP client to: <code>http://localhost:9876/mcp</code></p>
 </div>
 </div>
+
 <div class="section">
 <h2>Connected APIs</h2>
 <div id="apis"></div>
-<p id="empty-state" class="empty" style="display:none">No APIs connected. Run <code>musterflow connect &lt;url&gt;</code> to add one.</p>
+<p id="api-empty" class="empty hidden">No APIs connected. Run <code>musterflow connect &lt;url&gt;</code> to add one.</p>
 </div>
+
+<div class="section">
+<h2>Catalog Browser</h2>
+<p><input id="catalog-search" class="search-box" placeholder="Search catalog..."></p>
+<div id="catalog-results"></div>
+</div>
+
 <div class="section">
 <h2>MCP Endpoint</h2>
-<div class="card">
-<p><strong>URL:</strong> <code>http://localhost:9876/mcp</code></p>
-<p><strong>Transport:</strong> stdio JSON-RPC / HTTP SSE</p>
-<p>Connect any MCP-compatible client to use connected APIs as tools.</p>
+<div id="mcp-info"></div>
 </div>
-</div>
-<footer>MusterFlow v0.1.0 — Self-hosted. Your APIs, your keys, your data.</footer>
+
+<footer>MusterFlow v0.1.0 &mdash; Self-hosted. Your APIs, your keys, your data.</footer>
+
 <script>
-fetch('/api/apis').then(function(r) { return r.json(); }).then(function(data) {
-  var apis = data.apis || [];
-  if (apis.length === 0) {
-    document.getElementById('empty-state').style.display = 'block';
+// --- Connected APIs ---
+(function() {
+  fetch('/api/apis')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var apis = data.apis || [];
+      var el = document.getElementById('apis');
+      if (apis.length === 0) {
+        document.getElementById('api-empty').classList.remove('hidden');
+        return;
+      }
+      apis.forEach(function(api) {
+        var card = document.createElement('div');
+        card.className = 'card clickable';
+        card.innerHTML =
+          '<h3>' + api.name + '</h3>' +
+          '<p>' + (api.description || '') + '</p>' +
+          '<span class="stat">' + (api.endpoint_count || 0) + ' endpoints</span>' +
+          '<span class="stat">' + (api.auth_type || 'none') + '</span>';
+        card.addEventListener('click', function() {
+          toggleAPIDetail(card, api.id);
+        });
+        el.appendChild(card);
+      });
+    })
+    .catch(function(err) {
+      document.getElementById('apis').innerHTML =
+        '<p class="empty">Failed to load APIs: ' + err.message + '</p>';
+    });
+})();
+
+function toggleAPIDetail(card, id) {
+  var existing = card.querySelector('.api-detail');
+  if (existing) {
+    existing.classList.toggle('hidden');
     return;
   }
-  var el = document.getElementById('apis');
-  apis.forEach(function(api) {
-    el.innerHTML += '<div class="card">' +
-      '<h3>' + api.name + '</h3>' +
-      '<p>' + (api.description || '') + '</p>' +
-      '<span class="stat">' + api.endpoint_count + ' endpoints</span>' +
-      '<span class="stat">v' + api.version + '</span>' +
-      '<span class="stat">' + api.auth_type + '</span>' +
-    '</div>';
+  fetch('/api/apis/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(api) {
+      var detail = document.createElement('div');
+      detail.className = 'api-detail';
+      var dateStr = api.added_at ? new Date(api.added_at).toLocaleDateString() : 'N/A';
+      detail.innerHTML =
+        '<div><div class="field-label">Spec URL</div><div class="field-value"><code>' + (api.spec_url || 'N/A') + '</code></div></div>' +
+        '<div><div class="field-label">Base URL</div><div class="field-value"><code>' + (api.base_url || 'N/A') + '</code></div></div>' +
+        '<div><div class="field-label">Version</div><div class="field-value">' + (api.version || 'N/A') + '</div></div>' +
+        '<div><div class="field-label">Endpoints</div><div class="field-value">' + (api.endpoint_count || 0) + '</div></div>' +
+        '<div><div class="field-label">Auth Type</div><div class="field-value">' + (api.auth_type || 'none') + '</div></div>' +
+        '<div><div class="field-label">Connected</div><div class="field-value">' + dateStr + '</div></div>';
+      card.appendChild(detail);
+    })
+    .catch(function(err) {
+      var detail = document.createElement('div');
+      detail.className = 'api-detail';
+      detail.innerHTML = '<p class="empty">Failed to load details: ' + err.message + '</p>';
+      card.appendChild(detail);
+    });
+}
+
+// --- Catalog Browser ---
+(function() {
+  var searchInput = document.getElementById('catalog-search');
+  var resultsEl = document.getElementById('catalog-results');
+  var debounceTimer = null;
+
+  resultsEl.innerHTML = '<p class="empty">Enter a query to search the community catalog</p>';
+
+  searchInput.addEventListener('input', function() {
+    var q = searchInput.value.trim();
+    if (debounceTimer) clearTimeout(debounceTimer);
+    if (q === '') {
+      resultsEl.innerHTML = '<p class="empty">Enter a query to search the community catalog</p>';
+      return;
+    }
+    debounceTimer = setTimeout(function() {
+      resultsEl.innerHTML = '<p class="empty">Searching...</p>';
+      fetch('/api/catalog/search?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var results = data.results || [];
+          if (results.length === 0) {
+            resultsEl.innerHTML = '<p class="empty">No results</p>';
+            return;
+          }
+          var html = '<ul class="search-results">';
+          results.forEach(function(entry) {
+            html += '<li>' +
+              '<h3>' + (entry.name || entry.id) + '</h3>' +
+              '<p>' + (entry.description || '') + '</p>' +
+              '<span class="badge badge-type">' + (entry.type || 'api') + '</span>' +
+              '<span class="badge badge-score">score: ' + (entry.score !== undefined ? entry.score : 'N/A') + '</span>' +
+              '<span class="badge badge-tier">' + (entry.quality_tier || 'untested') + '</span>' +
+            '</li>';
+          });
+          html += '</ul>';
+          resultsEl.innerHTML = html;
+        })
+        .catch(function(err) {
+          resultsEl.innerHTML = '<p class="empty">Catalog search failed: ' + err.message + '</p>';
+        });
+    }, 300);
   });
-});
+})();
+
+// --- MCP Endpoint ---
+(function() {
+  var el = document.getElementById('mcp-info');
+  fetch('/api/mcp/info')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var tools = data.tools || [];
+      var html = '<div class="card">' +
+        '<p><strong>Endpoint:</strong> <code>' + (data.endpoint || '') + '</code></p>' +
+        '<p><strong>Transport:</strong> ' + (data.transport || '') + '</p>' +
+        '<p><strong>Tools:</strong> ' + (data.tool_count || 0) + '</p>' +
+      '</div>';
+      if (tools.length === 0) {
+        html += '<p class="empty">No APIs connected. Connect an API to see MCP tools.</p>';
+      } else {
+        tools.forEach(function(tool) {
+          html += '<div class="card clickable" onclick="this.querySelector(\'.tool-example\').classList.toggle(\'hidden\')">' +
+            '<h3>' + tool.name + '</h3>' +
+            '<p>' + (tool.description || '') + '</p>' +
+            '<pre class="tool-example">' + (tool.example || '') + '</pre>' +
+          '</div>';
+        });
+      }
+      el.innerHTML = html;
+    })
+    .catch(function(err) {
+      el.innerHTML = '<p class="empty">Failed to load MCP info: ' + err.message + '</p>';
+    });
+})();
 </script>
 </body>
 </html>

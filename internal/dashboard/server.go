@@ -3,25 +3,32 @@ package dashboard
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
+	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
+	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
 )
 
 // Server serves the MusterFlow web dashboard.
 type Server struct {
-	registry  *app.Registry
-	addr      string
-	mux       *http.ServeMux
-	mcpHandler http.Handler
+	registry      *app.Registry
+	catalogClient *catalog.Client
+	toolRegistry  *mcp.ToolRegistry
+	addr          string
+	mux           *http.ServeMux
+	mcpHandler    http.Handler
 }
 
 // NewServer creates a new dashboard server.
-func NewServer(registry *app.Registry, addr string) *Server {
+func NewServer(registry *app.Registry, catalogClient *catalog.Client, toolRegistry *mcp.ToolRegistry, addr string) *Server {
 	s := &Server{
-		registry: registry,
-		addr:     addr,
-		mux:      http.NewServeMux(),
+		registry:      registry,
+		catalogClient: catalogClient,
+		toolRegistry:  toolRegistry,
+		addr:          addr,
+		mux:           http.NewServeMux(),
 	}
 	s.registerRoutes()
 	return s
@@ -37,6 +44,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/health", s.handleHealth)
 	s.mux.HandleFunc("/api/apis", s.handleAPIs)
 	s.mux.HandleFunc("/api/apis/", s.handleAPIByID)
+	s.mux.HandleFunc("/api/catalog/search", s.handleCatalogSearch)
+	s.mux.HandleFunc("/api/mcp/info", s.handleMCPInfo)
 	s.mux.HandleFunc("/mcp", s.handleMCP)
 	s.mux.HandleFunc("/", serveIndex)
 }
@@ -111,6 +120,133 @@ func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+	}
+}
+
+// handleCatalogSearch searches the community catalog.
+// GET /api/catalog/search?q=<query>
+func (s *Server) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"results": []catalog.CatalogEntry{},
+			"total":   0,
+		})
+		return
+	}
+
+	entries, err := s.catalogClient.Search(query)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if entries == nil {
+		entries = []catalog.CatalogEntry{}
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"results": entries,
+		"total":   len(entries),
+	})
+}
+
+// mcpToolInfo is the JSON shape returned for each tool in /api/mcp/info.
+type mcpToolInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Example     string `json:"example"`
+}
+
+// handleMCPInfo returns information about the MCP endpoint and its tools.
+// GET /api/mcp/info
+func (s *Server) handleMCPInfo(w http.ResponseWriter, r *http.Request) {
+	endpoint := fmt.Sprintf("http://%s/mcp", s.addr)
+
+	if s.toolRegistry == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"endpoint":   endpoint,
+			"transport":  "HTTP JSON-RPC 2.0",
+			"tool_count": 0,
+			"tools":      []mcpToolInfo{},
+		})
+		return
+	}
+
+	tools := s.toolRegistry.ListTools()
+	toolInfos := make([]mcpToolInfo, 0, len(tools))
+	for _, t := range tools {
+		example := buildToolExample(t.Name, t.InputSchema)
+		toolInfos = append(toolInfos, mcpToolInfo{
+			Name:        t.Name,
+			Description: t.Description,
+			Example:     example,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"endpoint":   endpoint,
+		"transport":  "HTTP JSON-RPC 2.0",
+		"tool_count": len(toolInfos),
+		"tools":      toolInfos,
+	})
+}
+
+// buildToolExample generates a copy-pasteable JSON-RPC tools/call example.
+// If the input schema can be parsed, we extract property names and provide
+// placeholder values; otherwise we emit an empty arguments object.
+func buildToolExample(toolName string, inputSchema json.RawMessage) string {
+	args := buildExampleArgs(inputSchema)
+	example := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "tools/call",
+		"params": map[string]interface{}{
+			"name":      toolName,
+			"arguments": args,
+		},
+	}
+	b, err := json.MarshalIndent(example, "", "  ")
+	if err != nil {
+		return fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":%q,"arguments":{}}}`, toolName)
+	}
+	return string(b)
+}
+
+// buildExampleArgs extracts property names from a JSON Schema input schema
+// and builds a placeholder arguments object with example values.
+func buildExampleArgs(inputSchema json.RawMessage) map[string]interface{} {
+	args := map[string]interface{}{}
+	if len(inputSchema) == 0 {
+		return args
+	}
+	var schema struct {
+		Properties map[string]struct {
+			Type string `json:"type"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(inputSchema, &schema); err != nil {
+		return args
+	}
+	for name, prop := range schema.Properties {
+		args[name] = exampleValueForType(prop.Type)
+	}
+	return args
+}
+
+// exampleValueForType returns a placeholder value for a JSON Schema type.
+func exampleValueForType(t string) interface{} {
+	switch t {
+	case "string":
+		return "value"
+	case "integer", "number":
+		return 1
+	case "boolean":
+		return false
+	case "array":
+		return []interface{}{}
+	case "object":
+		return map[string]interface{}{}
+	default:
+		return "value"
 	}
 }
 

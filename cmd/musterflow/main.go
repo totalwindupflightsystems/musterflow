@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
+	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/cli"
 	"github.com/totalwindupflightsystems/musterflow/internal/dashboard"
 	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
@@ -102,18 +103,21 @@ func startServer(registry *app.Registry) error {
 	fmt.Println()
 	fmt.Println("Press Ctrl+C to stop.")
 
-	dashServer := dashboard.NewServer(registry, addr)
-
-	// Build MCP handler registry
-	handlerReg := handlers.NewRegistry()
-	handlerReg.Register(handlers.NewInitializeHandler("musterflow-mcp", Version))
-	handlerReg.Register(handlers.NewInitializedHandler())
-
 	// Build tool registry from connected APIs
 	toolRegistry := mcp.NewToolRegistry(registry)
 	if err := toolRegistry.Refresh(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
 	}
+
+	// Create catalog client for the community catalog browser
+	catalogClient := catalog.NewClient()
+
+	dashServer := dashboard.NewServer(registry, catalogClient, toolRegistry, addr)
+
+	// Build MCP handler registry
+	handlerReg := handlers.NewRegistry()
+	handlerReg.Register(handlers.NewInitializeHandler("musterflow-mcp", Version))
+	handlerReg.Register(handlers.NewInitializedHandler())
 
 	handlerReg.Register(handlers.NewListToolsHandler(toolRegistry))
 	handlerReg.Register(handlers.NewCallToolHandler(toolRegistry))

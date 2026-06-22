@@ -12,7 +12,7 @@ import (
 
 func TestServer_HealthEndpoint(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	rec := httptest.NewRecorder()
@@ -37,7 +37,7 @@ func TestServer_HealthEndpoint_ConnectedCount(t *testing.T) {
 	r.Add(&app.APIConnection{ID: "a", Name: "first"})
 	r.Add(&app.APIConnection{ID: "b", Name: "second"})
 
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	rec := httptest.NewRecorder()
@@ -55,7 +55,7 @@ func TestServer_HealthEndpoint_ConnectedCount(t *testing.T) {
 
 func TestServer_APIsEndpoint_Empty(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis", nil)
 	rec := httptest.NewRecorder()
@@ -90,7 +90,7 @@ func TestServer_APIsEndpoint_WithData(t *testing.T) {
 		EndpointCount: 10,
 	})
 
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis", nil)
 	rec := httptest.NewRecorder()
@@ -116,7 +116,7 @@ func TestServer_APIsEndpoint_WithData(t *testing.T) {
 
 func TestServer_APIByID_NotFound(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis/nonexistent", nil)
 	rec := httptest.NewRecorder()
@@ -138,7 +138,7 @@ func TestServer_APIByID_Success(t *testing.T) {
 		EndpointCount: 3,
 	})
 
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis/found-me", nil)
 	rec := httptest.NewRecorder()
@@ -159,7 +159,7 @@ func TestServer_APIByID_Success(t *testing.T) {
 
 func TestServer_APIByID_MissingID(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis/", nil)
 	rec := httptest.NewRecorder()
@@ -174,7 +174,7 @@ func TestServer_APIByID_Delete(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
 	r.Add(&app.APIConnection{ID: "delete-me", Name: "temp"})
 
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/apis/delete-me", nil)
 	rec := httptest.NewRecorder()
@@ -192,7 +192,7 @@ func TestServer_APIByID_Delete(t *testing.T) {
 
 func TestServer_APIByID_Delete_NotFound(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/apis/nonexistent", nil)
 	rec := httptest.NewRecorder()
@@ -205,7 +205,7 @@ func TestServer_APIByID_Delete_NotFound(t *testing.T) {
 
 func TestServer_APIByID_MethodNotAllowed(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodPut, "/api/apis/something", nil)
 	rec := httptest.NewRecorder()
@@ -218,7 +218,7 @@ func TestServer_APIByID_MethodNotAllowed(t *testing.T) {
 
 func TestServer_APIs_MethodNotAllowed(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodPost, "/api/apis", nil)
 	rec := httptest.NewRecorder()
@@ -231,7 +231,7 @@ func TestServer_APIs_MethodNotAllowed(t *testing.T) {
 
 func TestServer_IndexEndpoint(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
@@ -253,7 +253,7 @@ func TestServer_IndexEndpoint(t *testing.T) {
 
 func TestServer_MCP_NoHandler(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
 	rec := httptest.NewRecorder()
@@ -281,7 +281,7 @@ func TestServer_MCP_NoHandler(t *testing.T) {
 
 func TestServer_MCP_WithHandler(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	// Set a simple MCP handler
 	mockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -310,7 +310,7 @@ func TestServer_MCP_WithHandler(t *testing.T) {
 
 func TestServer_Handler(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
-	s := NewServer(r, ":0")
+	s := NewServer(r, nil, nil, ":0")
 
 	h := s.Handler()
 	if h == nil {
