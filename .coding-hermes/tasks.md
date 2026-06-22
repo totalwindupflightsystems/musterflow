@@ -47,18 +47,15 @@
   7. `internal/cli/root.go` — wired catalog search/push/pull with real implementations + catalog import.
 - **Result:** 6 new files, 2 modified (+480/-25 lines). 93.3% catalog coverage. Build/vet/test/guard all PASS. 24/24 catalog tests, all packages green.
 
-## [ ] TASK-004: Dashboard — browse catalog, view API details, launch MCP info
+## [x] TASK-004: Dashboard — browse catalog, view API details, launch MCP info (completed 2026-06-22)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
 - **Files:** internal/dashboard/server.go (MODIFY), web/index.html (MODIFY)
-- **AC-004.1:** Dashboard shows API details. Clicking a connected API shows: spec URL, version, endpoint count, base URL, auth type, connected date.
-- **AC-004.2:** Dashboard has catalog browser. /api/catalog/search?q=... endpoint queries the community catalog. Dashboard shows a search box and results.
-- **AC-004.3:** MCP connection info. Dashboard shows the MCP endpoint URL and lists available tools with copy-pasteable JSON-RPC examples.
-- **Files to modify:**
-  1. `internal/dashboard/server.go` — add `/api/catalog/search` handler, extend `/api/apis/<id>` to return more detail, add `/api/mcp/info` endpoint.
-  2. `web/index.html` — add catalog search UI, API detail cards, MCP info section.
-- **Verify:** `musterflow start`, open browser to `http://localhost:9876`, verify APIs render, catalog search works, MCP info shows.
+- **AC-004.1:** ✅ Dashboard shows API details. /api/apis/<id> returns full APIConnection with spec_url, version, endpoint_count, base_url, auth_type, added_at. Frontend renders clickable API cards with expandable detail panels.
+- **AC-004.2:** ✅ Dashboard has catalog browser. /api/catalog/search?q=... endpoint added. Frontend has search box with debounced input and results display with name, description, type badge, score badge, quality tier.
+- **AC-004.3:** ✅ MCP connection info. /api/mcp/info endpoint returns endpoint URL, transport, tool_count, and per-tool JSON-RPC examples with placeholder arguments extracted from InputSchema.
+- **Result:** 4 files changed (+367/-55 lines). build/vet/test/guard all PASS. All 3 AC verified against live server. GLM-5.2 spawn completed in ~7 min.
 
 ## [ ] TASK-005: Tests — achieve >80% coverage on all packages (3/5 done — app 85.3%, cli 60.1%, dashboard 91.3%)
 - **Priority:** high
