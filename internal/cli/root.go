@@ -16,6 +16,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
+	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 )
 
 // apiCommandState tracks lazy generation of cobra commands for a connected API.
@@ -160,7 +161,25 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 		Short: "Search the community catalog",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("catalog search not yet implemented")
+			client := catalog.NewClient()
+			results, err := client.Search(args[0])
+			if err != nil {
+				fmt.Printf("Error searching catalog: %v\n", err)
+				return nil
+			}
+			if len(results) == 0 {
+				fmt.Println("No catalog entries found.")
+				return nil
+			}
+			fmt.Printf("Catalog search results (%d):\n\n", len(results))
+			fmt.Printf("  %-20s %-20s %-6s %-60s %s\n", "ID", "NAME", "TYPE", "DESCRIPTION", "DOWNLOADS")
+			for _, e := range results {
+				desc := e.Description
+				if len(desc) > 60 {
+					desc = desc[:60]
+				}
+				fmt.Printf("  %-20s %-20s %-6s %-60s %d\n", e.ID, e.Name, e.Type, desc, e.Downloads)
+			}
 			return nil
 		},
 	})
@@ -168,8 +187,21 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "push <api-id>",
 		Short: "Push a connected API to the community catalog",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("catalog push not yet implemented")
+			conn, err := registry.Get(args[0])
+			if err != nil {
+				return err
+			}
+			entry := catalog.ConnectionToCatalogEntry(conn)
+			data, err := entry.ToJSON()
+			if err != nil {
+				return fmt.Errorf("marshal entry: %w", err)
+			}
+			fmt.Printf("Catalog entry JSON for %s:\n\n", conn.ID)
+			fmt.Println(string(data))
+			fmt.Println()
+			fmt.Printf("Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/%s.json and add it to index.json\n", conn.ID)
 			return nil
 		},
 	})
@@ -177,8 +209,34 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "pull <api-id>",
 		Short: "Pull an API from the community catalog",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("catalog pull not yet implemented")
+			client := catalog.NewClient()
+			entry, _, err := client.FetchEntry(args[0])
+			if err != nil {
+				fmt.Printf("Error pulling from catalog: %v\n", err)
+				return nil
+			}
+			if entry == nil {
+				fmt.Printf("Entry %s not found in catalog.\n", args[0])
+				return nil
+			}
+			fmt.Printf("Pulling %s (%s) from community catalog...\n", entry.ID, entry.Name)
+			specData, err := loadSpecData(entry.SpecURL)
+			if err != nil {
+				return fmt.Errorf("download spec: %w", err)
+			}
+			result, err := app.Connect(cmd.Context(), registry, app.ConnectOptions{
+				SpecURL: entry.SpecURL,
+				Name:    entry.Name,
+			})
+			if err != nil {
+				return fmt.Errorf("connect: %w", err)
+			}
+			fmt.Printf("✓ Pulled and connected: %s\n", result.SpecTitle)
+			fmt.Printf("  ID: %s\n", result.Connection.ID)
+			fmt.Printf("  Endpoints: %d\n", result.EndpointCount)
+			fmt.Printf("  Spec data: %d bytes\n", len(specData))
 			return nil
 		},
 	})

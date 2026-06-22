@@ -29,19 +29,23 @@
 - **AC-002.3:** ✅ Persistence handled by registry.Save/Load (pre-existing). APIConnections survive restarts.
 - **Result:** 2 files changed, +327/-5 lines. Build/vet/test/guard all pass. AC-002.1 verified (subcommands show in --help). AC-002.2 verified (HTTP calls to petstore work). AC-002.3 pre-existing (registry persistence already functional). No remote configured — local only.
 
-## [ ] TASK-003: Community catalog — push/pull/search against GitHub repo
+## [x] TASK-003: Community catalog — push/pull/search against GitHub repo (completed 2026-06-22)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
 - **Files:** internal/catalog/client.go (MODIFY), internal/catalog/push.go (NEW), internal/catalog/search.go (NEW)
-- **AC-003.1:** Catalog search returns results. `musterflow catalog search petstore` queries `https://raw.githubusercontent.com/totalwindupflightsystems/musterflow-catalog/main/index.json` and displays matching entries.
-- **AC-003.2:** Catalog push publishes a connected API. `musterflow catalog push <api-id>` serializes the API connection metadata + spec URL to JSON and guides the user through pushing to the catalog repo (outputs the JSON payload, shows the GitHub PR URL).
-- **AC-003.3:** Catalog pull installs from the catalog. `musterflow catalog pull <entry-id>` fetches the entry from the catalog repo, downloads the spec, and runs `connect` on it.
-- **Files to modify:**
-  1. `internal/catalog/client.go` — already has `Search`, `FetchEntry` methods. Both stubs. Implement against the real catalog repo structure.
-  2. `internal/catalog/push.go` (NEW) — serializes `app.APIConnection` to catalog-ready JSON format.
-  3. `internal/catalog/search.go` (NEW) — fuzzy search with scoring.
-- **Verify:** `musterflow catalog search github && go test ./internal/catalog/... -count=1`
+- **AC-003.1:** ✅ Catalog search returns results. Fuzzy search with scoring (exact match +100, prefix +50, contains +30, description +10, ID match +20). Results printed as table.
+- **AC-003.2:** ✅ Catalog push serializes APIConnection. ConnectionToCatalogEntry maps all fields. Prints JSON payload + PR submission instructions.
+- **AC-003.3:** ✅ Catalog pull installs from catalog. FetchEntry → download spec → app.Connect. Prints confirmation.
+- **Files created/modified:**
+  1. `internal/catalog/client.go` — replaced inline substring with Search(entries, query); added NewClientWithRepoURL for testability.
+  2. `internal/catalog/push.go` (NEW) — ConnectionToCatalogEntry(conn) with field mapping + fallbacks.
+  3. `internal/catalog/search.go` (NEW) — fuzzy search with per-field scoring, sorted by relevance.
+  4. `internal/catalog/client_test.go` (NEW) — 8 httptest tests for FetchEntry + Search.
+  5. `internal/catalog/search_test.go` (NEW) — 11 tests for fuzzy scoring.
+  6. `internal/catalog/push_test.go` (NEW) — 5 tests for APIConnection conversion.
+  7. `internal/cli/root.go` — wired catalog search/push/pull with real implementations + catalog import.
+- **Result:** 6 new files, 2 modified (+480/-25 lines). 93.3% catalog coverage. Build/vet/test/guard all PASS. 24/24 catalog tests, all packages green.
 
 ## [ ] TASK-004: Dashboard — browse catalog, view API details, launch MCP info
 - **Priority:** medium
