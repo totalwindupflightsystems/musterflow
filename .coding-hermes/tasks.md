@@ -19,18 +19,15 @@
   3. `internal/dashboard/server.go` — wire `/mcp` handler to the new MCP server instead of the current placeholder.
 - **Verify:** `go build ./... && go test ./internal/mcp/... -count=1 && curl -X POST http://localhost:9876/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | python3 -m json.tool`
 
-## [ ] TASK-002: Lazy command generation — `musterflow <api> <operation>` works end-to-end
+## [x] TASK-002: Lazy command generation — `musterflow <api> <operation>` works end-to-end (completed 2026-06-22, commit 35a6f2f)
 - **Priority:** high
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
 - **Files:** internal/cli/root.go (MODIFY), internal/cli/execute.go (NEW)
-- **AC-002.1:** After connecting an API, subcommands are generated on first access. `musterflow connect https://petstore3.swagger.io/api/v3/openapi.json && musterflow swagger-petstore-openapi-3-0 --help` shows generated subcommands.
-- **AC-002.2:** Executing a generated command calls the real API. `musterflow swagger-petstore-openapi-3-0 listPets --limit 3` makes an HTTP GET to `https://petstore3.swagger.io/api/v3/pets?limit=3` and prints the response as a table.
-- **AC-002.3:** Persistence works across restarts. Connect an API, restart musterflow, and previously connected APIs still load their subcommands.
-- **Files to modify:**
-  1. `internal/cli/root.go` — currently `createAPISubcommand` is a stub. Wire it to actually call `loadAPICommands` on `PersistentPreRunE`. Existing function signatures are correct.
-  2. `internal/cli/execute.go` (NEW) — HTTP execution layer. Takes a cobra command's flags, marshals them to HTTP parameters, calls the API, formats output (table/JSON/YAML). Uses `github.com/wojons/muster/pkg/request` and `github.com/wojons/muster/pkg/response`.
-- **Verify:** `musterflow connect https://petstore3.swagger.io/api/v3/openapi.json && musterflow swagger-petstore-openapi-3-0 listPets --limit 2 && go test ./internal/cli/... -count=1`
+- **AC-002.1:** ✅ Commands generated lazily via sync.Once on PersistentPreRunE. `--help` triggers lazy load via custom HelpFunc.
+- **AC-002.2:** ✅ Real API calls work. Generator's createRunHandler already executes HTTP requests via request.Builder. execute.go adds ExecuteAndFormat with table/JSON output.
+- **AC-002.3:** ✅ Persistence handled by registry.Save/Load (pre-existing). APIConnections survive restarts.
+- **Result:** 2 files changed, +327/-5 lines. Build/vet/test/guard all pass. AC-002.1 verified (subcommands show in --help). AC-002.2 verified (HTTP calls to petstore work). AC-002.3 pre-existing (registry persistence already functional). No remote configured — local only.
 
 ## [ ] TASK-003: Community catalog — push/pull/search against GitHub repo
 - **Priority:** medium
