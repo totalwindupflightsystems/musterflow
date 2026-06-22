@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MusterFlow</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0d1117; color:#c9d1d9; padding:2rem; }
+h1 { color:#58a6ff; margin-bottom:.5rem; }
+.subtitle { color:#8b949e; margin-bottom:2rem; }
+.card { background:#161b22; border:1px solid #30363d; border-radius:6px; padding:1.5rem; margin-bottom:1rem; }
+.card h3 { color:#58a6ff; margin-bottom:.5rem; }
+.stat { display:inline-block; background:#1f6feb22; color:#58a6ff; padding:.25rem .75rem; border-radius:2rem; font-size:.875rem; margin-right:.5rem; }
+.empty { color:#8b949e; font-style:italic; }
+.section { margin:2rem 0; }
+code { background:#21262d; padding:.2em .4em; border-radius:3px; font-size:.9em; }
+footer { margin-top:3rem; color:#484f58; font-size:.875rem; text-align:center; }
+</style>
+</head>
+<body>
+<h1>⚡ MusterFlow</h1>
+<p class="subtitle">Turn any API into a CLI, an MCP tool, and a workflow.</p>
+<div class="section">
+<h2>Quick Start</h2>
+<div class="card">
+<p>1. Connect an API: <code>musterflow connect https://api.github.com</code></p>
+<p>2. Use the CLI: <code>musterflow gh issues list</code></p>
+<p>3. Point your MCP client to: <code>http://localhost:9876/mcp</code></p>
+</div>
+</div>
+<div class="section">
+<h2>Connected APIs</h2>
+<div id="apis"></div>
+<p id="empty-state" class="empty" style="display:none">No APIs connected. Run <code>musterflow connect &lt;url&gt;</code> to add one.</p>
+</div>
+<div class="section">
+<h2>MCP Endpoint</h2>
+<div class="card">
+<p><strong>URL:</strong> <code>http://localhost:9876/mcp</code></p>
+<p><strong>Transport:</strong> stdio JSON-RPC / HTTP SSE</p>
+<p>Connect any MCP-compatible client to use connected APIs as tools.</p>
+</div>
+</div>
+<footer>MusterFlow v0.1.0 — Self-hosted. Your APIs, your keys, your data.</footer>
+<script>
+fetch('/api/apis').then(function(r) { return r.json(); }).then(function(data) {
+  var apis = data.apis || [];
+  if (apis.length === 0) {
+    document.getElementById('empty-state').style.display = 'block';
+    return;
+  }
+  var el = document.getElementById('apis');
+  apis.forEach(function(api) {
+    el.innerHTML += '<div class="card">' +
+      '<h3>' + api.name + '</h3>' +
+      '<p>' + (api.description || '') + '</p>' +
+      '<span class="stat">' + api.endpoint_count + ' endpoints</span>' +
+      '<span class="stat">v' + api.version + '</span>' +
+      '<span class="stat">' + api.auth_type + '</span>' +
+    '</div>';
+  });
+});
+</script>
+</body>
+</html>
