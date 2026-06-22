@@ -41,6 +41,15 @@ func NewClient() *Client {
 	}
 }
 
+// NewClientWithRepoURL creates a catalog client pointing at a custom repo URL.
+// Used for testing with httptest.Server.
+func NewClientWithRepoURL(repoURL string) *Client {
+	return &Client{
+		repoURL:  repoURL,
+		httpClient: &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
 // Search searches the catalog index for matching entries.
 func (c *Client) Search(query string) ([]CatalogEntry, error) {
 	url := fmt.Sprintf("%s/index.json", c.repoURL)
@@ -62,15 +71,8 @@ func (c *Client) Search(query string) ([]CatalogEntry, error) {
 		return nil, fmt.Errorf("decode catalog: %w", err)
 	}
 
-	// Simple substring match (upgrade to fuzzy search later)
-	var results []CatalogEntry
-	qlower := toLower(query)
-	for _, e := range entries {
-		if contains(toLower(e.Name), qlower) || contains(toLower(e.Description), qlower) {
-			results = append(results, e)
-		}
-	}
-	return results, nil
+	// Fuzzy search with relevance scoring (see search.go)
+	return Search(entries, query), nil
 }
 
 // FetchEntry retrieves a specific catalog entry.
