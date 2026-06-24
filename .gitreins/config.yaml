@@ -6,7 +6,7 @@ guards:
   lsp: true
   lsp_servers:
     go:
-      - gopls
+    - gopls
   static_analysis: true
   static_analysis_tools: {}
   go:
