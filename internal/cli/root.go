@@ -16,6 +16,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
+	"github.com/totalwindupflightsystems/musterflow/internal/auth"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/config"
 )
@@ -29,6 +30,14 @@ type apiCommandState struct {
 
 var apiCommands = make(map[string]*apiCommandState)
 var apiCommandsMu sync.Mutex
+
+// auth command flags
+var (
+	typeFlag    string
+	keyFlag     string
+	certFlag    string
+	keyPathFlag string
+)
 
 // NewRootCommand creates the root musterflow command.
 func NewRootCommand(registry *app.Registry) *cobra.Command {
@@ -51,6 +60,7 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newFlowCommand(registry))
 	root.AddCommand(newMCPCommand(registry))
 	root.AddCommand(newConfigCommand(registry))
+	root.AddCommand(newAuthCommand(registry))
 
 	loadAPISubcommands(root, registry)
 
@@ -366,6 +376,142 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 			return nil
 		},
 	})
+
+	return cmd
+}
+
+func newAuthCommand(registry *app.Registry) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "auth",
+		Short: "Manage API credentials",
+	}
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "add <api-id>",
+		Short: "Add credentials for an API",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			mgr := auth.NewManager(cfg)
+
+			authType := auth.CredentialTypeFromString(typeFlag)
+			cred := auth.Credential{
+				Type:     authType,
+				Key:      keyFlag,
+				CertPath: certFlag,
+				KeyPath:  keyPathFlag,
+			}
+			if err := mgr.Add(args[0], cred); err != nil {
+				return fmt.Errorf("add auth: %w", err)
+			}
+			fmt.Printf("✓ Added %s auth for %s\n", authType, args[0])
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "list",
+		Short: "List configured credentials (keys masked)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			mgr := auth.NewManager(cfg)
+			entries := mgr.List()
+			if len(entries) == 0 {
+				fmt.Println("No credentials configured.")
+				fmt.Println("Use 'musterflow auth add <api-id> --type apikey --key sk-xxx' to add one.")
+				return nil
+			}
+			fmt.Println("Configured credentials:")
+			for _, e := range entries {
+				fmt.Printf("  %s: type=%s key=%s", e.APIID, e.Type, e.Key)
+				if e.CertPath != "" {
+					fmt.Printf(" cert=%s", e.CertPath)
+				}
+				fmt.Println()
+			}
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "remove <api-id>",
+		Short: "Remove credentials for an API",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			mgr := auth.NewManager(cfg)
+			if err := mgr.Remove(args[0]); err != nil {
+				return err
+			}
+			fmt.Printf("✓ Removed auth for %s\n", args[0])
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "get <api-id>",
+		Short: "Get the credential value for an API (prints raw key)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			mgr := auth.NewManager(cfg)
+			cred, err := mgr.Get(args[0])
+			if err != nil {
+				return err
+			}
+			fmt.Print(cred.Key)
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "login <api-id>",
+		Short: "Start OAuth2 authorization code flow for an API",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			mgr := auth.NewManager(cfg)
+
+			// OAuth2 skeleton: for MVP, prompt the user to provide the token
+			// manually. Full OAuth2 flow (browser open, callback server) is
+			// a Phase 2 item.
+			conn, err := registry.Get(args[0])
+			if err != nil {
+				return fmt.Errorf("API %q not found in registry. Connect it first with 'musterflow connect'", args[0])
+			}
+			fmt.Printf("Starting OAuth2 flow for %s (%s)\n", conn.Name, conn.SpecURL)
+			fmt.Println()
+			fmt.Println("OAuth2 browser-based flow is not yet implemented.")
+			fmt.Println("For now, obtain a token manually and run:")
+			fmt.Printf("  musterflow auth add %s --type oauth2 --key <token>\n", args[0])
+			fmt.Println()
+			fmt.Println("The full OAuth2 authorization code flow (browser open, callback")
+			fmt.Println("server, token refresh) is planned for Phase 2.")
+			_ = mgr // reserved for OAuth2 flow implementation
+			return nil
+		},
+	})
+
+	// Flags for the 'add' subcommand — scoped to the auth command
+	cmd.PersistentFlags().StringVar(&typeFlag, "type", "bearer", "Auth type: none, apikey, bearer, oauth2, mtls")
+	cmd.PersistentFlags().StringVar(&keyFlag, "key", "", "API key or bearer token")
+	cmd.PersistentFlags().StringVar(&certFlag, "cert", "", "mTLS client certificate path")
+	cmd.PersistentFlags().StringVar(&keyPathFlag, "key-path", "", "mTLS client key path")
 
 	return cmd
 }
