@@ -66,6 +66,7 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newCompletionCommand())
 	root.AddCommand(newExportCommand(registry))
 	root.AddCommand(newImportCommand(registry))
+	root.AddCommand(newRefreshCommand(registry))
 
 	root.PersistentFlags().StringVarP(&outputFlag, "output", "o", "", "Output file path (format auto-detected from extension)")
 
@@ -602,6 +603,28 @@ func newImportCommand(registry *app.Registry) *cobra.Command {
 				return err
 			}
 			fmt.Printf("✓ Imported %d APIs from %s\n", n, args[0])
+			return nil
+		},
+	}
+}
+
+func newRefreshCommand(registry *app.Registry) *cobra.Command {
+	return &cobra.Command{
+		Use:   "refresh <api-id>",
+		Short: "Refresh API spec and regenerate commands",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := app.Refresh(cmd.Context(), registry, args[0])
+			if err != nil {
+				return err
+			}
+			fmt.Printf("✓ Refreshed %s\n", result.Connection.Name)
+			fmt.Printf("  Version: %s → %s", result.OldVersion, result.NewVersion)
+			if result.VersionChanged {
+				fmt.Print(" (changed)")
+			}
+			fmt.Println()
+			fmt.Printf("  Endpoints: %d → %d\n", result.OldEndpoints, result.NewEndpoints)
 			return nil
 		},
 	}
