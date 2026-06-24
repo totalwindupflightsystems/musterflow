@@ -17,6 +17,7 @@ import (
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
+	"github.com/totalwindupflightsystems/musterflow/internal/config"
 )
 
 // apiCommandState tracks lazy generation of cobra commands for a connected API.
@@ -49,6 +50,7 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newCatalogCommand(registry))
 	root.AddCommand(newFlowCommand(registry))
 	root.AddCommand(newMCPCommand(registry))
+	root.AddCommand(newConfigCommand(registry))
 
 	loadAPISubcommands(root, registry)
 
@@ -299,6 +301,73 @@ func loadAPISubcommands(root *cobra.Command, registry *app.Registry) {
 		apiCmd := createAPISubcommand(conn)
 		root.AddCommand(apiCmd)
 	}
+}
+
+func newConfigCommand(registry *app.Registry) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Manage MusterFlow configuration",
+	}
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "show",
+		Short: "Show current configuration",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			// Mask auth keys
+			for id, auth := range cfg.Auth {
+				auth.Key = config.MaskKey(auth.Key)
+				cfg.Auth[id] = auth
+			}
+			fmt.Printf("Port:              %d\n", cfg.Port)
+			fmt.Printf("Data directory:    %s\n", cfg.DataDir)
+			fmt.Printf("Default format:    %s\n", cfg.DefaultFormat)
+			fmt.Printf("Auto-completion:   %v\n", cfg.AutoCompletion)
+			fmt.Printf("Config file:       %s\n", config.ConfigPath())
+			if len(cfg.Auth) > 0 {
+				fmt.Println("\nAuth:")
+				for id, auth := range cfg.Auth {
+					fmt.Printf("  %s: type=%s key=%s\n", id, auth.Type, auth.Key)
+				}
+			}
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "set <key> <value>",
+		Short: "Set a configuration value",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			key, val := args[0], args[1]
+			switch key {
+			case "port":
+				fmt.Sscanf(val, "%d", &cfg.Port)
+			case "default_format":
+				cfg.DefaultFormat = val
+			case "auto_completion":
+				cfg.AutoCompletion = val == "true" || val == "1" || val == "yes"
+			case "data_dir":
+				cfg.DataDir = val
+			default:
+				return fmt.Errorf("unknown config key: %s (valid: port, default_format, auto_completion, data_dir)", key)
+			}
+			if err := config.Save(cfg); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+			fmt.Printf("✓ Set %s = %s\n", key, val)
+			return nil
+		},
+	})
+
+	return cmd
 }
 
 func createAPISubcommand(conn *app.APIConnection) *cobra.Command {

@@ -15,6 +15,7 @@ import (
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/cli"
+	"github.com/totalwindupflightsystems/musterflow/internal/config"
 	"github.com/totalwindupflightsystems/musterflow/internal/dashboard"
 	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
 	"github.com/wojons/muster/pkg/mcp/handlers"
@@ -25,10 +26,9 @@ var (
 	Commit    = "unknown"
 	BuildDate = "unknown"
 
-	// Flags
-	dashboardAddr string
-	mcpAddr       string
-	dataDir       string
+	// CLI flag overrides
+	flagDashboardAddr string
+	flagDataDir       string
 )
 
 func main() {
@@ -39,12 +39,19 @@ func main() {
 }
 
 func run() error {
-	// Load registry
-	regDir := dataDir
-	if regDir == "" {
-		regDir = app.DefaultDataDir()
+	// Load config
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
 	}
-	registry := app.NewRegistry(regDir)
+
+	// CLI flags override config
+	if flagDataDir != "" {
+		cfg.DataDir = flagDataDir
+	}
+
+	// Load registry
+	registry := app.NewRegistry(cfg.DataDir)
 	if err := registry.Load(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
 	}
@@ -52,20 +59,19 @@ func run() error {
 	rootCmd := cli.NewRootCommand(registry)
 	rootCmd.Version = Version
 
-	// Add start flags
-	rootCmd.PersistentFlags().StringVar(&dashboardAddr, "dashboard-addr", "localhost:9876", "Dashboard HTTP address")
-	rootCmd.PersistentFlags().StringVar(&mcpAddr, "mcp-addr", "localhost:9876", "MCP endpoint address")
-	rootCmd.PersistentFlags().StringVar(&dataDir, "data-dir", "", "Data directory (default: ~/.musterflow)")
+	// Add CLI flags
+	rootCmd.PersistentFlags().StringVar(&flagDashboardAddr, "dashboard-addr", "", "Dashboard HTTP address (default: port from config)")
+	rootCmd.PersistentFlags().StringVar(&flagDataDir, "data-dir", "", "Data directory (default: ~/.musterflow)")
 
-	// Override the start command to actually start
+	// Override the start command to use config
 	startCmd := findSubcommand(rootCmd, "start")
 	if startCmd != nil {
 		startCmd.RunE = func(cmd *cobra.Command, args []string) error {
-			return startServer(registry)
+			return startServer(registry, cfg)
 		}
 	}
 
-	// Root command just shows help by default
+	// Root command shows help by default
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	}
@@ -93,12 +99,23 @@ func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
 	return nil
 }
 
-func startServer(registry *app.Registry) error {
-	addr := dashboardAddr
+func startServer(registry *app.Registry, cfg config.Config) error {
+	// Resolve port: CLI flag > config file > default with auto-discovery
+	port := cfg.Port
+	if flagDashboardAddr != "" {
+		fmt.Sscanf(flagDashboardAddr, ":%d", &port)
+	}
+
+	port, err := config.FindPort(port)
+	if err != nil {
+		return fmt.Errorf("no available port: %w", err)
+	}
+
+	addr := fmt.Sprintf(":%d", port)
 	fmt.Printf("⚡ MusterFlow %s\n\n", Version)
-	fmt.Printf("Dashboard:    http://%s\n", addr)
-	fmt.Printf("API:          http://%s/api/\n", addr)
-	fmt.Printf("MCP endpoint: http://%s/mcp\n", addr)
+	fmt.Printf("Dashboard:    http://localhost%s\n", addr)
+	fmt.Printf("API:          http://localhost%s/api/\n", addr)
+	fmt.Printf("MCP endpoint: http://localhost%s/mcp\n", addr)
 	fmt.Printf("\nConnected APIs: %d\n", len(registry.List()))
 	fmt.Println()
 	fmt.Println("Press Ctrl+C to stop.")
@@ -109,20 +126,16 @@ func startServer(registry *app.Registry) error {
 		fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
 	}
 
-	// Create catalog client for the community catalog browser
 	catalogClient := catalog.NewClient()
-
 	dashServer := dashboard.NewServer(registry, catalogClient, toolRegistry, addr)
 
 	// Build MCP handler registry
 	handlerReg := handlers.NewRegistry()
 	handlerReg.Register(handlers.NewInitializeHandler("musterflow-mcp", Version))
 	handlerReg.Register(handlers.NewInitializedHandler())
-
 	handlerReg.Register(handlers.NewListToolsHandler(toolRegistry))
 	handlerReg.Register(handlers.NewCallToolHandler(toolRegistry))
 
-	// Wire MCP HTTP server into the dashboard
 	mcpHTTPServer := mcp.NewHTTPServer(handlerReg)
 	dashServer.SetMCPHandler(mcpHTTPServer)
 
@@ -140,7 +153,6 @@ func startServer(registry *app.Registry) error {
 		}
 	}()
 
-	// Wait for interrupt
 	ctx, cancel := context.WithCancel(context.Background())
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
