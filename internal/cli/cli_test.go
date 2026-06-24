@@ -34,7 +34,7 @@ func captureStdout(fn func()) string {
 }
 
 func TestNewRootCommand_TopLevelCommands(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 
 	expected := map[string]bool{
@@ -48,6 +48,8 @@ func TestNewRootCommand_TopLevelCommands(t *testing.T) {
 		"config":     true,
 		"auth":       true,
 		"completion": true,
+		"export":     true,
+		"import":     true,
 	}
 
 	for _, cmd := range root.Commands() {
@@ -71,7 +73,7 @@ func TestNewRootCommand_TopLevelCommands(t *testing.T) {
 }
 
 func TestRootCommand_Use(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 	if root.Use != "musterflow" {
 		t.Errorf("expected Use 'musterflow', got %q", root.Use)
@@ -79,7 +81,7 @@ func TestRootCommand_Use(t *testing.T) {
 }
 
 func TestListCommand_Empty(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"list"})
 
@@ -95,7 +97,7 @@ func TestListCommand_Empty(t *testing.T) {
 }
 
 func TestListCommand_WithAPIs(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	r.Add(&app.APIConnection{
 		ID:        "abc123",
 		Name:      "github",
@@ -123,7 +125,7 @@ func TestListCommand_WithAPIs(t *testing.T) {
 }
 
 func TestConnectCommand_FlagParsing(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 
 	cmd, _, err := root.Find([]string{"connect"})
@@ -144,7 +146,7 @@ func TestConnectCommand_FlagParsing(t *testing.T) {
 }
 
 func TestConnectCommand_RequiresArg(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 
 	buf := new(bytes.Buffer)
@@ -161,7 +163,7 @@ func TestConnectCommand_RequiresArg(t *testing.T) {
 }
 
 func TestDisconnectCommand_RequiresArg(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 
 	buf := new(bytes.Buffer)
@@ -176,7 +178,7 @@ func TestDisconnectCommand_RequiresArg(t *testing.T) {
 }
 
 func TestStartCommand(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"start"})
 
@@ -195,7 +197,7 @@ func TestStartCommand(t *testing.T) {
 }
 
 func TestStartCommand_WithConnectedAPIs(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	r.Add(&app.APIConnection{
 		ID:   "test",
 		Name: "test-api",
@@ -216,7 +218,7 @@ func TestStartCommand_WithConnectedAPIs(t *testing.T) {
 }
 
 func TestMCPCommand_NoAPIs(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"mcp"})
 
@@ -232,7 +234,7 @@ func TestMCPCommand_NoAPIs(t *testing.T) {
 }
 
 func TestMCPCommand_WithAPIs(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	r.Add(&app.APIConnection{
 		ID:            "gh",
 		Name:          "github",
@@ -255,7 +257,7 @@ func TestMCPCommand_WithAPIs(t *testing.T) {
 }
 
 func TestCatalogCommand(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 
 	buf := new(bytes.Buffer)
@@ -269,7 +271,7 @@ func TestCatalogCommand(t *testing.T) {
 }
 
 func TestFlowCommand(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 
 	buf := new(bytes.Buffer)
@@ -434,7 +436,7 @@ func TestClearOperationServers_WithServers(t *testing.T) {
 }
 
 func TestDisconnectCommand_NotFound(t *testing.T) {
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"disconnect", "nonexistent"})
 
@@ -447,7 +449,7 @@ func TestDisconnectCommand_NotFound(t *testing.T) {
 func TestConnectCommand_RequiresArg_ContinueOnError(t *testing.T) {
 	// Cobra's default ContinueOnError mode means missing args return nil error
 	// but the error is printed to stderr. Document this behavior.
-	r := app.NewRegistry(t.TempDir())
+	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"connect"})
 
