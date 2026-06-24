@@ -89,8 +89,8 @@ func run() error {
 		cancel()
 	}()
 
-	// Auto-install shell completions on first run (unless disabled)
-	if completion.ShouldPrompt(cfg.AutoCompletion) {
+	// Auto-install shell completions on first run (unless disabled or non-interactive)
+	if completion.ShouldPrompt(cfg.AutoCompletion) && isTerminal() {
 		shell := completion.DetectShell()
 		if completion.PromptInstall(shell) {
 			installErr := completion.Install(shell, func(s completion.Shell) (string, error) {
@@ -188,4 +188,13 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 	wg.Wait()
 	fmt.Println("Goodbye.")
 	return nil
+}
+
+// isTerminal returns true if stdin is a terminal (interactive session).
+func isTerminal() bool {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (stat.Mode() & os.ModeCharDevice) != 0
 }
