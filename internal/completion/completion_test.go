@@ -145,3 +145,91 @@ func TestPromptInstall_No(t *testing.T) {
 		t.Error("expected false for 'n'")
 	}
 }
+
+func TestInstall_GenerateError(t *testing.T) {
+	err := Install(ShellBash, func(s Shell) (string, error) {
+		return "", &fakeError{msg: "generator failed"}
+	})
+	if err == nil {
+		t.Error("expected error when generate fails")
+	}
+}
+
+type fakeError struct{ msg string }
+
+func (e *fakeError) Error() string { return e.msg }
+
+func TestInstall_Success(t *testing.T) {
+	homeDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", homeDir)
+	defer os.Setenv("HOME", origHome)
+
+	expectedScript := "# musterflow bash completion"
+	err := Install(ShellBash, func(s Shell) (string, error) {
+		return expectedScript, nil
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	// Verify file was written
+	path, err := InstallPath(ShellBash)
+	if err != nil {
+		t.Fatalf("InstallPath: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != expectedScript {
+		t.Errorf("expected %q, got %q", expectedScript, string(data))
+	}
+}
+
+func TestShouldPrompt_WithInstalledCompletions(t *testing.T) {
+	homeDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", homeDir)
+	defer os.Setenv("HOME", origHome)
+
+	// Install a completion to simulate pre-existing installation
+	if err := Install(ShellBash, func(s Shell) (string, error) {
+		return "# musterflow bash completion", nil
+	}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	if ShouldPrompt(true) {
+		t.Error("ShouldPrompt should be false when completions are already installed")
+	}
+}
+
+func TestInstalledShells_WithBashInstalled(t *testing.T) {
+	homeDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", homeDir)
+	defer os.Setenv("HOME", origHome)
+
+	// Install bash completion
+	if err := Install(ShellBash, func(s Shell) (string, error) {
+		return "# musterflow bash completion", nil
+	}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	installed := InstalledShells()
+	if len(installed) == 0 {
+		t.Error("expected bash to be detected as installed")
+	}
+	found := false
+	for _, s := range installed {
+		if s == ShellBash {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected ShellBash in installed shells, got: %v", installed)
+	}
+}
