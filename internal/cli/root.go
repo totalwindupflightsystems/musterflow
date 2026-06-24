@@ -18,6 +18,7 @@ import (
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/auth"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
+	"github.com/totalwindupflightsystems/musterflow/internal/completion"
 	"github.com/totalwindupflightsystems/musterflow/internal/config"
 )
 
@@ -61,6 +62,7 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newMCPCommand(registry))
 	root.AddCommand(newConfigCommand(registry))
 	root.AddCommand(newAuthCommand(registry))
+	root.AddCommand(newCompletionCommand())
 
 	root.PersistentFlags().StringVarP(&outputFlag, "output", "o", "", "Output file path (format auto-detected from extension)")
 
@@ -518,6 +520,35 @@ func newAuthCommand(registry *app.Registry) *cobra.Command {
 	cmd.PersistentFlags().StringVar(&keyPathFlag, "key-path", "", "mTLS client key path")
 
 	return cmd
+}
+
+func newCompletionCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "completion [bash|zsh|fish]",
+		Short: "Generate shell completion script",
+		Long: `Generate shell completion script for musterflow.
+
+To install:
+  musterflow completion bash > ~/.bash_completion.d/musterflow
+  musterflow completion zsh > ~/.zsh/completions/_musterflow
+  musterflow completion fish > ~/.config/fish/completions/musterflow.fish
+
+Or let musterflow install automatically on first run.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			shell := completion.Shell(args[0])
+			switch shell {
+			case completion.ShellBash:
+				return cmd.Root().GenBashCompletion(cmd.OutOrStdout())
+			case completion.ShellZsh:
+				return cmd.Root().GenZshCompletion(cmd.OutOrStdout())
+			case completion.ShellFish:
+				return cmd.Root().GenFishCompletion(cmd.OutOrStdout(), true)
+			default:
+				return fmt.Errorf("unsupported shell: %s (supported: bash, zsh, fish)", args[0])
+			}
+		},
+	}
 }
 
 func createAPISubcommand(conn *app.APIConnection) *cobra.Command {

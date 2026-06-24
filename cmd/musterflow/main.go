@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/cli"
+	"github.com/totalwindupflightsystems/musterflow/internal/completion"
 	"github.com/totalwindupflightsystems/musterflow/internal/config"
 	"github.com/totalwindupflightsystems/musterflow/internal/dashboard"
 	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
@@ -86,6 +88,28 @@ func run() error {
 		<-sigCh
 		cancel()
 	}()
+
+	// Auto-install shell completions on first run (unless disabled)
+	if completion.ShouldPrompt(cfg.AutoCompletion) {
+		shell := completion.DetectShell()
+		if completion.PromptInstall(shell) {
+			installErr := completion.Install(shell, func(s completion.Shell) (string, error) {
+				var buf bytes.Buffer
+				switch s {
+				case completion.ShellBash:
+					return buf.String(), rootCmd.GenBashCompletion(&buf)
+				case completion.ShellZsh:
+					return buf.String(), rootCmd.GenZshCompletion(&buf)
+				case completion.ShellFish:
+					return buf.String(), rootCmd.GenFishCompletion(&buf, true)
+				}
+				return "", fmt.Errorf("unsupported shell: %s", s)
+			})
+			if installErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: completion install failed: %v\n", installErr)
+			}
+		}
+	}
 
 	return rootCmd.ExecuteContext(ctx)
 }
