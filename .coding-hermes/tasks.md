@@ -182,3 +182,15 @@
 - **AC-017.2:** ✅ Workflow execution. Flow run/list wired in CLI.
 - **AC-017.3:** ✅ Webhook triggers. `/hooks/` endpoint registered.
 - **Result:** Committed at 4ae2946.
+
+## [x] TASK-018: Auth test coverage — YAMLTokenStore + OpenBrowser tests
+- **Priority:** high
+- **Model:** deepseek-v4-pro (direct — mechanical test-writing)
+- **Files:** internal/auth/oauth2_test.go (NEW)
+- **AC-018.1:** YAMLTokenStore Save/Load round-trip. Create store, save token with AccessToken/RefreshToken/TokenType/ExpiresAt, load back, verify all fields match.
+- **AC-018.2:** YAMLTokenStore error paths. Load nonexistent service returns "token not found" error. Save creates parent directory. Save with empty service name.
+- **AC-018.3:** OpenBrowser on Linux. Returns no error (xdg-open exists). Non-Linux platforms return error or not tested.
+- **AC-018.4:** NewYAMLTokenStore constructor. Sets Dir field correctly.
+- **Verify:** `go test ./internal/auth/... -count=1 -v -run "YAML|OpenBrowser|NewYAML"`
+- **Target:** auth coverage from 65.0% → >75%
+- **Result:** 9 tests (NewYAMLTokenStore, SaveLoad, SaveOverwrite, LoadNonexistent, SaveCreatesDir, SaveEmptyService, LoadFileNotYAML, OpenBrowser_Linux, SaveMultipleServices). auth coverage 65.0%→79.5% (+14.5pp). All guards PASS. Direct-implement (no spawn).
