@@ -1,6 +1,14 @@
 package auth
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"math/big"
+	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -411,27 +419,47 @@ func TestBuildTransport(t *testing.T) {
 		t.Error("expected nil on error")
 	}
 
-	// mtls with paths
+	// mtls with missing cert file
 	info, err = BuildTransport(&Credential{
 		Type:     CredentialMTLS,
-		CertPath: "/tmp/cert.pem",
-		KeyPath:  "/tmp/key.pem",
+		CertPath: "/nonexistent/path/cert.pem",
+		KeyPath:  "/nonexistent/path/key.pem",
+	})
+	if err == nil {
+		t.Error("expected error for nonexistent cert files")
+	}
+	if info != nil {
+		t.Error("expected nil on error")
+	}
+
+	// mtls with real cert/key files
+	tmpDir := t.TempDir()
+	certPath := filepath.Join(tmpDir, "cert.pem")
+	keyPath := filepath.Join(tmpDir, "key.pem")
+	// Generate a self-signed cert for testing
+	if err := generateTestCert(certPath, keyPath); err != nil {
+		t.Skipf("skipping mTLS transport test: cert generation failed: %v", err)
+	}
+	info, err = BuildTransport(&Credential{
+		Type:     CredentialMTLS,
+		CertPath: certPath,
+		KeyPath:  keyPath,
 	})
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if info == nil {
 		t.Fatal("expected non-nil for valid mtls")
 	}
-	m, ok := info.(map[string]string)
+	transport, ok := info.(*http.Transport)
 	if !ok {
-		t.Fatalf("expected map[string]string, got %T", info)
+		t.Fatalf("expected *http.Transport, got %T", info)
 	}
-	if m["cert_path"] != "/tmp/cert.pem" {
-		t.Errorf("cert_path = %q", m["cert_path"])
+	if transport.TLSClientConfig == nil {
+		t.Error("expected TLSClientConfig to be set")
 	}
-	if m["key_path"] != "/tmp/key.pem" {
-		t.Errorf("key_path = %q", m["key_path"])
+	if len(transport.TLSClientConfig.Certificates) != 1 {
+		t.Errorf("expected 1 certificate, got %d", len(transport.TLSClientConfig.Certificates))
 	}
 }
 
@@ -504,4 +532,36 @@ func TestMaskDisplay(t *testing.T) {
 	if !strings.Contains(maskDisplay("ghp_abcdef12345678"), "...") {
 		t.Errorf("long key should contain '...': %q", maskDisplay("ghp_abcdef12345678"))
 	}
+}
+
+// generateTestCert creates a self-signed TLS certificate for testing.
+func generateTestCert(certPath, keyPath string) error {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		return err
+	}
+	certFile, err := os.Create(certPath)
+	if err != nil {
+		return err
+	}
+	defer certFile.Close()
+	if err := pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
+		return err
+	}
+	keyFile, err := os.Create(keyPath)
+	if err != nil {
+		return err
+	}
+	defer keyFile.Close()
+	return pem.Encode(keyFile, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
 }

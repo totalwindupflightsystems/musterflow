@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/wojons/muster/pkg/generator"
@@ -35,12 +36,27 @@ type apiCommandState struct {
 var apiCommands = make(map[string]*apiCommandState)
 var apiCommandsMu sync.Mutex
 
+// authMgr is set by the main function and used by BuildRequest for auto-auth.
+var authMgr *auth.Manager
+
+// SetAuthManager sets the global auth manager for auto-injecting credentials.
+func SetAuthManager(m *auth.Manager) {
+	authMgr = m
+}
+
 // auth command flags
 var (
 	typeFlag    string
 	keyFlag     string
 	certFlag    string
 	keyPathFlag string
+	// OAuth2 login flags
+	oauthClientID     string
+	oauthClientSecret string
+	oauthAuthURL      string
+	oauthTokenURL     string
+	oauthScopes       []string
+	oauthRedirectPort int
 )
 
 // NewRootCommand creates the root musterflow command.
@@ -551,33 +567,107 @@ func newAuthCommand(registry *app.Registry) *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "login <api-id>",
 		Short: "Start OAuth2 authorization code flow for an API",
-		Args:  cobra.ExactArgs(1),
+		Long: `Start an OAuth2 authorization code flow. Opens a browser to the
+authorization URL, starts a local callback server, exchanges the
+code for a token, and stores the credential.
+
+Flags --client-id, --client-secret, --auth-url, and --token-url
+are required for the OAuth2 flow.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load()
+			apiID := args[0]
+
+			// Validate required OAuth2 flags
+			if oauthClientID == "" {
+				return fmt.Errorf("--client-id is required for OAuth2 login")
+			}
+			if oauthClientSecret == "" {
+				return fmt.Errorf("--client-secret is required for OAuth2 login")
+			}
+			if oauthAuthURL == "" {
+				return fmt.Errorf("--auth-url is required for OAuth2 login")
+			}
+			if oauthTokenURL == "" {
+				return fmt.Errorf("--token-url is required for OAuth2 login")
+			}
+			if oauthRedirectPort == 0 {
+				oauthRedirectPort = 19876
+			}
+
+			fmt.Printf("Starting OAuth2 flow for %s\n", apiID)
+			fmt.Printf("  Auth URL: %s\n", oauthAuthURL)
+			fmt.Printf("  Token URL: %s\n", oauthTokenURL)
+			fmt.Println()
+
+			cfg := auth.OAuth2Config{
+				ClientID:     oauthClientID,
+				ClientSecret: oauthClientSecret,
+				AuthURL:      oauthAuthURL,
+				TokenURL:     oauthTokenURL,
+				Scopes:       oauthScopes,
+				RedirectPort: oauthRedirectPort,
+			}
+
+			authReq, err := auth.StartLogin(cfg)
+			if err != nil {
+				return fmt.Errorf("start OAuth2 flow: %w", err)
+			}
+
+			// Open browser
+			fmt.Printf("Opening browser to: %s\n", authReq.URL)
+			if err := auth.OpenBrowser(authReq.URL); err != nil {
+				fmt.Fprintf(os.Stderr, "Could not open browser: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Please open this URL manually:\n  %s\n", authReq.URL)
+			}
+
+			// Start callback server
+			fmt.Printf("\nWaiting for authorization (listening on port %d)...\n", oauthRedirectPort)
+			fmt.Println("Complete authorization in your browser, then return here.")
+
+			code, err := startCallbackServer(oauthRedirectPort)
+			if err != nil {
+				return fmt.Errorf("callback server: %w", err)
+			}
+
+			fmt.Println("\nAuthorization received. Exchanging code for token...")
+
+			store := auth.NewYAMLTokenStore(filepath.Join(app.DefaultDataDir(), "tokens"))
+			token, err := auth.CompleteLogin(store, cfg, authReq, code)
+			if err != nil {
+				return fmt.Errorf("complete login: %w", err)
+			}
+
+			// Store credential via auth manager
+			cfg2, err := config.Load()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
-			mgr := auth.NewManager(cfg)
-
-			// OAuth2 skeleton: for MVP, prompt the user to provide the token
-			// manually. Full OAuth2 flow (browser open, callback server) is
-			// a Phase 2 item.
-			conn, err := registry.Get(args[0])
-			if err != nil {
-				return fmt.Errorf("API %q not found in registry. Connect it first with 'musterflow connect'", args[0])
+			mgr := auth.NewManager(cfg2)
+			cred := auth.Credential{
+				Type: auth.CredentialOAuth2,
+				Key:  token.AccessToken,
 			}
-			fmt.Printf("Starting OAuth2 flow for %s (%s)\n", conn.Name, conn.SpecURL)
-			fmt.Println()
-			fmt.Println("OAuth2 browser-based flow is not yet implemented.")
-			fmt.Println("For now, obtain a token manually and run:")
-			fmt.Printf("  musterflow auth add %s --type oauth2 --key <token>\n", args[0])
-			fmt.Println()
-			fmt.Println("The full OAuth2 authorization code flow (browser open, callback")
-			fmt.Println("server, token refresh) is planned for Phase 2.")
-			_ = mgr // reserved for OAuth2 flow implementation
+			if err := mgr.Add(apiID, cred); err != nil {
+				return fmt.Errorf("store credential: %w", err)
+			}
+
+			fmt.Printf("✓ OAuth2 login complete for %s\n", apiID)
+			fmt.Printf("  Token type: %s\n", token.TokenType)
+			if token.RefreshToken != "" {
+				fmt.Printf("  Refresh token: stored\n")
+			}
+			fmt.Printf("  Expires: %s\n", token.ExpiresAt.Format(time.RFC3339))
 			return nil
 		},
 	})
+
+	// OAuth2 login flags
+	cmd.PersistentFlags().StringVar(&oauthClientID, "client-id", "", "OAuth2 client ID")
+	cmd.PersistentFlags().StringVar(&oauthClientSecret, "client-secret", "", "OAuth2 client secret")
+	cmd.PersistentFlags().StringVar(&oauthAuthURL, "auth-url", "", "OAuth2 authorization URL")
+	cmd.PersistentFlags().StringVar(&oauthTokenURL, "token-url", "", "OAuth2 token URL")
+	cmd.PersistentFlags().StringSliceVar(&oauthScopes, "scopes", nil, "OAuth2 scopes (comma-separated)")
+	cmd.PersistentFlags().IntVar(&oauthRedirectPort, "redirect-port", 19876, "Local callback server port")
 
 	// Flags for the 'add' subcommand — scoped to the auth command
 	cmd.PersistentFlags().StringVar(&typeFlag, "type", "bearer", "Auth type: none, apikey, bearer, oauth2, mtls")
@@ -881,4 +971,59 @@ func loadSpecData(specURL string) ([]byte, error) {
 		return io.ReadAll(resp.Body)
 	}
 	return os.ReadFile(specURL)
+}
+
+// startCallbackServer starts an HTTP server on the given port and waits for
+// a single OAuth2 callback. Returns the authorization code from the query.
+func startCallbackServer(port int) (string, error) {
+	type result struct {
+		code string
+		err  error
+	}
+	ch := make(chan result, 1)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		code := q.Get("code")
+		errStr := q.Get("error")
+		if errStr != "" {
+			ch <- result{err: fmt.Errorf("authorization error: %s (%s)", errStr, q.Get("error_description"))}
+			http.Error(w, "Authorization failed", http.StatusBadRequest)
+			return
+		}
+		if code == "" {
+			ch <- result{err: fmt.Errorf("no authorization code received")}
+			http.Error(w, "Missing authorization code", http.StatusBadRequest)
+			return
+		}
+		ch <- result{code: code}
+		fmt.Fprint(w, "Authorization successful! You may close this window.")
+	})
+
+	addr := fmt.Sprintf(":%d", port)
+	srv := &http.Server{
+		Addr:         addr,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		// Server will exit on Shutdown or error
+		_ = srv.ListenAndServe()
+	}()
+
+	// Wait for callback or timeout
+	select {
+	case res := <-ch:
+		srv.Close()
+		if res.err != nil {
+			return "", res.err
+		}
+		return res.code, nil
+	case <-time.After(5 * time.Minute):
+		srv.Close()
+		return "", fmt.Errorf("timed out waiting for authorization (5 minutes)")
+	}
 }
