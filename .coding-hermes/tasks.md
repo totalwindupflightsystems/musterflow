@@ -81,7 +81,7 @@
 - **Design decisions:** YAML (muster engine convention, Go stdlib `gopkg.in/yaml.v3`). Config struct: `Port`, `DataDir`, `DefaultFormat`, `AutoCompletion`, `Auth` map.
 - **Verify:** `musterflow config show` prints defaults, `musterflow config set port 9999` persists, restart reads it, port conflict auto-increments.
 
-## [ ] TASK-007: Auth per API — apikey, bearer, oauth2, mTLS credential management
+## [x] TASK-007: Auth per API — apikey, bearer, oauth2, mTLS credential management (completed 2026-06-24)
 - **Priority:** high
 - **Model:** glm-5.2
 - **Files:** internal/auth/manager.go (NEW), internal/auth/credential.go (NEW), internal/app/connect.go (MODIFY), cmd/musterflow/main.go (MODIFY)
@@ -92,7 +92,7 @@
 - **Design decisions:** Auth types: `none`, `apikey`, `bearer`, `oauth2`, `mtls`. Storage: config YAML (keys redacted in `musterflow config show`). OAuth2: use muster's `pkg/auth/oauth2_flow.go`. Keychain integration: use muster's `pkg/auth/keychain.go` for OS-native secret storage where available (Linux: Secret Service, macOS: Keychain).
 - **Verify:** `musterflow auth add gh --type bearer --key ghp_xxx && musterflow auth list | grep "gh.*bearer.*ghp_..."` (key masked), `go test ./internal/auth/... -count=1`
 
-## [ ] TASK-008: Output formats — CSV, JSONL, Parquet + format auto-detection
+## [x] TASK-008: Output formats — CSV, JSONL, Parquet + format auto-detection (completed 2026-06-24, commit 0be953f)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Files:** internal/cli/execute.go (MODIFY), internal/cli/formats.go (NEW)
