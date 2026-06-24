@@ -695,7 +695,7 @@ Or let musterflow install automatically on first run.`,
 			shell := completion.Shell(args[0])
 			switch shell {
 			case completion.ShellBash:
-				return cmd.Root().GenBashCompletion(cmd.OutOrStdout())
+				return cmd.Root().GenBashCompletionV2(cmd.OutOrStdout(), false)
 			case completion.ShellZsh:
 				return cmd.Root().GenZshCompletion(cmd.OutOrStdout())
 			case completion.ShellFish:
@@ -876,6 +876,20 @@ func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 		}
 		fmt.Fprint(c.OutOrStdout(), c.UsageString())
 	})
+	// ValidArgsFunction provides dynamic completion for lazily-generated
+	// API subcommands. Cobra's V2 bash completion (and built-in fish/zsh
+	// completion) calls the binary with __complete at completion time,
+	// which triggers this function to load and enumerate subcommands.
+	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if err := ensureAPILoaded(cmd, conn); err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+		var names []string
+		for _, sub := range cmd.Commands() {
+			names = append(names, sub.Name())
+		}
+		return names, cobra.ShellCompDirectiveNoFileComp
+	}
 	return cmd
 }
 

@@ -690,4 +690,29 @@ func TestCreateAPISubcommand(t *testing.T) {
 		t.Error("expected RunE to be set")
 	}
 	cmd.Help()
+
+	// Verify ValidArgsFunction is set for dynamic completion (AC-009.2)
+	if cmd.ValidArgsFunction == nil {
+		t.Error("expected ValidArgsFunction to be set for dynamic API subcommand completion")
+	}
+}
+
+func TestCompletionCommand_GeneratesOutputForAllShells(t *testing.T) {
+	registry := app.NewRegistry(t.TempDir())
+	rootCmd := NewRootCommand(registry)
+
+	shells := []string{"bash", "zsh", "fish"}
+	for _, shell := range shells {
+		t.Run(shell, func(t *testing.T) {
+			output := captureStdout(func() {
+				rootCmd.SetArgs([]string{"completion", shell})
+				if err := rootCmd.Execute(); err != nil {
+					t.Fatalf("completion %s: %v", shell, err)
+				}
+			})
+			if output == "" {
+				t.Errorf("expected non-empty output for %s completion", shell)
+			}
+		})
+	}
 }

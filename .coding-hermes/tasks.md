@@ -102,7 +102,7 @@
 - **Design decisions:** Table/JSON/YAML already implemented. CSV: `encoding/csv` stdlib. JSONL: one JSON object per line. Parquet: use `github.com/parquet-go/parquet-go` — write as optional dependency (graceful fallback if not installed).
 - **Verify:** `musterflow connect https://petstore3.swagger.io/api/v3/openapi.json && musterflow swagger-petstore-openapi-3-0 listPets --format csv | head -1` shows column headers, `--format jsonl | wc -l` matches pet count.
 
-## [ ] TASK-009: Shell completion — bash, zsh, fish auto-install
+## [x] TASK-009: Shell completion — bash, zsh, fish auto-install
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Files:** internal/completion/install.go (NEW), cmd/musterflow/main.go (MODIFY)
