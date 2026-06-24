@@ -3,7 +3,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,23 +25,23 @@ type APIConnection struct {
 }
 
 // Registry stores connected APIs and manages persistence.
+// Uses DuckDB for storage, with automatic migration from legacy JSON.
 type Registry struct {
-	mu          sync.RWMutex
-	connections map[string]*APIConnection
-	dataDir     string
-	dbPath      string
+	mu      sync.RWMutex
+	dataDir string
+	dbPath  string
+	store   *Store
 }
 
-// NewRegistry creates a new API registry backed by a JSON file.
+// NewRegistry creates a new API registry backed by DuckDB.
 func NewRegistry(dataDir string) *Registry {
 	return &Registry{
-		connections: make(map[string]*APIConnection),
-		dataDir:     dataDir,
-		dbPath:      filepath.Join(dataDir, "registry.json"),
+		dataDir: dataDir,
+		dbPath:  filepath.Join(dataDir, "musterflow.db"),
 	}
 }
 
-// Load reads the registry from disk.
+// Load opens the DuckDB store and migrates from legacy JSON if needed.
 func (r *Registry) Load() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -51,27 +50,23 @@ func (r *Registry) Load() error {
 		return fmt.Errorf("create data dir: %w", err)
 	}
 
-	data, err := os.ReadFile(r.dbPath)
-	if os.IsNotExist(err) {
-		return nil // empty registry
-	}
+	store, err := NewStore(r.dbPath)
 	if err != nil {
-		return fmt.Errorf("read registry: %w", err)
+		return fmt.Errorf("open store: %w", err)
+	}
+	r.store = store
+
+	// Auto-migrate from legacy JSON
+	n, err := MigrateJSONToStore(store, r.dataDir)
+	if err != nil {
+		store.Close()
+		return fmt.Errorf("migrate JSON: %w", err)
+	}
+	if n > 0 {
+		fmt.Fprintf(os.Stderr, "Migrated %d connections from JSON to DuckDB\n", n)
 	}
 
-	return json.Unmarshal(data, &r.connections)
-}
-
-// Save writes the registry to disk.
-func (r *Registry) save() error {
-	if err := os.MkdirAll(r.dataDir, 0755); err != nil {
-		return fmt.Errorf("create data dir: %w", err)
-	}
-	data, err := json.MarshalIndent(r.connections, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal registry: %w", err)
-	}
-	return os.WriteFile(r.dbPath, data, 0644)
+	return nil
 }
 
 // Add adds a new API connection and persists it.
@@ -79,10 +74,13 @@ func (r *Registry) Add(conn *APIConnection) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if r.store == nil {
+		return fmt.Errorf("registry not loaded")
+	}
+
 	conn.AddedAt = time.Now()
 	conn.UpdatedAt = time.Now()
-	r.connections[conn.ID] = conn
-	return r.save()
+	return r.store.Add(conn)
 }
 
 // Get returns an API connection by ID.
@@ -90,11 +88,10 @@ func (r *Registry) Get(id string) (*APIConnection, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	conn, ok := r.connections[id]
-	if !ok {
-		return nil, fmt.Errorf("api %q not found", id)
+	if r.store == nil {
+		return nil, fmt.Errorf("registry not loaded")
 	}
-	return conn, nil
+	return r.store.Get(id)
 }
 
 // List returns all connected APIs.
@@ -102,11 +99,14 @@ func (r *Registry) List() []*APIConnection {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	result := make([]*APIConnection, 0, len(r.connections))
-	for _, conn := range r.connections {
-		result = append(result, conn)
+	if r.store == nil {
+		return nil
 	}
-	return result
+	conns, err := r.store.List()
+	if err != nil {
+		return nil
+	}
+	return conns
 }
 
 // Remove removes an API connection.
@@ -114,11 +114,32 @@ func (r *Registry) Remove(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, ok := r.connections[id]; !ok {
-		return fmt.Errorf("api %q not found", id)
+	if r.store == nil {
+		return fmt.Errorf("registry not loaded")
 	}
-	delete(r.connections, id)
-	return r.save()
+	return r.store.Remove(id)
+}
+
+// Store returns the underlying DuckDB store (for export/import).
+func (r *Registry) Store() *Store {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.store
+}
+
+// DataDir returns the data directory for this registry.
+func (r *Registry) DataDir() string {
+	return r.dataDir
+}
+
+// Close closes the registry's database connection.
+func (r *Registry) Close() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.store != nil {
+		return r.store.Close()
+	}
+	return nil
 }
 
 // DefaultDataDir returns the default data directory for MusterFlow.

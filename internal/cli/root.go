@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -63,6 +64,8 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newConfigCommand(registry))
 	root.AddCommand(newAuthCommand(registry))
 	root.AddCommand(newCompletionCommand())
+	root.AddCommand(newExportCommand(registry))
+	root.AddCommand(newImportCommand(registry))
 
 	root.PersistentFlags().StringVarP(&outputFlag, "output", "o", "", "Output file path (format auto-detected from extension)")
 
@@ -547,6 +550,59 @@ Or let musterflow install automatically on first run.`,
 			default:
 				return fmt.Errorf("unsupported shell: %s (supported: bash, zsh, fish)", args[0])
 			}
+		},
+	}
+}
+
+func newExportCommand(registry *app.Registry) *cobra.Command {
+	var outputPath string
+	cmd := &cobra.Command{
+		Use:   "export [path]",
+		Short: "Export API registry to JSONL",
+		Long:  "Export all connected APIs to a JSONL file (one JSON object per line).\nDefault: ~/.musterflow/registry.jsonl",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := outputPath
+			if path == "" {
+				if len(args) > 0 {
+					path = args[0]
+				} else {
+					path = filepath.Join(registry.DataDir(), "registry.jsonl")
+				}
+			}
+			store := registry.Store()
+			if store == nil {
+				return fmt.Errorf("registry not loaded")
+			}
+			if err := app.ExportJSONL(store, path); err != nil {
+				return err
+			}
+			conns := registry.List()
+			fmt.Printf("✓ Exported %d APIs to %s\n", len(conns), path)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output file path")
+	return cmd
+}
+
+func newImportCommand(registry *app.Registry) *cobra.Command {
+	return &cobra.Command{
+		Use:   "import <path>",
+		Short: "Import APIs from a JSONL file",
+		Long:  "Import API connections from a JSONL file into the registry.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store := registry.Store()
+			if store == nil {
+				return fmt.Errorf("registry not loaded")
+			}
+			n, err := app.ImportJSONL(store, args[0])
+			if err != nil {
+				return err
+			}
+			fmt.Printf("✓ Imported %d APIs from %s\n", n, args[0])
+			return nil
 		},
 	}
 }
