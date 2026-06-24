@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
+	"github.com/totalwindupflightsystems/musterflow/internal/auth"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/cli"
 	"github.com/totalwindupflightsystems/musterflow/internal/completion"
@@ -57,6 +58,10 @@ func run() error {
 	if err := registry.Load(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
 	}
+
+	// Set up auth manager for auto-injecting credentials into API commands
+	authMgr := auth.NewManager(cfg)
+	cli.SetAuthManager(authMgr)
 
 	rootCmd := cli.NewRootCommand(registry)
 	rootCmd.Version = Version

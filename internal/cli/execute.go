@@ -1,5 +1,4 @@
 package cli
-
 import (
 	"context"
 	"encoding/json"
@@ -12,6 +11,8 @@ import (
 	"github.com/wojons/muster/pkg/request"
 	"github.com/wojons/muster/pkg/response"
 	"github.com/spf13/cobra"
+
+	"github.com/totalwindupflightsystems/musterflow/internal/auth"
 )
 
 // ExecuteOptions configures an API call from CLI flags.
@@ -24,8 +25,11 @@ type ExecuteOptions struct {
 	BodyFlags  map[string]string // flag name → body property name
 	Format     string            // "table", "json", "yaml", "csv", "jsonl", "parquet"
 	Raw        bool              // output raw response
-	AuthToken  string            // optional bearer token
+	AuthToken  string            // optional bearer token (explicit override)
 	Output     string            // output file path (auto-detects format from extension)
+	// Auto-resolved auth
+	AuthManager *auth.Manager // auth manager for auto-resolving credentials
+	APIID       string        // API ID for credential lookup
 }
 
 // BuildRequest constructs an *http.Request from ExecuteOptions and cobra command flags.
@@ -72,7 +76,22 @@ func BuildRequest(cmd *cobra.Command, opts ExecuteOptions) (*request.Builder, er
 		}
 	}
 
-	// Set auth
+	// Auto-resolve auth from auth manager if not explicitly provided
+	if opts.AuthToken == "" && opts.APIID != "" {
+		mgr := opts.AuthManager
+		if mgr == nil {
+			mgr = authMgr // fall back to global auth manager
+		}
+		if mgr != nil {
+			if cred, err := mgr.Get(opts.APIID); err == nil && cred.IsConfigured() {
+				auth.InjectAuthHeader(cred, func(k, v string) {
+					builder.SetHeader(k, v)
+				})
+			}
+		}
+	}
+
+	// Set auth from explicit flag (always takes precedence over auto-resolved)
 	if opts.AuthToken != "" {
 		builder.SetHeader("Authorization", "Bearer "+opts.AuthToken)
 	}

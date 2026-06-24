@@ -134,13 +134,11 @@ func BuildTransport(cred *Credential) (interface{}, error) {
 	if cred.CertPath == "" || cred.KeyPath == "" {
 		return nil, fmt.Errorf("mTLS requires both cert_path and key_path")
 	}
-	// The actual tls.Config creation happens in the caller, which has access
-	// to crypto/tls and can load the cert+key files. This function just
-	// validates and returns the paths.
-	return map[string]string{
-		"cert_path": cred.CertPath,
-		"key_path":  cred.KeyPath,
-	}, nil
+	transport, err := BuildMTLSTransport(cred.CertPath, cred.KeyPath)
+	if err != nil {
+		return nil, err
+	}
+	return transport, nil
 }
 
 // CredentialTypeFromString converts a string to a CredentialType, defaulting to
