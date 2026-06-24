@@ -110,7 +110,7 @@
 - **AC-009.2:** Completion works for connected API subcommands. `musterflow gh <TAB>` shows GitHub API operations. `musterflow gh issues <TAB>` shows issues subcommands (list, get, create, etc.). Dynamic — updates when new APIs are connected.
 - **AC-009.3:** Manual install via `musterflow completion bash|zsh|fish`. Outputs completion script. Disable auto-prompt via config: `auto_completion: false`.
 - **Design decisions:** Import muster's `pkg/completion` for generators. Cobra's built-in `GenBashCompletion` etc for root commands. Dynamic completion for API subcommands via `ValidArgsFunction`.
-- **Verify:** `musterflow completion bash | source /dev/stdin && musterflow <TAB>` shows subcommands. `musterflow gh <TAB>` shows operations.
+- **Result (2026-06-24, commit 7a5a89b):** AC-009.1 and AC-009.3 were already implemented — auto-install in main.go (lines 97-117) and manual completion command in newCompletionCommand(). Added: V2 dynamic bash completion (GenBashCompletionV2) + ValidArgsFunction on createAPISubcommand for lazy API subcommand enumeration. 2 files changed (+40/-1). All tests pass, Tier 1 guards PASS. No remote — committed locally only.
 
 ## [ ] TASK-010: Docker multi-arch image — linux/amd64 + linux/arm64
 - **Priority:** medium
