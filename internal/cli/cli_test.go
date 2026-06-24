@@ -46,6 +46,7 @@ func TestNewRootCommand_TopLevelCommands(t *testing.T) {
 		"flow":       true,
 		"mcp":        true,
 		"config":     true,
+		"auth":       true,
 	}
 
 	for _, cmd := range root.Commands() {
