@@ -489,3 +489,45 @@ func TestExportJSONL_EmptyStore(t *testing.T) {
 		t.Errorf("expected empty file, got: %s", data)
 	}
 }
+
+func TestRegistry_Store(t *testing.T) {
+	dir := t.TempDir()
+	r := NewRegistry(dir)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	store := r.Store()
+	if store == nil {
+		t.Fatal("expected non-nil store after Load")
+	}
+}
+
+func TestRegistry_Store_NotLoaded(t *testing.T) {
+	r := NewRegistry(t.TempDir())
+	// Don't call Load() — store should be nil
+	store := r.Store()
+	if store != nil {
+		t.Error("expected nil store when not loaded")
+	}
+}
+
+func TestRegistry_DataDir(t *testing.T) {
+	r := NewRegistry("/custom/path")
+	dir := r.DataDir()
+	if dir != "/custom/path" {
+		t.Errorf("expected DataDir '/custom/path', got %q", dir)
+	}
+}
+
+func TestDefaultDataDir(t *testing.T) {
+	dir := DefaultDataDir()
+	if dir == "" {
+		t.Fatal("DefaultDataDir returned empty string")
+	}
+	// Should end with .musterflow
+	if !strings.HasSuffix(dir, ".musterflow") {
+		t.Errorf("expected suffix .musterflow, got %q", dir)
+	}
+}
