@@ -22,6 +22,7 @@ import (
 	"github.com/totalwindupflightsystems/musterflow/internal/completion"
 	"github.com/totalwindupflightsystems/musterflow/internal/config"
 	"github.com/totalwindupflightsystems/musterflow/internal/wasm"
+	"github.com/totalwindupflightsystems/musterflow/internal/workflow"
 )
 
 // apiCommandState tracks lazy generation of cobra commands for a connected API.
@@ -274,20 +275,79 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		Short: "Workflow management",
 	}
 
-	cmd.AddCommand(&cobra.Command{
-		Use:   "create",
+	var (
+		webhook    bool
+		description string
+	)
+
+	createCmd := &cobra.Command{
+		Use:   "create <name>",
 		Short: "Create a new workflow",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("workflow creation not yet implemented")
+			engine := workflow.NewEngine(
+				filepath.Join(app.DefaultDataDir(), "flows"),
+				"http://localhost:9876",
+			)
+			flow, err := engine.Create(args[0], "# Write your Starlark workflow here\n", webhook)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("✓ Created flow %q\n", flow.Name)
+			if webhook {
+				fmt.Printf("  Webhook URL: %s\n", flow.WebhookURL)
+			}
+			fmt.Printf("  Edit: %s/flows/%s.star\n", app.DefaultDataDir(), flow.Name)
 			return nil
 		},
-	})
+	}
+	createCmd.Flags().BoolVar(&webhook, "webhook", false, "Create a webhook trigger for this flow")
+	createCmd.Flags().StringVar(&description, "description", "", "Flow description")
+	cmd.AddCommand(createCmd)
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "list",
 		Short: "List workflows",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("No workflows defined.")
+			engine := workflow.NewEngine(
+				filepath.Join(app.DefaultDataDir(), "flows"),
+				"http://localhost:9876",
+			)
+			flows, err := engine.List()
+			if err != nil {
+				return err
+			}
+			if len(flows) == 0 {
+				fmt.Println("No workflows defined.")
+				fmt.Println("Create one with: musterflow flow create <name>")
+				return nil
+			}
+			fmt.Println("Workflows:")
+			for _, f := range flows {
+				fmt.Printf("  %s", f.Name)
+				if f.WebhookURL != "" {
+					fmt.Printf("  webhook: %s", f.WebhookURL)
+				}
+				fmt.Println()
+			}
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "run <name>",
+		Short: "Run a workflow",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			engine := workflow.NewEngine(
+				filepath.Join(app.DefaultDataDir(), "flows"),
+				"http://localhost:9876",
+			)
+			output, err := engine.Run(args[0], nil)
+			if err != nil {
+				return err
+			}
+			fmt.Print(output)
 			return nil
 		},
 	})
