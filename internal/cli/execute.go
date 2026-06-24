@@ -22,9 +22,10 @@ type ExecuteOptions struct {
 	PathParams map[string]string // param name → value from positional args
 	QueryFlags map[string]string // flag name → param name for query params
 	BodyFlags  map[string]string // flag name → body property name
-	Format     string            // "table", "json", "yaml"
+	Format     string            // "table", "json", "yaml", "csv", "jsonl", "parquet"
 	Raw        bool              // output raw response
 	AuthToken  string            // optional bearer token
+	Output     string            // output file path (auto-detects format from extension)
 }
 
 // BuildRequest constructs an *http.Request from ExecuteOptions and cobra command flags.
@@ -93,9 +94,32 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 		return fmt.Errorf("read response: %w", err)
 	}
 
+	// Resolve format: --format flag > --output extension > default
+	format := opts.Format
+	if outputFlag != "" {
+		opts.Output = outputFlag
+	}
+	if format == "" && opts.Output != "" {
+		if detected := DetectFormat(opts.Output); detected != "" {
+			format = detected
+		}
+	}
+	if format == "" {
+		format = "table"
+	}
+
+	// Resolve output destination: --output > stdout
 	out := cmd.OutOrStdout()
 	if out == nil {
 		out = os.Stdout
+	}
+	if opts.Output != "" {
+		f, err := os.Create(opts.Output)
+		if err != nil {
+			return fmt.Errorf("create output file: %w", err)
+		}
+		defer f.Close()
+		out = f
 	}
 
 	// Raw mode — just dump the body
@@ -119,13 +143,25 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 	}
 
 	// Format output
-	switch opts.Format {
+	switch format {
 	case "json":
 		pretty, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
 			return fmt.Errorf("format JSON: %w", err)
 		}
 		fmt.Fprintln(out, string(pretty))
+	case "csv":
+		if err := writeCSV(out, data); err != nil {
+			return fmt.Errorf("format CSV: %w", err)
+		}
+	case "jsonl":
+		if err := writeJSONL(out, data); err != nil {
+			return fmt.Errorf("format JSONL: %w", err)
+		}
+	case "parquet":
+		if err := writeParquet(out, data); err != nil {
+			return fmt.Errorf("format Parquet: %w — try --format json instead", err)
+		}
 	case "table":
 		printTable(out, data)
 	case "yaml":
