@@ -57,7 +57,7 @@
 - **AC-004.3:** ✅ MCP connection info. /api/mcp/info endpoint returns endpoint URL, transport, tool_count, and per-tool JSON-RPC examples with placeholder arguments extracted from InputSchema.
 - **Result:** 4 files changed (+367/-55 lines). build/vet/test/guard all PASS. All 3 AC verified against live server. GLM-5.2 spawn completed in ~7 min.
 
-## [ ] TASK-005: Tests — achieve >80% coverage on all packages (3/5 done — app 85.3%, cli 60.1%, dashboard 91.3%)
+## [ ] TASK-005: Tests — achieve >80% coverage on all packages (4/5 done — app 85%, catalog 93%, dashboard 93%, cli 62%, mcp 60%)
 - **Priority:** high
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
@@ -69,7 +69,7 @@
 - **AC-005.5:** `internal/mcp` — TODO (existing tests at 59.6%)
 - **Verify:** `go test ./... -count=1 -cover && go tool cover -func=coverage.out | grep total`
 
-## [ ] TASK-006: Config system — YAML config, port auto-discovery, data directory
+## [x] TASK-006: Config system — YAML config, port auto-discovery, data directory (completed 2026-06-23)
 - **Priority:** high
 - **Model:** glm-5.2
 - **Files:** internal/config/config.go (NEW), cmd/musterflow/main.go (MODIFY)
