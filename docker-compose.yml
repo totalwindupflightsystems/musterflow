@@ -1,0 +1,12 @@
+services:
+  musterflow:
+    build: .
+    image: ghcr.io/totalwindupflightsystems/musterflow:latest
+    ports:
+      - "9876:9876"
+    volumes:
+      - musterflow-data:/root/.musterflow
+    restart: unless-stopped
+
+volumes:
+  musterflow-data:
