@@ -21,6 +21,7 @@ import (
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/completion"
 	"github.com/totalwindupflightsystems/musterflow/internal/config"
+	"github.com/totalwindupflightsystems/musterflow/internal/wasm"
 )
 
 // apiCommandState tracks lazy generation of cobra commands for a connected API.
@@ -67,6 +68,7 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newExportCommand(registry))
 	root.AddCommand(newImportCommand(registry))
 	root.AddCommand(newRefreshCommand(registry))
+	root.AddCommand(newTransformCommand())
 
 	root.PersistentFlags().StringVarP(&outputFlag, "output", "o", "", "Output file path (format auto-detected from extension)")
 
@@ -628,6 +630,50 @@ func newRefreshCommand(registry *app.Registry) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newTransformCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "transform",
+		Short: "Manage WASM transforms",
+	}
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "list",
+		Short: "List installed transforms",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			reg := wasm.NewRegistry(filepath.Join(app.DefaultDataDir(), "transforms"))
+			transforms, err := reg.List()
+			if err != nil {
+				return err
+			}
+			if len(transforms) == 0 {
+				fmt.Println("No transforms installed.")
+				fmt.Printf("Place .wasm files in %s/transforms/ to install.\n", app.DefaultDataDir())
+				return nil
+			}
+			fmt.Println("Installed transforms:")
+			for _, t := range transforms {
+				fmt.Printf("  %s (%s)\n", t.Name, t.Path)
+			}
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "install <catalog-entry>",
+		Short: "Install a transform from the catalog",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			reg := wasm.NewRegistry(filepath.Join(app.DefaultDataDir(), "transforms"))
+			if err := reg.InstallFromCatalog(args[0]); err != nil {
+				fmt.Println(err)
+			}
+			return nil
+		},
+	})
+
+	return cmd
 }
 
 func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
