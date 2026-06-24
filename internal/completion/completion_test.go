@@ -80,3 +80,68 @@ func TestInstall_InvalidGenerate(t *testing.T) {
 		t.Error("expected error for empty completion script")
 	}
 }
+
+func TestPromptInstall_DefaultYes(t *testing.T) {
+	// Simulate user pressing Enter (empty input = yes)
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdin = r
+
+	// Write newline (empty input = default yes) and close
+	go func() {
+		w.Write([]byte("\n"))
+		w.Close()
+	}()
+
+	result := PromptInstall(ShellBash)
+	if !result {
+		t.Error("expected true for empty input (default yes)")
+	}
+}
+
+func TestPromptInstall_ExplicitYes(t *testing.T) {
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdin = r
+
+	go func() {
+		w.Write([]byte("y\n"))
+		w.Close()
+	}()
+
+	result := PromptInstall(ShellZsh)
+	if !result {
+		t.Error("expected true for 'y'")
+	}
+}
+
+func TestPromptInstall_No(t *testing.T) {
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdin = r
+
+	go func() {
+		w.Write([]byte("n\n"))
+		w.Close()
+	}()
+
+	result := PromptInstall(ShellBash)
+	if result {
+		t.Error("expected false for 'n'")
+	}
+}
