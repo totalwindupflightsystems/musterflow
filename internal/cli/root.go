@@ -62,10 +62,14 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newConfigCommand(registry))
 	root.AddCommand(newAuthCommand(registry))
 
+	root.PersistentFlags().StringVarP(&outputFlag, "output", "o", "", "Output file path (format auto-detected from extension)")
+
 	loadAPISubcommands(root, registry)
 
 	return root
 }
+
+var outputFlag string
 
 func newStartCommand(registry *app.Registry) *cobra.Command {
 	return &cobra.Command{
