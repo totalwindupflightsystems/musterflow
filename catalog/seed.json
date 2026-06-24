@@ -1,0 +1,112 @@
+[
+  {
+    "id": "github",
+    "name": "GitHub",
+    "description": "GitHub REST API — issues, PRs, repos, users, actions, and more. The API every developer integrates with but dreads the docs for.",
+    "spec_url": "https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json",
+    "type": "openapi",
+    "category": "dev-tools",
+    "version": "2022-11-28",
+    "downloads": 0,
+    "score": 10
+  },
+  {
+    "id": "stripe",
+    "name": "Stripe",
+    "description": "Stripe API — payments, subscriptions, invoices, customers. The gold standard for API design that everyone still struggles to integrate.",
+    "spec_url": "https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json",
+    "type": "openapi",
+    "category": "payments",
+    "version": "2024-09-01",
+    "downloads": 0,
+    "score": 10
+  },
+  {
+    "id": "slack",
+    "name": "Slack",
+    "description": "Slack Web API — messaging, channels, users, bots. The API that powers every team's communication but has the most confusing auth model.",
+    "spec_url": "https://raw.githubusercontent.com/slackapi/slack-api-specs/master/web-api/slack_web_openapi_v2.json",
+    "type": "openapi",
+    "category": "communication",
+    "version": "2.0",
+    "downloads": 0,
+    "score": 9
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "description": "Discord API — guilds, channels, messages, webhooks. The API every bot developer needs but the docs are scattered across multiple sites.",
+    "spec_url": "https://raw.githubusercontent.com/discord/discord-api-spec/main/spec.json",
+    "type": "openapi",
+    "category": "communication",
+    "version": "10",
+    "downloads": 0,
+    "score": 8
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "description": "OpenAI API — chat completions, embeddings, models, fine-tuning. The API that launched a thousand startups but changes every 3 months.",
+    "spec_url": "https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml",
+    "type": "openapi",
+    "category": "ai",
+    "version": "2.0.0",
+    "downloads": 0,
+    "score": 10
+  },
+  {
+    "id": "notion",
+    "name": "Notion",
+    "description": "Notion API — pages, databases, blocks, users. The API for the knowledge base everyone uses but whose data model requires a PhD to understand.",
+    "spec_url": "https://raw.githubusercontent.com/notionapi/notion-api-spec/main/openapi.yaml",
+    "type": "openapi",
+    "category": "project-management",
+    "version": "2022-06-28",
+    "downloads": 0,
+    "score": 9
+  },
+  {
+    "id": "linear",
+    "name": "Linear",
+    "description": "Linear API — issues, projects, teams, cycles. The project management API developers actually like, but GraphQL-only means no OpenAPI spec. Pain point: requires custom connector.",
+    "spec_url": "https://raw.githubusercontent.com/linear/linear-api-spec/main/openapi.yaml",
+    "type": "openapi",
+    "category": "project-management",
+    "version": "1.0",
+    "downloads": 0,
+    "score": 8
+  },
+  {
+    "id": "jira",
+    "name": "Jira",
+    "description": "Jira Cloud REST API — issues, projects, workflows, sprints. The enterprise standard that every developer has been forced to integrate with at least once.",
+    "spec_url": "https://raw.githubusercontent.com/atlassian/api-specs/master/jira/jira-api.yaml",
+    "type": "openapi",
+    "category": "project-management",
+    "version": "3",
+    "downloads": 0,
+    "score": 8
+  },
+  {
+    "id": "twilio",
+    "name": "Twilio",
+    "description": "Twilio API — SMS, voice, video, chat. The communications API that powers every verification code you've ever received.",
+    "spec_url": "https://raw.githubusercontent.com/twilio/twilio-oai/main/spec/json/twilio_api_v2010.json",
+    "type": "openapi",
+    "category": "communication",
+    "version": "2010-04-01",
+    "downloads": 0,
+    "score": 9
+  },
+  {
+    "id": "cloudflare",
+    "name": "Cloudflare",
+    "description": "Cloudflare API — DNS, workers, zones, firewall rules. The edge platform API that everyone relies on but whose docs are a firehose.",
+    "spec_url": "https://raw.githubusercontent.com/cloudflare/api-schemas/main/openapi.yaml",
+    "type": "openapi",
+    "category": "cloud",
+    "version": "4",
+    "downloads": 0,
+    "score": 9
+  }
+]

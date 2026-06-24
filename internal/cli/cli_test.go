@@ -51,6 +51,7 @@ func TestNewRootCommand_TopLevelCommands(t *testing.T) {
 		"export":     true,
 		"import":     true,
 		"refresh":    true,
+		"transform":  true,
 	}
 
 	for _, cmd := range root.Commands() {
