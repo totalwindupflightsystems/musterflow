@@ -3,6 +3,12 @@ guards:
   lint: false
   tests: false
   test_mode: full
+  lsp: true
+  lsp_servers:
+    go:
+      - gopls
+  static_analysis: true
+  static_analysis_tools: {}
   go:
     build: true
     lint: true
@@ -13,7 +19,8 @@ evaluator:
   max_input_tokens: 0.5M
   max_output_tokens: 0.2M
   tool_call_weight: 0.1
-  static_analysis_diagnostics: false
+  lsp_diagnostics: true
+  static_analysis_diagnostics: true
 defaults:
   model: glm-5.2
   check_for_updates: true
