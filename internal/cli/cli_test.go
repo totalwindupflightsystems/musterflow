@@ -635,3 +635,52 @@ func TestBuildRequest_WithAuthToken(t *testing.T) {
 		t.Fatal("expected non-nil builder")
 	}
 }
+
+func TestLoadSpecData_HTTP(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"openapi":"3.0.0"}`))
+	}))
+	defer ts.Close()
+
+	data, err := loadSpecData(ts.URL)
+	if err != nil {
+		t.Fatalf("loadSpecData HTTP: %v", err)
+	}
+	if string(data) != `{"openapi":"3.0.0"}` {
+		t.Errorf("expected spec JSON, got: %s", string(data))
+	}
+}
+
+func TestLoadSpecData_HTTPError(t *testing.T) {
+	_, err := loadSpecData("http://127.0.0.1:19999/nonexistent")
+	if err == nil {
+		t.Error("expected error for unreachable HTTP URL")
+	}
+}
+
+func TestCreateAPISubcommand(t *testing.T) {
+	conn := &app.APIConnection{
+		ID:            "test-id",
+		Name:          "test-api",
+		Description:   "A test API",
+		SpecURL:       "https://example.com/openapi.json",
+		BaseURL:       "https://api.example.com",
+		EndpointCount: 5,
+	}
+
+	cmd := createAPISubcommand(conn)
+	if cmd.Use != "test-api" {
+		t.Errorf("expected Use='test-api', got %q", cmd.Use)
+	}
+	if !strings.Contains(cmd.Short, "test-api") {
+		t.Errorf("expected Short to contain 'test-api', got %q", cmd.Short)
+	}
+	if cmd.DisableFlagParsing != true {
+		t.Error("expected DisableFlagParsing=true for API subcommands")
+	}
+	if cmd.RunE == nil {
+		t.Error("expected RunE to be set")
+	}
+	cmd.Help()
+}
