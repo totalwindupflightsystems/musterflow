@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
+	"github.com/totalwindupflightsystems/musterflow/internal/workflow"
 )
 
 // Server serves the MusterFlow web dashboard.
@@ -47,6 +49,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/catalog/search", s.handleCatalogSearch)
 	s.mux.HandleFunc("/api/mcp/info", s.handleMCPInfo)
 	s.mux.HandleFunc("/mcp", s.handleMCP)
+	s.mux.HandleFunc("/hooks/", s.handleWebhook)
 	s.mux.HandleFunc("/", serveIndex)
 }
 
@@ -254,4 +257,30 @@ func writeJSON(w http.ResponseWriter, code int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(data)
+}
+
+func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
+	// Extract flow name from path: /hooks/<name>
+	name := r.URL.Path[len("/hooks/"):]
+	if name == "" {
+		writeJSON(w, 400, map[string]string{"error": "missing flow name"})
+		return
+	}
+
+	var payload map[string]interface{}
+	if r.Body != nil {
+		json.NewDecoder(r.Body).Decode(&payload)
+	}
+
+	engine := workflow.NewEngine(
+		filepath.Join(app.DefaultDataDir(), "flows"),
+		fmt.Sprintf("http://localhost%s", s.addr),
+	)
+	output, err := engine.Run(name, payload)
+	if err != nil {
+		writeJSON(w, 404, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, 200, map[string]string{"result": output})
 }
