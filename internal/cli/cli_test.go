@@ -50,6 +50,7 @@ func TestNewRootCommand_TopLevelCommands(t *testing.T) {
 		"completion": true,
 		"export":     true,
 		"import":     true,
+		"refresh":    true,
 	}
 
 	for _, cmd := range root.Commands() {
