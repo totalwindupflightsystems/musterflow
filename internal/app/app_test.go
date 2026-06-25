@@ -531,3 +531,216 @@ func TestDefaultDataDir(t *testing.T) {
 		t.Errorf("expected suffix .musterflow, got %q", dir)
 	}
 }
+
+// --- Refresh tests ---
+
+func TestRefresh_Success(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"openapi": "3.0.0",
+			"info": {"title": "Refreshed API", "version": "2.0.0", "description": "Updated"},
+			"servers": [{"url": "https://refreshed.example.com"}],
+			"paths": {
+				"/items": {
+					"get": {"operationId": "listItems"},
+					"post": {"operationId": "createItem"}
+				},
+				"/items/{id}": {"get": {"operationId": "getItem"}}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	// Register initial connection
+	r.Add(&APIConnection{
+		ID:            "refresh-test",
+		Name:          "Old Name",
+		SpecURL:       ts.URL + "/openapi.json",
+		BaseURL:       "https://old.example.com",
+		Version:       "1.0.0",
+		EndpointCount: 1,
+		AuthType:      "bearer",
+	})
+
+	result, err := Refresh(context.Background(), r, "refresh-test")
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if result.NewVersion != "2.0.0" {
+		t.Errorf("NewVersion = %q, want 2.0.0", result.NewVersion)
+	}
+	if result.OldVersion != "1.0.0" {
+		t.Errorf("OldVersion = %q, want 1.0.0", result.OldVersion)
+	}
+	if result.NewEndpoints != 3 {
+		t.Errorf("NewEndpoints = %d, want 3", result.NewEndpoints)
+	}
+	if result.OldEndpoints != 1 {
+		t.Errorf("OldEndpoints = %d, want 1", result.OldEndpoints)
+	}
+	if !result.VersionChanged {
+		t.Error("expected VersionChanged=true")
+	}
+	// Verify auth type preserved
+	if result.Connection.AuthType != "bearer" {
+		t.Errorf("AuthType = %q, want bearer", result.Connection.AuthType)
+	}
+}
+
+func TestRefresh_NotFound(t *testing.T) {
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	_, err := Refresh(context.Background(), r, "nonexistent")
+	if err == nil {
+		t.Error("expected error for nonexistent ID")
+	}
+}
+
+func TestRefresh_BaseURLChange(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"openapi": "3.0.0",
+			"info": {"title": "URL Test", "version": "1.0.0"},
+			"servers": [{"url": "https://new-base.example.com"}],
+			"paths": {
+				"/x": {"get": {"operationId": "getX"}}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	r.Add(&APIConnection{
+		ID:            "url-change",
+		Name:          "URL Test",
+		SpecURL:       ts.URL + "/openapi.json",
+		BaseURL:       "https://old.example.com",
+		Version:       "1.0.0",
+		EndpointCount: 1,
+	})
+
+	result, err := Refresh(context.Background(), r, "url-change")
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if result.Connection.BaseURL != "https://new-base.example.com" {
+		t.Errorf("BaseURL = %q, want https://new-base.example.com", result.Connection.BaseURL)
+	}
+}
+
+func TestRefresh_AuthTypePreserved(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"openapi": "3.0.0",
+			"info": {"title": "Auth Test", "version": "1.0.0"},
+			"paths": {
+				"/secure": {"get": {"operationId": "getSecure"}}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	r.Add(&APIConnection{
+		ID:            "auth-preserve",
+		Name:          "Auth Test",
+		SpecURL:       ts.URL + "/openapi.json",
+		BaseURL:       "https://auth.example.com",
+		Version:       "1.0.0",
+		EndpointCount: 1,
+		AuthType:      "oauth2",
+	})
+
+	result, err := Refresh(context.Background(), r, "auth-preserve")
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if result.Connection.AuthType != "oauth2" {
+		t.Errorf("AuthType = %q, want oauth2", result.Connection.AuthType)
+	}
+}
+
+// --- Error path tests ---
+
+func TestNewStore_InvalidPath(t *testing.T) {
+	// Try to open DuckDB at /dev/null — should fail (not a valid DuckDB file)
+	store, err := NewStore("/dev/null/test.db")
+	if err == nil {
+		store.Close()
+		t.Error("expected error for invalid path")
+	}
+}
+
+func TestExportJSONL_WriteError(t *testing.T) {
+	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
+	defer store.Close()
+
+	store.Add(&APIConnection{ID: "x", Name: "X", SpecURL: "url", BaseURL: "url"})
+
+	// Write to a directory path (should fail)
+	err := ExportJSONL(store, t.TempDir())
+	if err == nil {
+		t.Error("expected error writing to directory")
+	}
+}
+
+func TestImportJSONL_NonexistentFile(t *testing.T) {
+	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
+	defer store.Close()
+
+	_, err := ImportJSONL(store, "/nonexistent/path/file.jsonl")
+	if err == nil {
+		t.Error("expected error for nonexistent file")
+	}
+}
+
+func TestImportJSONL_InvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	badPath := filepath.Join(dir, "bad.jsonl")
+	os.WriteFile(badPath, []byte(`not valid json`), 0644)
+
+	store, _ := NewStore(filepath.Join(dir, "test.db"))
+	defer store.Close()
+
+	_, err := ImportJSONL(store, badPath)
+	if err == nil {
+		t.Error("expected error for invalid JSON")
+	}
+}
+
+func TestLoad_CreateDirError(t *testing.T) {
+	// Create a file where a directory should go — mkdirAll should fail
+	parent := t.TempDir()
+	blocked := filepath.Join(parent, "blocked")
+	os.WriteFile(blocked, []byte("block"), 0444) // read-only file
+
+	r := NewRegistry(filepath.Join(blocked, "subdir"))
+	err := r.Load()
+	if err == nil {
+		r.Close()
+		t.Error("expected error when data dir is blocked")
+	}
+}

@@ -69,7 +69,6 @@
 - **AC-005.5:** ✅ `internal/mcp` — 84.6% coverage (+25pp). Added 8 tests: ListCommands, GetCommand (found/not found/empty registry), ExecuteCommand (dispatch/not found), AddCommand/RemoveCommand/UpdateCommand (not-supported errors), Execute_NonJSONResponse. Remaining gaps in Execute fetchSpecData error paths and ServeHTTP edge cases.
 - **Completion update (2026-06-24):** `internal/completion` — 87.3% coverage (+20pp). Added 4 tests: Install_GenerateError, Install_Success, ShouldPrompt_WithInstalledCompletions, InstalledShells_WithBashInstalled. Completion now above 80% target.
 - **Result:** 7/8 packages above 80%. Only cli (48.8%) remains below due to unreachable gap requiring muster generator integration (documented in AC-005.2). Auth (98.5%) and config (86.8%) above 80%.
-- **Verify:** `go test ./... -count=1 -cover && go tool cover -func=coverage.out | grep total`
 
 ## [x] TASK-006: Config system — YAML config, port auto-discovery, data directory (completed 2026-06-23)
 - **Priority:** high
@@ -194,3 +193,16 @@
 - **Verify:** `go test ./internal/auth/... -count=1 -v -run "YAML|OpenBrowser|NewYAML"`
 - **Target:** auth coverage from 65.0% → >75%
 - **Result:** 9 tests (NewYAMLTokenStore, SaveLoad, SaveOverwrite, LoadNonexistent, SaveCreatesDir, SaveEmptyService, LoadFileNotYAML, OpenBrowser_Linux, SaveMultipleServices). auth coverage 65.0%→79.5% (+14.5pp). All guards PASS. Direct-implement (no spawn).
+
+## [x] TASK-019: App test coverage — fill app coverage gap to >80% (completed 2026-06-24)
+- **Priority:** high
+- **Model:** deepseek-v4-pro (direct — mechanical test-writing)
+- **Files:** internal/app/app_test.go (MODIFY — append new tests)
+- **AC-019.1:** `Refresh` tests. TestRefresh_Success (httptest spec, refresh, verify version/endpoints), TestRefresh_NotFound (nonexistent ID), TestRefresh_BaseURLChange (changed base URL), TestRefresh_AuthTypePreserved (auth preserved after refresh).
+- **AC-019.2:** `NewStore` error path. Test with invalid DuckDB path (e.g., /dev/null).
+- **AC-019.3:** `ExportJSONL` error path. Test write to unwritable location.
+- **AC-019.4:** `ImportJSONL` error path. Test import from nonexistent file.
+- **AC-019.5:** `Load` error path. Test with unwritable data dir.
+- **Verify:** `go test ./internal/app/... -count=1 -run "Refresh|NewStore|Export|Import|Load"`
+- **Target:** app coverage from 73.6% → >80%
+- **Result (2026-06-24):** 9 new tests (TestRefresh_Success, TestRefresh_NotFound, TestRefresh_BaseURLChange, TestRefresh_AuthTypePreserved, TestNewStore_InvalidPath, TestExportJSONL_WriteError, TestImportJSONL_NonexistentFile, TestImportJSONL_InvalidJSON, TestLoad_CreateDirError). app coverage 73.6%→83.0% (+9.4pp). Tier 1 PASS. Direct-implement (no spawn).
