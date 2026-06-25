@@ -1099,3 +1099,167 @@ func TestFlowCommand_ListOutput(t *testing.T) {
 		t.Errorf("expected 'No workflows defined', got: %s", output)
 	}
 }
+
+// --- TASK-023: command constructor tests for config, auth, refresh, flow, transform ---
+
+func TestConfigCommand_UseAndShort(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newConfigCommand(r)
+	if cmd.Use != "config" {
+		t.Errorf("expected Use='config', got %q", cmd.Use)
+	}
+	if cmd.Short == "" {
+		t.Error("expected non-empty Short")
+	}
+}
+
+func TestConfigCommand_ShowSubcommand(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newConfigCommand(r)
+	show, _, err := cmd.Find([]string{"show"})
+	if err != nil {
+		t.Fatalf("find config show: %v", err)
+	}
+	if show.Use != "show" {
+		t.Errorf("expected Use='show', got %q", show.Use)
+	}
+	if show.Short == "" {
+		t.Error("expected non-empty Short for config show")
+	}
+}
+
+func TestConfigCommand_SetSubcommand(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newConfigCommand(r)
+	setCmd, _, err := cmd.Find([]string{"set"})
+	if err != nil {
+		t.Fatalf("find config set: %v", err)
+	}
+	if setCmd.Use != "set <key> <value>" {
+		t.Errorf("expected Use='set <key> <value>', got %q", setCmd.Use)
+	}
+	if setCmd.Short == "" {
+		t.Error("expected non-empty Short for config set")
+	}
+}
+
+func TestAuthCommand_UseAndShort(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newAuthCommand(r)
+	if cmd.Use != "auth" {
+		t.Errorf("expected Use='auth', got %q", cmd.Use)
+	}
+	if cmd.Short == "" {
+		t.Error("expected non-empty Short")
+	}
+}
+
+func TestAuthCommand_AddFlags(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	authCmd, _, err := root.Find([]string{"auth"})
+	if err != nil {
+		t.Fatalf("find auth: %v", err)
+	}
+	flags := authCmd.PersistentFlags()
+	if flags.Lookup("type") == nil {
+		t.Error("expected --type flag on auth command")
+	}
+	if flags.Lookup("key") == nil {
+		t.Error("expected --key flag on auth command")
+	}
+}
+
+func TestAuthCommand_LoginSubcommand(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	loginCmd, _, err := root.Find([]string{"auth", "login"})
+	if err != nil {
+		t.Fatalf("find auth login: %v", err)
+	}
+	if loginCmd.Use != "login <api-id>" {
+		t.Errorf("expected Use='login <api-id>', got %q", loginCmd.Use)
+	}
+}
+
+func TestRefreshCommand_UseAndShort(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newRefreshCommand(r)
+	if cmd.Use != "refresh <api-id>" {
+		t.Errorf("expected Use='refresh <api-id>', got %q", cmd.Use)
+	}
+	if cmd.Short == "" {
+		t.Error("expected non-empty Short")
+	}
+}
+
+func TestRefreshCommand_ArgsValidation(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newRefreshCommand(r)
+	if cmd.Args == nil {
+		t.Error("expected Args validator on refresh command")
+	}
+}
+
+func TestFlowCommand_UseAndShort(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newFlowCommand(r)
+	if cmd.Use != "flow" {
+		t.Errorf("expected Use='flow', got %q", cmd.Use)
+	}
+	if cmd.Short == "" {
+		t.Error("expected non-empty Short")
+	}
+}
+
+func TestFlowCommand_CreateArgs(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	createCmd, _, err := root.Find([]string{"flow", "create"})
+	if err != nil {
+		t.Fatalf("find flow create: %v", err)
+	}
+	if createCmd.Use != "create <name>" {
+		t.Errorf("expected Use='create <name>', got %q", createCmd.Use)
+	}
+	// Should require exactly 1 arg
+	if createCmd.Args == nil {
+		t.Error("expected Args validator on flow create")
+	}
+}
+
+func TestFlowCommand_RunSubcommand(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	runCmd, _, err := root.Find([]string{"flow", "run"})
+	if err != nil {
+		t.Fatalf("find flow run: %v", err)
+	}
+	if runCmd.Use != "run <name>" {
+		t.Errorf("expected Use='run <name>', got %q", runCmd.Use)
+	}
+}
+
+func TestTransformCommand_UseAndShort(t *testing.T) {
+	cmd := newTransformCommand()
+	if cmd.Use != "transform" {
+		t.Errorf("expected Use='transform', got %q", cmd.Use)
+	}
+	if cmd.Short == "" {
+		t.Error("expected non-empty Short")
+	}
+}
+
+func TestTransformCommand_InstallSubcommand(t *testing.T) {
+	cmd := newTransformCommand()
+	installCmd, _, err := cmd.Find([]string{"install"})
+	if err != nil {
+		t.Fatalf("find transform install: %v", err)
+	}
+	if installCmd.Use == "" {
+		t.Error("expected non-empty Use for transform install")
+	}
+	if installCmd.Short == "" {
+		t.Error("expected non-empty Short for transform install")
+	}
+}
