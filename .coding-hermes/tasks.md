@@ -228,3 +228,23 @@
 - **Model:** deepseek-v4-pro (direct — 74-line file, trivial)
 - **Files:** internal/wasm/transform_test.go (NEW)
 - **Result:** 8 tests (NewRegistry, List×5, InstallFromCatalog, Run). wasm coverage 0.0%→87.5%. Build/vet/test/guard all PASS.
+
+## [x] TASK-023: cli command-constructor tests — config, auth, refresh, flow, transform (completed 2026-06-25)
+- **Priority:** high
+- **Model:** deepseek-v4-pro (direct — command-constructor tests)
+- **Files:** internal/cli/cli_test.go (APPEND)
+- **AC-023.1:** ✅ `newConfigCommand` — tested Use="config", Short non-empty, subcommands (show/set) exist with correct Use strings. 3 test cases.
+- **AC-023.2:** ✅ `newAuthCommand` — tested Use="auth", Short non-empty, subcommands (add/list/remove/get/login) exist, PersistentFlags (--type, --key). 4 test cases.
+- **AC-023.3:** ✅ `newRefreshCommand` — tested Use="refresh <api-id>", Short non-empty, Args validator present. 2 test cases.
+- **AC-023.4:** ✅ `newFlowCommand` — tested Use="flow", Short non-empty, subcommands (create/list/run) with correct Use and Args. 4 test cases.
+- **AC-023.5:** ✅ `newTransformCommand` — tested Use="transform", Short non-empty, subcommands (list/install) exist with non-empty Use/Short. 2 test cases.
+- **Result:** 15 new tests added. All pass. cli coverage unchanged at 50.1% — RunE functions require integration state (config files, auth managers) unreachable from unit tests. Build/vet/test/guard all PASS.
+
+## [ ] TASK-024: cli command-constructor tests — catalog (target cli >58%)
+- **Priority:** medium
+- **Model:** deepseek-v4-pro (direct — catalog command-constructor tests)
+- **Files:** internal/cli/cli_test.go (APPEND)
+- **AC-024.1:** `newCatalogCommand` — test subcommands exist (search, push, pull), Use is "catalog", Short is non-empty. At least 4 test cases.
+- **AC-024.2:** Verify search/push/pull subcommands have correct flags (--query for search, --repo for push, --name for pull).
+- **AC-024.3:** Test catalog command with nil store returns expected error behavior.
+- **Verify:** `go test ./internal/cli/... -count=1 -coverprofile=/tmp/mf-cli-cov.out && go tool cover -func=/tmp/mf-cli-cov.out | tail -1`
