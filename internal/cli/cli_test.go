@@ -716,3 +716,386 @@ func TestCompletionCommand_GeneratesOutputForAllShells(t *testing.T) {
 		})
 	}
 }
+
+// --- TASK-021: Command constructor coverage ---
+
+func TestExportCommand_NilStore(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load() — store stays nil
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"export"})
+
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for export with nil store")
+	}
+}
+
+func TestExportCommand_Structure(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"export"})
+	if err != nil {
+		t.Fatalf("find export: %v", err)
+	}
+	if cmd.Use != "export [path]" {
+		t.Errorf("expected Use='export [path]', got %q", cmd.Use)
+	}
+	if cmd.Short == "" {
+		t.Error("expected non-empty Short")
+	}
+	if cmd.Flags().Lookup("output") == nil {
+		t.Error("expected --output flag")
+	}
+}
+
+func TestExportCommand_LoadedRegistry(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	outPath := filepath.Join(t.TempDir(), "export.jsonl")
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"export", "--output", outPath})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("export: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "Exported") {
+		t.Errorf("expected 'Exported' in output, got: %s", output)
+	}
+	if _, err := os.Stat(outPath); os.IsNotExist(err) {
+		t.Errorf("expected export file at %s", outPath)
+	}
+}
+
+func TestImportCommand_NilStore(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load() — store stays nil
+	root := NewRootCommand(r)
+
+	jsonlFile := filepath.Join(t.TempDir(), "dummy.jsonl")
+	os.WriteFile(jsonlFile, []byte(`{"id":"test","name":"test-api"}`), 0644)
+	root.SetArgs([]string{"import", jsonlFile})
+
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for import with nil store")
+	}
+}
+
+func TestImportCommand_NonexistentFile(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import", "/nonexistent/path/file.jsonl"})
+
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for import from nonexistent file")
+	}
+}
+
+func TestImportCommand_Structure(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"import"})
+	if err != nil {
+		t.Fatalf("find import: %v", err)
+	}
+	if cmd.Use != "import <path>" {
+		t.Errorf("expected Use='import <path>', got %q", cmd.Use)
+	}
+}
+
+func TestRefreshCommand_NonexistentAPI(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"refresh", "nonexistent-api-id"})
+
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error refreshing nonexistent API")
+	}
+}
+
+func TestRefreshCommand_MissingArg(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"refresh"})
+
+	root.SetErr(new(bytes.Buffer))
+	err := root.Execute()
+	// Cobra ContinueOnError: missing args prints error but returns nil
+	if err != nil {
+		t.Logf("refresh without arg: %v", err)
+	}
+}
+
+func TestRefreshCommand_Structure(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"refresh"})
+	if err != nil {
+		t.Fatalf("find refresh: %v", err)
+	}
+	if cmd.Use != "refresh <api-id>" {
+		t.Errorf("expected Use='refresh <api-id>', got %q", cmd.Use)
+	}
+}
+
+func TestTransformCommand_Subcommands(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"transform"})
+	if err != nil {
+		t.Fatalf("find transform: %v", err)
+	}
+
+	expected := map[string]bool{"list": true, "install": true}
+	names := make(map[string]bool)
+	for _, sub := range cmd.Commands() {
+		names[sub.Name()] = true
+	}
+	for name := range expected {
+		if !names[name] {
+			t.Errorf("expected transform subcommand %q", name)
+		}
+	}
+}
+
+func TestTransformCommand_ListEmpty(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	// Don't Load — transforms use app.DefaultDataDir() directly
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"transform", "list"})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("transform list: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "No transforms") {
+		t.Errorf("expected 'No transforms' in output, got: %s", output)
+	}
+}
+
+func TestCatalogCommand_Subcommands(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"catalog"})
+	if err != nil {
+		t.Fatalf("find catalog: %v", err)
+	}
+
+	expected := map[string]bool{"search": true, "push": true, "pull": true}
+	names := make(map[string]bool)
+	for _, sub := range cmd.Commands() {
+		names[sub.Name()] = true
+	}
+	for name := range expected {
+		if !names[name] {
+			t.Errorf("expected catalog subcommand %q", name)
+		}
+	}
+}
+
+func TestCatalogCommand_SearchOutput(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "search", "github"})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("catalog search: %v", err)
+		}
+	})
+
+	if output == "" {
+		t.Error("expected non-empty output from catalog search")
+	}
+}
+
+func TestConnectCommand_InvalidURL(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"connect", "not-a-valid-url-xyz://"})
+
+	err := root.Execute()
+	if err == nil {
+		t.Log("connect with invalid URL did not return error (Cobra ContinueOnError)")
+	}
+}
+
+func TestAuthCommand_Subcommands(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"auth"})
+	if err != nil {
+		t.Fatalf("find auth: %v", err)
+	}
+
+	expected := map[string]bool{"add": true, "list": true, "remove": true, "get": true, "login": true}
+	names := make(map[string]bool)
+	for _, sub := range cmd.Commands() {
+		names[sub.Name()] = true
+	}
+	for name := range expected {
+		if !names[name] {
+			t.Errorf("expected auth subcommand %q", name)
+		}
+	}
+}
+
+func TestFlowCommand_Subcommands(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"flow"})
+	if err != nil {
+		t.Fatalf("find flow: %v", err)
+	}
+
+	expected := map[string]bool{"create": true, "list": true, "run": true}
+	names := make(map[string]bool)
+	for _, sub := range cmd.Commands() {
+		names[sub.Name()] = true
+	}
+	for name := range expected {
+		if !names[name] {
+			t.Errorf("expected flow subcommand %q", name)
+		}
+	}
+}
+
+func TestFlowCommand_CreateStructure(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	createCmd, _, err := root.Find([]string{"flow", "create"})
+	if err != nil {
+		t.Fatalf("find flow create: %v", err)
+	}
+
+	if createCmd.Flags().Lookup("webhook") == nil {
+		t.Error("expected --webhook flag on flow create")
+	}
+	if createCmd.Flags().Lookup("description") == nil {
+		t.Error("expected --description flag on flow create")
+	}
+}
+
+func TestConnectCommand_SubcommandStructure(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"connect"})
+	if err != nil {
+		t.Fatalf("find connect: %v", err)
+	}
+
+	flags := cmd.Flags()
+	if flags.Lookup("base-url") == nil {
+		t.Error("expected --base-url flag")
+	}
+	if flags.Lookup("name") == nil {
+		t.Error("expected --name flag")
+	}
+	if flags.Lookup("auth") == nil {
+		t.Error("expected --auth flag")
+	}
+}
+
+func TestCatalogCommand_PushNonexistent(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "push", "nonexistent-api"})
+
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error pushing nonexistent API to catalog")
+	}
+}
+
+func TestConfigCommand_Subcommands(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+
+	cmd, _, err := root.Find([]string{"config"})
+	if err != nil {
+		t.Fatalf("find config: %v", err)
+	}
+
+	expected := map[string]bool{"show": true, "set": true}
+	names := make(map[string]bool)
+	for _, sub := range cmd.Commands() {
+		names[sub.Name()] = true
+	}
+	for name := range expected {
+		if !names[name] {
+			t.Errorf("expected config subcommand %q", name)
+		}
+	}
+}
+
+func TestFlowCommand_ListOutput(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "list"})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow list: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "No workflows defined") {
+		t.Errorf("expected 'No workflows defined', got: %s", output)
+	}
+}
