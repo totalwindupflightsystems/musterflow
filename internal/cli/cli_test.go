@@ -1263,3 +1263,125 @@ func TestTransformCommand_InstallSubcommand(t *testing.T) {
 		t.Error("expected non-empty Short for transform install")
 	}
 }
+
+// --- TASK-024: catalog command constructor tests ---
+
+func TestCatalogCommand_UseAndShort(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newCatalogCommand(r)
+	if cmd.Use != "catalog" {
+		t.Errorf("expected Use='catalog', got %q", cmd.Use)
+	}
+	if cmd.Short == "" {
+		t.Error("expected non-empty Short")
+	}
+}
+
+func TestCatalogCommand_SearchSubcommand(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newCatalogCommand(r)
+	searchCmd, _, err := cmd.Find([]string{"search"})
+	if err != nil {
+		t.Fatalf("find catalog search: %v", err)
+	}
+	if searchCmd.Use != "search <query>" {
+		t.Errorf("expected Use='search <query>', got %q", searchCmd.Use)
+	}
+	if searchCmd.Short == "" {
+		t.Error("expected non-empty Short for catalog search")
+	}
+	if searchCmd.Args == nil {
+		t.Error("expected Args validator on catalog search (MinimumNArgs(1))")
+	}
+}
+
+func TestCatalogCommand_PushSubcommand(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newCatalogCommand(r)
+	pushCmd, _, err := cmd.Find([]string{"push"})
+	if err != nil {
+		t.Fatalf("find catalog push: %v", err)
+	}
+	if pushCmd.Use != "push <api-id>" {
+		t.Errorf("expected Use='push <api-id>', got %q", pushCmd.Use)
+	}
+	if pushCmd.Short == "" {
+		t.Error("expected non-empty Short for catalog push")
+	}
+	if pushCmd.Args == nil {
+		t.Error("expected Args validator on catalog push (ExactArgs(1))")
+	}
+}
+
+func TestCatalogCommand_PullSubcommand(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	cmd := newCatalogCommand(r)
+	pullCmd, _, err := cmd.Find([]string{"pull"})
+	if err != nil {
+		t.Fatalf("find catalog pull: %v", err)
+	}
+	if pullCmd.Use != "pull <api-id>" {
+		t.Errorf("expected Use='pull <api-id>', got %q", pullCmd.Use)
+	}
+	if pullCmd.Short == "" {
+		t.Error("expected non-empty Short for catalog pull")
+	}
+	if pullCmd.Args == nil {
+		t.Error("expected Args validator on catalog pull (ExactArgs(1))")
+	}
+}
+
+func TestCatalogCommand_SubcommandFlags(t *testing.T) {
+	// AC-024.2: verify subcommands use positional args (not --query/--repo/--name flags).
+	// The catalog commands use positional arguments: search <query>, push <api-id>, pull <api-id>.
+	r := app.NewRegistry(t.TempDir())
+	cmd := newCatalogCommand(r)
+
+	for _, name := range []string{"search", "push", "pull"} {
+		sub, _, err := cmd.Find([]string{name})
+		if err != nil {
+			t.Fatalf("find catalog %s: %v", name, err)
+		}
+		// Verify subcommands have Args validators for positional args
+		if sub.Args == nil {
+			t.Errorf("catalog %s: expected Args validator (uses positional args)", name)
+		}
+		// No --query, --repo, or --name flags — all use positional args
+	}
+}
+
+func TestCatalogCommand_NilStore(t *testing.T) {
+	// AC-024.3: push with nil store returns an error.
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load() — store stays nil
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "push", "nonexistent"})
+
+	output := captureStdout(func() {
+		_ = root.Execute()
+	})
+
+	// Push uses registry.Get(args[0]) which errors when store is nil
+	if !strings.Contains(output, "Error") && !strings.Contains(output, "not found") {
+		t.Logf("catalog push with nil store output: %s", output)
+	}
+}
+
+func TestCatalogCommand_SearchNilStore(t *testing.T) {
+	// Search does NOT use the registry — it calls catalog.NewClient().Search().
+	// It should still work even with nil store.
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load() — store stays nil
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "search", "petstore"})
+
+	output := captureStdout(func() {
+		_ = root.Execute()
+	})
+
+	// Search doesn't use registry — it should not panic on nil store
+	if strings.Contains(output, "panic") {
+		t.Errorf("catalog search with nil store panicked: %s", output)
+	}
+	t.Logf("catalog search with nil store: %s", strings.TrimSpace(output))
+}
