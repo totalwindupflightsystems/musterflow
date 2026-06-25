@@ -222,3 +222,9 @@
 - **Model:** deepseek-v4-pro (direct — single-package test additions)
 - **Files:** internal/cli/cli_test.go (MODIFY — append new tests)
 - **Result:** 21 new tests (Export×3, Import×3, Refresh×3, Transform×2, Catalog×4, Connect×2, Auth×1, Flow×3). cli coverage 45.0%→50.1% (+5.1pp). All AC criteria met: export/import nil store errors, refresh nonexistent, transform subcommands, catalog search/push/subcommands, connect flags, auth/flow subcommands. Build/vet/test/guard all PASS.
+
+## [x] TASK-022: wasm coverage — test Registry and stub functions (target >80%) (completed 2026-06-25)
+- **Priority:** medium
+- **Model:** deepseek-v4-pro (direct — 74-line file, trivial)
+- **Files:** internal/wasm/transform_test.go (NEW)
+- **Result:** 8 tests (NewRegistry, List×5, InstallFromCatalog, Run). wasm coverage 0.0%→87.5%. Build/vet/test/guard all PASS.
