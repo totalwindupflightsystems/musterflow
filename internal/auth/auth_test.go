@@ -187,6 +187,19 @@ func TestManager_Remove_NotExist(t *testing.T) {
 	}
 }
 
+func TestManager_Remove_EmptyID(t *testing.T) {
+	cfg, _ := tempConfig(t)
+	mgr := NewManager(cfg)
+
+	err := mgr.Remove("")
+	if err == nil {
+		t.Error("expected error for empty ID")
+	}
+	if err != nil && !strings.Contains(err.Error(), "api ID is required") {
+		t.Errorf("error = %q, want containing 'api ID is required'", err.Error())
+	}
+}
+
 func TestManager_Get(t *testing.T) {
 	cfg, _ := tempConfig(t)
 	mgr := NewManager(cfg)
