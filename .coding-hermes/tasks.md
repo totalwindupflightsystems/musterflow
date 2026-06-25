@@ -194,6 +194,16 @@
 - **Target:** auth coverage from 65.0% → >75%
 - **Result:** 9 tests (NewYAMLTokenStore, SaveLoad, SaveOverwrite, LoadNonexistent, SaveCreatesDir, SaveEmptyService, LoadFileNotYAML, OpenBrowser_Linux, SaveMultipleServices). auth coverage 65.0%→79.5% (+14.5pp). All guards PASS. Direct-implement (no spawn).
 
+## [x] TASK-020: Workflow engine tests — NewEngine, Create, List, Run (>80% coverage) (completed 2026-06-25)
+- **Priority:** high
+- **Model:** deepseek-v4-pro (direct — single-package tests)
+- **Files:** internal/workflow/engine_test.go (NEW)
+- **AC-020.1:** `NewEngine` constructor test. Verify returned Engine has correct dir and baseURL fields.
+- **AC-020.2:** `Create` tests. Create flow with webhook=false (no webhook URL), with webhook=true (generates URL), empty name, duplicate name (overwrites), Create writes .star file to disk.
+- **AC-020.3:** `List` tests. List empty directory returns empty slice. List with one flow returns it with correct fields. List with multiple flows returns all. List skips non-.star files. List handles deleted files gracefully.
+- **AC-020.4:** `Run` tests. Run existing flow returns success message. Run nonexistent flow returns error. Run with nil trigger payload returns success. Run with populated payload includes it in output.
+- **Result:** 14 tests (NewEngine, Create×4, List×5, Run×4). workflow coverage 0%→86.8%. All packages green. Tier 1 PASS. Direct-implement (no spawn).
+
 ## [x] TASK-019: App test coverage — fill app coverage gap to >80% (completed 2026-06-24)
 - **Priority:** high
 - **Model:** deepseek-v4-pro (direct — mechanical test-writing)
