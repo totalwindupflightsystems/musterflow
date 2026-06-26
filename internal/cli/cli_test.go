@@ -2,13 +2,16 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/spf13/cobra"
@@ -1384,4 +1387,111 @@ func TestCatalogCommand_SearchNilStore(t *testing.T) {
 		t.Errorf("catalog search with nil store panicked: %s", output)
 	}
 	t.Logf("catalog search with nil store: %s", strings.TrimSpace(output))
+}
+
+// --- OAuth2 callback server tests ---
+
+// freePort returns a port number by asking the OS for an available address.
+func freePort(t *testing.T) int {
+	t.Helper()
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatalf("find free port: %v", err)
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port
+}
+
+func TestStartCallbackServer_Success(t *testing.T) {
+	port := freePort(t)
+	done := make(chan string, 1)
+	errCh := make(chan error, 1)
+
+	go func() {
+		code, err := startCallbackServer(port)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		done <- code
+	}()
+
+	// Give it a moment to start listening
+	time.Sleep(50 * time.Millisecond)
+
+	// Hit the callback endpoint like a browser would
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback?code=test-auth-code-123", port))
+	if err != nil {
+		t.Fatalf("failed to reach callback server: %v", err)
+	}
+	resp.Body.Close()
+
+	select {
+	case code := <-done:
+		if code != "test-auth-code-123" {
+			t.Errorf("expected 'test-auth-code-123', got %q", code)
+		}
+	case err := <-errCh:
+		t.Fatalf("unexpected error: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for callback result")
+	}
+}
+
+func TestStartCallbackServer_MissingCode(t *testing.T) {
+	port := freePort(t)
+	done := make(chan error, 1)
+
+	go func() {
+		_, err := startCallbackServer(port)
+		done <- err
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback", port))
+	if err != nil {
+		t.Fatalf("failed to reach callback server: %v", err)
+	}
+	resp.Body.Close()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Error("expected error for missing code, got nil")
+		} else if !strings.Contains(err.Error(), "no authorization code") {
+			t.Errorf("expected 'no authorization code' error, got: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out")
+	}
+}
+
+func TestStartCallbackServer_ErrorParam(t *testing.T) {
+	port := freePort(t)
+	done := make(chan error, 1)
+
+	go func() {
+		_, err := startCallbackServer(port)
+		done <- err
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback?error=access_denied&error_description=user+cancelled", port))
+	if err != nil {
+		t.Fatalf("failed to reach callback server: %v", err)
+	}
+	resp.Body.Close()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Error("expected error for OAuth error response, got nil")
+		} else if !strings.Contains(err.Error(), "access_denied") {
+			t.Errorf("expected 'access_denied' in error, got: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out")
+	}
 }
