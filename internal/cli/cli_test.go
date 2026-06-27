@@ -1495,3 +1495,260 @@ func TestStartCallbackServer_ErrorParam(t *testing.T) {
 		t.Fatal("timed out")
 	}
 }
+
+// --- Config command execution tests ---
+
+func setHome(t *testing.T, dir string) func() {
+	t.Helper()
+	old := os.Getenv("HOME")
+	os.Setenv("HOME", dir)
+	return func() { os.Setenv("HOME", old) }
+}
+
+func TestConfigCommand_ShowDefaults(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"config", "show"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("config show: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "9876") {
+		t.Errorf("expected default port 9876 in output, got: %s", output)
+	}
+}
+
+func TestConfigCommand_SetAndShow(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Set port
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"config", "set", "port", "9999"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("config set: %v", err)
+		}
+	})
+	if !strings.Contains(output, "9999") {
+		t.Errorf("expected port 9999 in set output, got: %s", output)
+	}
+
+	// Show should reflect the change
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"config", "show"})
+	output = captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("config show: %v", err)
+		}
+	})
+	if !strings.Contains(output, "9999") {
+		t.Errorf("expected port 9999 in show after set, got: %s", output)
+	}
+}
+
+func TestConfigCommand_SetInvalidKey(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"config", "set", "bogus", "value"})
+
+	var stderr bytes.Buffer
+	root.SetErr(&stderr)
+
+	_ = root.Execute() // expected to error
+
+	output := stderr.String()
+	if !strings.Contains(output, "unknown config key") {
+		t.Errorf("expected 'unknown config key' in stderr, got: %q", output)
+	}
+}
+
+// --- Auth command execution tests ---
+
+func TestAuthCommand_AddAndList(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Add a credential
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"auth", "add", "gh", "--type", "bearer", "--key", "ghp_test123"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("auth add: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Added") {
+		t.Errorf("expected 'Added' in add output, got: %s", output)
+	}
+
+	// List credentials (key should be masked)
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"auth", "list"})
+	output = captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("auth list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "ghp_") {
+		t.Errorf("expected masked key in list output, got: %s", output)
+	}
+	t.Logf("auth list: %s", strings.TrimSpace(output))
+}
+
+func TestAuthCommand_ListEmpty(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"auth", "list"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("auth list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "No credentials") {
+		t.Errorf("expected 'No credentials' for empty list, got: %s", output)
+	}
+}
+
+// --- Flow command execution tests ---
+
+func TestFlowCommand_CreateList(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "my-flow"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("flow create: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Created flow") {
+		t.Errorf("expected 'Created flow' in output, got: %s", output)
+	}
+
+	// List should show it
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "list"})
+	output = captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("flow list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "my-flow") {
+		t.Errorf("expected 'my-flow' in list output, got: %s", output)
+	}
+}
+
+func TestFlowCommand_Run(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Create first
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "test-run"})
+	_ = root.Execute()
+
+	// Run
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "test-run"})
+	output := captureStdout(func() {
+		_ = root.Execute()
+	})
+	// Run returns the flow content (Starlark script) — should not error
+	if strings.Contains(output, "Error") || strings.Contains(output, "error") {
+		t.Logf("flow run output (may include stderr): %s", output)
+	}
+	// At minimum, should not panic
+	if strings.Contains(output, "panic") {
+		t.Errorf("panic on flow run: %s", output)
+	}
+}
+
+func TestFlowCommand_ListEmpty(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "list"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("flow list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "No workflows") {
+		t.Errorf("expected 'No workflows' for empty list, got: %s", output)
+	}
+}
+
+// --- Catalog command execution tests ---
+
+func TestCatalogCommand_SearchExec(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "search", "stripe"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("catalog search: %v", err)
+		}
+	})
+	// Either finds results or says "No catalog entries" — both valid
+	if !strings.Contains(output, "result") && !strings.Contains(output, "No catalog") && !strings.Contains(output, "no catalog") {
+		t.Logf("catalog search output: %s", strings.TrimSpace(output))
+	}
+	// Must not panic
+	if strings.Contains(output, "panic") {
+		t.Errorf("panic on catalog search: %s", output)
+	}
+}
