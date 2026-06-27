@@ -1417,7 +1417,7 @@ func TestStartCallbackServer_Success(t *testing.T) {
 	}()
 
 	// Give it a moment to start listening
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Hit the callback endpoint like a browser would
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback?code=test-auth-code-123", port))
@@ -1447,7 +1447,7 @@ func TestStartCallbackServer_MissingCode(t *testing.T) {
 		done <- err
 	}()
 
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback", port))
 	if err != nil {
@@ -1476,7 +1476,7 @@ func TestStartCallbackServer_ErrorParam(t *testing.T) {
 		done <- err
 	}()
 
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback?error=access_denied&error_description=user+cancelled", port))
 	if err != nil {
