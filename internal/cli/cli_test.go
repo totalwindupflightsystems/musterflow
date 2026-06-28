@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -18,6 +19,8 @@ import (
 	"github.com/wojons/muster/pkg/request"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
+	"github.com/totalwindupflightsystems/musterflow/internal/auth"
+	"github.com/totalwindupflightsystems/musterflow/internal/config"
 )
 
 // captureStdout runs fn and returns everything written to os.Stdout.
@@ -1750,5 +1753,430 @@ func TestCatalogCommand_SearchExec(t *testing.T) {
 	// Must not panic
 	if strings.Contains(output, "panic") {
 		t.Errorf("panic on catalog search: %s", output)
+	}
+}
+
+// --- TASK-025: Actionable RunE gap tests ---
+
+func TestSetAuthManager(t *testing.T) {
+	// Verify SetAuthManager sets the package-level auth manager
+	old := authMgr
+	defer func() { authMgr = old }()
+
+	cfg := config.Defaults()
+	mgr := auth.NewManager(cfg)
+	SetAuthManager(mgr)
+
+	if authMgr != mgr {
+		t.Error("SetAuthManager did not set the auth manager")
+	}
+}
+
+func TestTransformCommand_ListExec_Empty(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"transform", "list"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("transform list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "No transforms installed") {
+		t.Errorf("expected 'No transforms installed' for empty dir, got: %s", output)
+	}
+}
+
+func TestTransformCommand_ListExec_WithTransforms(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	// Create a .wasm file in the transforms directory
+	transformsDir := filepath.Join(home, ".musterflow", "transforms")
+	if err := os.MkdirAll(transformsDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(transformsDir, "redact-pii.wasm"), []byte("(module)"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(transformsDir, "reshape-json.wasm"), []byte("(module)"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"transform", "list"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("transform list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Installed transforms") {
+		t.Errorf("expected 'Installed transforms' banner, got: %s", output)
+	}
+	if !strings.Contains(output, "redact-pii.wasm") {
+		t.Errorf("expected 'redact-pii.wasm' in output, got: %s", output)
+	}
+	if !strings.Contains(output, "reshape-json.wasm") {
+		t.Errorf("expected 'reshape-json.wasm' in output, got: %s", output)
+	}
+}
+
+func TestAuthCommand_RemoveExec(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// First, add a credential
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"auth", "add", "test-api", "--type", "bearer", "--key", "sk-test123"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("auth add: %v", err)
+	}
+
+	// Now remove it
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"auth", "remove", "test-api"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("auth remove: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Removed auth") {
+		t.Errorf("expected 'Removed auth' in output, got: %s", output)
+	}
+}
+
+func TestAuthCommand_RemoveExec_NotFound(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"auth", "remove", "nonexistent"})
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for removing nonexistent credential")
+	}
+}
+
+func TestAuthCommand_GetExec(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// First, add a credential
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"auth", "add", "get-test", "--type", "apikey", "--key", "sk-get-test-123"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("auth add: %v", err)
+	}
+
+	// Now get it
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"auth", "get", "get-test"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("auth get: %v", err)
+		}
+	})
+	if !strings.Contains(output, "sk-get-test-123") {
+		t.Errorf("expected key 'sk-get-test-123' in output, got: %s", output)
+	}
+}
+
+func TestAuthCommand_GetExec_NotFound(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"auth", "get", "nonexistent"})
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for getting nonexistent credential")
+	}
+}
+
+func TestCatalogCommand_PushExec(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	// httptest spec server
+	specJSON := `{"openapi":"3.0.3","info":{"title":"Push Test API","version":"1.0"},"paths":{}}`
+	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(specJSON))
+	}))
+	defer specServer.Close()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Connect an API to push
+	result, err := app.Connect(context.Background(), r, app.ConnectOptions{
+		SpecURL: specServer.URL,
+		Name:    "push-test",
+	})
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "push", result.Connection.ID})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("catalog push: %v", err)
+		}
+	})
+	// Should print catalog entry JSON
+	if !strings.Contains(output, "Catalog entry JSON") {
+		t.Errorf("expected 'Catalog entry JSON' in output, got: %s", output)
+	}
+	// Should contain PR instructions
+	if !strings.Contains(output, "PR to") || !strings.Contains(output, "musterflow-catalog") {
+		t.Errorf("expected PR instructions in output, got: %s", output)
+	}
+	// Should contain the connection name
+	if !strings.Contains(output, "push-test") {
+		t.Errorf("expected 'push-test' in JSON output, got: %s", output)
+	}
+}
+
+func TestCatalogCommand_PushExec_NotFound(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "push", "nonexistent"})
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for pushing nonexistent API")
+	}
+}
+
+// --- ExecuteAndFormat format coverage tests ---
+
+func TestExecuteAndFormat_JSONL(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[{"name":"a","val":1},{"name":"b","val":2}]`))
+	}))
+	defer ts.Close()
+
+	cmd := &cobra.Command{}
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+
+	builder := request.NewBuilder(ts.URL, "/items", "GET")
+	opts := ExecuteOptions{Format: "jsonl"}
+
+	if err := ExecuteAndFormat(cmd, builder, opts); err != nil {
+		t.Fatalf("ExecuteAndFormat JSONL: %v", err)
+	}
+
+	output := buf.String()
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) < 2 {
+		t.Errorf("expected at least 2 JSONL lines, got %d: %q", len(lines), output)
+	}
+}
+
+func TestExecuteAndFormat_PlainText(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("Hello, World!"))
+	}))
+	defer ts.Close()
+
+	cmd := &cobra.Command{}
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+
+	builder := request.NewBuilder(ts.URL, "/plain", "GET")
+	opts := ExecuteOptions{Format: "table"}
+
+	if err := ExecuteAndFormat(cmd, builder, opts); err != nil {
+		t.Fatalf("ExecuteAndFormat plain text: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "Hello, World!") {
+		t.Errorf("expected 'Hello, World!' in output, got: %s", buf.String())
+	}
+}
+
+func TestExecuteAndFormat_CSVFile(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[{"id":1,"name":"one"},{"id":2,"name":"two"}]`))
+	}))
+	defer ts.Close()
+
+	tmpDir := t.TempDir()
+	outPath := filepath.Join(tmpDir, "test.csv")
+
+	cmd := &cobra.Command{}
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+
+	builder := request.NewBuilder(ts.URL, "/items", "GET")
+	opts := ExecuteOptions{Format: "csv", Output: outPath}
+
+	if err := ExecuteAndFormat(cmd, builder, opts); err != nil {
+		t.Fatalf("ExecuteAndFormat CSV to file: %v", err)
+	}
+
+	content, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+	if !strings.Contains(string(content), "id") {
+		t.Errorf("expected CSV header 'id' in output file, got: %s", string(content))
+	}
+	if !strings.Contains(string(content), "one") {
+		t.Errorf("expected 'one' in output file, got: %s", string(content))
+	}
+}
+
+func TestExecuteAndFormat_OutputFileError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer ts.Close()
+
+	cmd := &cobra.Command{}
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+
+	builder := request.NewBuilder(ts.URL, "/ok", "GET")
+	// Output to a nonexistent directory — should fail
+	opts := ExecuteOptions{Format: "json", Output: "/nonexistent/path/output.json"}
+
+	err := ExecuteAndFormat(cmd, builder, opts)
+	if err == nil {
+		t.Error("expected error for unwritable output path")
+	}
+}
+
+func TestConnectCommand_Exec_InvalidURL(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"connect", "not-a-valid-url"})
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for invalid connect URL")
+	}
+}
+
+func TestBuildRequest_WithAuthManager(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	// Set up auth manager with a credential
+	cfg := config.Defaults()
+	cfg.DataDir = home
+	mgr := auth.NewManager(cfg)
+	if err := mgr.Add("test-api", auth.Credential{
+		Type: auth.CredentialBearer,
+		Key:  "test-token-123",
+	}); err != nil {
+		t.Fatalf("add credential: %v", err)
+	}
+
+	// Create a cobra command with no flags
+	cmd := &cobra.Command{}
+
+	opts := ExecuteOptions{
+		BaseURL:     "https://api.example.com",
+		Path:        "/v1/items",
+		Method:      "GET",
+		APIID:       "test-api",
+		AuthManager: mgr,
+	}
+
+	builder, err := BuildRequest(cmd, opts)
+	if err != nil {
+		t.Fatalf("BuildRequest: %v", err)
+	}
+	if builder == nil {
+		t.Fatal("expected non-nil builder")
+	}
+}
+
+func TestBuildRequest_WithGlobalAuth(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+	oldAuth := authMgr
+	defer func() { authMgr = oldAuth }()
+
+	// Set up global auth manager
+	cfg := config.Defaults()
+	cfg.DataDir = home
+	mgr := auth.NewManager(cfg)
+	if err := mgr.Add("global-api", auth.Credential{
+		Type: auth.CredentialBearer,
+		Key:  "global-token-456",
+	}); err != nil {
+		t.Fatalf("add credential: %v", err)
+	}
+	SetAuthManager(mgr)
+
+	cmd := &cobra.Command{}
+
+	opts := ExecuteOptions{
+		BaseURL: "https://api.example.com",
+		Path:    "/v1/items",
+		Method:  "GET",
+		APIID:   "global-api",
+		// AuthManager is nil — falls back to global authMgr
+	}
+
+	builder, err := BuildRequest(cmd, opts)
+	if err != nil {
+		t.Fatalf("BuildRequest: %v", err)
+	}
+	if builder == nil {
+		t.Fatal("expected non-nil builder")
 	}
 }
