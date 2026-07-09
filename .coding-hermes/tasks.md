@@ -261,3 +261,33 @@
 - **Target:** cli coverage from 68.8% → >75%
 - **Verify:** `go test ./internal/cli/... -count=1 -coverprofile=/tmp/mf-cli-cov.out && go tool cover -func=/tmp/mf-cli-cov.out | grep 'total:'`
 - **Result:** 16 new tests across 5 coverage areas: SetAuthManager (0%→100%), newTransformCommand list RunE (empty + with transforms), newCatalogCommand push RunE (success + not-found), newAuthCommand remove/get RunE (success + not-found), ExecuteAndFormat JSONL/plain-text/CSV-file/output-error, BuildRequest auth-manager + global-auth. cli coverage 68.8%→75.5% (+6.7pp). All 10 packages green. GitReins Tier 1 PASS. Direct-implement (no spawn).
+
+## [ ] TASK-026: Fix DuckDB lock conflict — CLI unusable while dashboard is running
+- **Priority:** high
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** internal/app/store.go (MODIFY), cmd/musterflow/main.go (MODIFY)
+- **AC-026.1:** Running `musterflow start` (dashboard) and `musterflow list` (CLI) concurrently works. Currently the dashboard holds an exclusive DuckDB lock on `~/.musterflow/musterflow.db`, causing all CLI commands to fail with "Conflicting lock is held". The store should be opened in read-only mode for CLI operations or a connection pool should be shared.
+- **AC-026.2:** CLI commands (`list`, `connect`, `disconnect`, `catalog search`) work when dashboard is running on the same host. The CLI should either connect to the running dashboard's API instead of hitting DuckDB directly, or open DuckDB with appropriate concurrency settings.
+- **AC-026.3:** DuckDB store is opened with `access_mode=read_write` and connection pooling. If the dashboard is the writer, CLI operations should use read-only access or route through the API.
+- **Verify:** Start dashboard in background, run `musterflow list`, `musterflow catalog search github` — both succeed without lock errors.
+- **Discovered:** 2026-07-09 discovery sweep (board empty). Reproduced with GitHub (1192 endpoints) + Petstore (19 endpoints) connected.
+
+## [ ] TASK-027: Create README.md
+- **Priority:** medium
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** README.md (NEW)
+- **AC-027.1:** README includes install instructions (go install, Homebrew), quick start (connect, use CLI, MCP), feature list, architecture diagram, and link to landing page.
+- **AC-027.2:** Commands section with examples: connect, list, catalog search, flow create, auth add, start.
+- **AC-027.3:** Badges for Go version, build status, license.
+- **Discovered:** 2026-07-09 discovery sweep. Project has SKILL.md but no README.md.
+
+## [ ] TASK-028: Fix 10 pre-existing errcheck lint warnings
+- **Priority:** low
+- **Model:** deepseek-v4-pro (direct — mechanical lint fixes)
+- **Files:** internal/catalog/client_test.go, internal/completion/install.go, internal/config/config_test.go, internal/mcp/server.go
+- **AC-028.1:** All 10 errcheck warnings resolved. Check return values from `w.Write`, `fmt.Scanln`, `os.MkdirAll`, `os.WriteFile`, `json.NewEncoder(w).Encode`.
+- **AC-028.2:** No new lint warnings introduced. `golangci-lint run --timeout 60s` returns clean.
+- **AC-028.3:** All existing tests continue to pass.
+- **Discovered:** 2026-07-09 discovery sweep. 10 pre-existing errcheck warnings across 4 files.
