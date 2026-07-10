@@ -2,7 +2,9 @@
 package cli
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,6 +44,17 @@ var authMgr *auth.Manager
 // SetAuthManager sets the global auth manager for auto-injecting credentials.
 func SetAuthManager(m *auth.Manager) {
 	authMgr = m
+}
+
+// dashboardBaseURL is set by main when the dashboard is detected as running.
+// When non-empty, CLI write operations (connect/disconnect) route through the
+// dashboard HTTP API instead of opening the DB directly.
+var dashboardBaseURL string
+
+// SetDashboardURL sets the dashboard base URL so CLI write operations route
+// through the dashboard API (avoiding DuckDB lock conflicts).
+func SetDashboardURL(url string) {
+	dashboardBaseURL = url
 }
 
 // auth command flags
@@ -123,6 +136,12 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			specURL := args[0]
+
+			// If the dashboard is running, route through its API to avoid lock conflicts.
+			if dashboardBaseURL != "" {
+				return connectViaDashboard(specURL, baseURL, nameInput, authType)
+			}
+
 			result, err := app.Connect(cmd.Context(), registry, app.ConnectOptions{
 				SpecURL:  specURL,
 				BaseURL:  baseURL,
@@ -182,6 +201,10 @@ func newDisconnectCommand(registry *app.Registry) *cobra.Command {
 		Short: "Disconnect an API",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// If the dashboard is running, route through its API to avoid lock conflicts.
+			if dashboardBaseURL != "" {
+				return disconnectViaDashboard(args[0])
+			}
 			if err := app.Disconnect(registry, args[0]); err != nil {
 				return err
 			}
@@ -189,6 +212,85 @@ func newDisconnectCommand(registry *app.Registry) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+// connectViaDashboard routes a connect operation through the dashboard HTTP API
+// to avoid DuckDB lock conflicts when the dashboard holds the write lock.
+func connectViaDashboard(specURL, baseURL, nameInput, authType string) error {
+	payload := map[string]interface{}{
+		"spec_url":  specURL,
+		"base_url":  baseURL,
+		"name":      nameInput,
+		"auth_type": authType,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal connect payload: %w", err)
+	}
+
+	resp, err := http.Post(dashboardBaseURL+"/api/apis", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("dashboard connect request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		ID            string `json:"id"`
+		Name          string `json:"name"`
+		SpecTitle     string `json:"spec_title"`
+		SpecVersion   string `json:"spec_version"`
+		EndpointCount int    `json:"endpoint_count"`
+		BaseURL       string `json:"base_url"`
+		Error         string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode dashboard response: %w", err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		msg := result.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("connect via dashboard: %s", msg)
+	}
+
+	fmt.Printf("✓ Connected: %s\n", result.SpecTitle)
+	fmt.Printf("  ID: %s\n", result.ID)
+	fmt.Printf("  Version: %s\n", result.SpecVersion)
+	fmt.Printf("  Endpoints: %d\n", result.EndpointCount)
+	fmt.Printf("  Base URL: %s\n", result.BaseURL)
+	fmt.Printf("\nTry: musterflow %s --help\n", result.Name)
+	return nil
+}
+
+// disconnectViaDashboard routes a disconnect operation through the dashboard HTTP API
+// to avoid DuckDB lock conflicts when the dashboard holds the write lock.
+func disconnectViaDashboard(apiID string) error {
+	req, err := http.NewRequest(http.MethodDelete, dashboardBaseURL+"/api/apis/"+apiID, nil)
+	if err != nil {
+		return fmt.Errorf("create disconnect request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("dashboard disconnect request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var result struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&result)
+		msg := result.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("disconnect via dashboard: %s", msg)
+	}
+
+	fmt.Printf("✓ Disconnected: %s\n", apiID)
+	return nil
 }
 
 func newCatalogCommand(registry *app.Registry) *cobra.Command {

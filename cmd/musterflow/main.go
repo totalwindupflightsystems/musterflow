@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -53,10 +55,23 @@ func run() error {
 		cfg.DataDir = flagDataDir
 	}
 
+	// Detect if the dashboard is already running on the configured port.
+	// If it is, open the DB read-only to avoid conflicting lock errors.
+	dashAddr := fmt.Sprintf("127.0.0.1:%d", cfg.Port)
+	dashRunning := isPortInUse(dashAddr)
+
 	// Load registry
 	registry := app.NewRegistry(cfg.DataDir)
-	if err := registry.Load(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
+	if dashRunning {
+		if err := registry.LoadReadOnly(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not load registry (read-only): %v\n", err)
+		}
+		// Route write operations (connect/disconnect) through the dashboard API
+		cli.SetDashboardURL(fmt.Sprintf("http://%s", dashAddr))
+	} else {
+		if err := registry.Load(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
+		}
 	}
 
 	// Set up auth manager for auto-injecting credentials into API commands
@@ -202,4 +217,14 @@ func isTerminal() bool {
 		return false
 	}
 	return (stat.Mode() & os.ModeCharDevice) != 0
+}
+
+// isPortInUse returns true if something is listening on the given TCP address.
+func isPortInUse(addr string) bool {
+	conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }

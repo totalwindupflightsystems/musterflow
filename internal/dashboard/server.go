@@ -95,9 +95,52 @@ func (s *Server) handleAPIs(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"apis": s.registry.List(),
 		})
+	case http.MethodPost:
+		// POST with nil/empty body falls through to method-not-allowed
+		// to preserve backward compatibility with clients that don't send a body.
+		if r.Body == nil || r.ContentLength == 0 {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+			return
+		}
+		s.handleAPIAdd(w, r)
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 	}
+}
+
+// handleAPIAdd connects a new API via the dashboard HTTP API.
+// POST /api/apis with JSON body: {spec_url, base_url, name, auth_type}
+func (s *Server) handleAPIAdd(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		SpecURL  string `json:"spec_url"`
+		BaseURL  string `json:"base_url"`
+		Name     string `json:"name"`
+		AuthType string `json:"auth_type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
+		return
+	}
+
+	result, err := app.Connect(r.Context(), s.registry, app.ConnectOptions{
+		SpecURL:  body.SpecURL,
+		BaseURL:  body.BaseURL,
+		Name:     body.Name,
+		AuthType: body.AuthType,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"id":            result.Connection.ID,
+		"name":          result.Connection.Name,
+		"spec_title":    result.SpecTitle,
+		"spec_version":  result.SpecVersion,
+		"endpoint_count": result.EndpointCount,
+		"base_url":      result.Connection.BaseURL,
+	})
 }
 
 func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request) {
