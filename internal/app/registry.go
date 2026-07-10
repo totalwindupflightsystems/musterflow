@@ -69,6 +69,32 @@ func (r *Registry) Load() error {
 	return nil
 }
 
+// LoadReadOnly opens the DuckDB store in read-only mode.
+// It creates the data dir if needed but skips JSON migration (a write operation).
+// Use this when another process (e.g. the dashboard) holds the write lock.
+func (r *Registry) LoadReadOnly() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if err := os.MkdirAll(r.dataDir, 0755); err != nil {
+		return fmt.Errorf("create data dir: %w", err)
+	}
+
+	store, err := NewStoreReadOnly(r.dbPath)
+	if err != nil {
+		return fmt.Errorf("open store (read-only): %w", err)
+	}
+	r.store = store
+	return nil
+}
+
+// Storedb returns the underlying DuckDB store for direct access.
+func (r *Registry) Storedb() *Store {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.store
+}
+
 // Add adds a new API connection and persists it.
 func (r *Registry) Add(conn *APIConnection) error {
 	r.mu.Lock()

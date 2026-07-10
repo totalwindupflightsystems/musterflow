@@ -14,9 +14,9 @@ type Store struct {
 	db *sql.DB
 }
 
-// NewStore opens (or creates) a DuckDB database at the given path.
+// NewStore opens (or creates) a DuckDB database at the given path in read-write mode.
 func NewStore(dbPath string) (*Store, error) {
-	db, err := sql.Open("duckdb", dbPath)
+	db, err := sql.Open("duckdb", dbPath+"?access_mode=read_write")
 	if err != nil {
 		return nil, fmt.Errorf("open duckdb: %w", err)
 	}
@@ -33,6 +33,23 @@ func NewStore(dbPath string) (*Store, error) {
 	}
 
 	return s, nil
+}
+
+// NewStoreReadOnly opens a DuckDB database in read-only mode.
+// It does NOT run migrations (migrations are write operations).
+// The caller must ensure the database has already been migrated by a prior read-write open.
+func NewStoreReadOnly(dbPath string) (*Store, error) {
+	db, err := sql.Open("duckdb", dbPath+"?access_mode=read_only")
+	if err != nil {
+		return nil, fmt.Errorf("open duckdb (read-only): %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("ping duckdb (read-only): %w", err)
+	}
+
+	return &Store{db: db}, nil
 }
 
 func (s *Store) migrate() error {

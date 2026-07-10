@@ -262,7 +262,7 @@
 - **Verify:** `go test ./internal/cli/... -count=1 -coverprofile=/tmp/mf-cli-cov.out && go tool cover -func=/tmp/mf-cli-cov.out | grep 'total:'`
 - **Result:** 16 new tests across 5 coverage areas: SetAuthManager (0%→100%), newTransformCommand list RunE (empty + with transforms), newCatalogCommand push RunE (success + not-found), newAuthCommand remove/get RunE (success + not-found), ExecuteAndFormat JSONL/plain-text/CSV-file/output-error, BuildRequest auth-manager + global-auth. cli coverage 68.8%→75.5% (+6.7pp). All 10 packages green. GitReins Tier 1 PASS. Direct-implement (no spawn).
 
-## [ ] TASK-026: Fix DuckDB lock conflict — CLI unusable while dashboard is running
+## [x] TASK-026: Fix DuckDB lock conflict — CLI unusable while dashboard is running (completed 2026-07-10, commit pending)
 - **Priority:** high
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
@@ -272,6 +272,7 @@
 - **AC-026.3:** DuckDB store is opened with `access_mode=read_write` and connection pooling. If the dashboard is the writer, CLI operations should use read-only access or route through the API.
 - **Verify:** Start dashboard in background, run `musterflow list`, `musterflow catalog search github` — both succeed without lock errors.
 - **Discovered:** 2026-07-09 discovery sweep (board empty). Reproduced with GitHub (1192 endpoints) + Petstore (19 endpoints) connected.
+- **Result (2026-07-10):** 5 files changed (+217/-4). GLM-5.2 via ollama-cloud. Added NewStoreReadOnly (access_mode=read_only), LoadReadOnly (skips migration), dashboard POST /api/apis endpoint, CLI connectViaDashboard/disconnectViaDashboard routing, isPortInUse detection in main.go. All 11 test packages green. GitReins Tier 1 PASS, Tier 2 5/5 PASS.
 
 ## [ ] TASK-027: Create README.md
 - **Priority:** medium
