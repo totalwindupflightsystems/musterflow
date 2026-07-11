@@ -37,8 +37,8 @@ func TestServer_HealthEndpoint(t *testing.T) {
 
 func TestServer_HealthEndpoint_ConnectedCount(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
-	r.Add(&app.APIConnection{ID: "a", Name: "first"})
-	r.Add(&app.APIConnection{ID: "b", Name: "second"})
+	_ = r.Add(&app.APIConnection{ID: "a", Name: "first"})
+	_ = r.Add(&app.APIConnection{ID: "b", Name: "second"})
 
 	s := NewServer(r, nil, nil, ":0")
 
@@ -47,7 +47,7 @@ func TestServer_HealthEndpoint_ConnectedCount(t *testing.T) {
 	s.Handler().ServeHTTP(rec, req)
 
 	var body map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&body)
+	_ = json.NewDecoder(rec.Body).Decode(&body)
 
 	connected := body["connected_apis"]
 	// connected is float64 from JSON decoding
@@ -84,7 +84,7 @@ func TestServer_APIsEndpoint_Empty(t *testing.T) {
 
 func TestServer_APIsEndpoint_WithData(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
-	r.Add(&app.APIConnection{
+	_ = r.Add(&app.APIConnection{
 		ID:        "abc123",
 		Name:      "test-api",
 		SpecURL:   "https://example.com/openapi.json",
@@ -132,7 +132,7 @@ func TestServer_APIByID_NotFound(t *testing.T) {
 
 func TestServer_APIByID_Success(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
-	r.Add(&app.APIConnection{
+	_ = r.Add(&app.APIConnection{
 		ID:        "found-me",
 		Name:      "found-api",
 		SpecURL:   "https://example.com/spec.json",
@@ -175,7 +175,7 @@ func TestServer_APIByID_MissingID(t *testing.T) {
 
 func TestServer_APIByID_Delete(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
-	r.Add(&app.APIConnection{ID: "delete-me", Name: "temp"})
+	_ = r.Add(&app.APIConnection{ID: "delete-me", Name: "temp"})
 
 	s := NewServer(r, nil, nil, ":0")
 
@@ -290,7 +290,7 @@ func TestServer_MCP_WithHandler(t *testing.T) {
 	mockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}`))
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}`))
 	})
 	s.SetMCPHandler(mockHandler)
 
@@ -336,7 +336,7 @@ func TestServer_CatalogSearch_NoQuery(t *testing.T) {
 	}
 
 	var body map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&body)
+	_ = json.NewDecoder(rec.Body).Decode(&body)
 
 	if total, ok := body["total"].(float64); !ok || total != 0 {
 		t.Errorf("expected total=0, got %v", body["total"])
@@ -349,7 +349,7 @@ func TestServer_CatalogSearch_WithResults(t *testing.T) {
 	// Start httptest server that returns a catalog index
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{"id":"stripe","name":"Stripe","description":"Payments API","score":10,"quality_tier":"official"}]`))
+		_, _ = w.Write([]byte(`[{"id":"stripe","name":"Stripe","description":"Payments API","score":10,"quality_tier":"official"}]`))
 	}))
 	defer ts.Close()
 
@@ -365,7 +365,7 @@ func TestServer_CatalogSearch_WithResults(t *testing.T) {
 	}
 
 	var body map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&body)
+	_ = json.NewDecoder(rec.Body).Decode(&body)
 
 	if total, ok := body["total"].(float64); !ok || total < 1 {
 		t.Errorf("expected total>=1, got %v", body["total"])
@@ -408,7 +408,7 @@ func TestServer_MCPInfo_NoRegistry(t *testing.T) {
 	}
 
 	var body map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&body)
+	_ = json.NewDecoder(rec.Body).Decode(&body)
 
 	if body["tool_count"].(float64) != 0 {
 		t.Errorf("expected tool_count=0 when no registry, got %v", body["tool_count"])
@@ -421,7 +421,7 @@ func TestServer_MCPInfo_NoRegistry(t *testing.T) {
 func TestServer_MCPInfo_WithTools(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
 	// Add an API connection — the ToolRegistry reads from it via Refresh()
-	r.Add(&app.APIConnection{ID: "test", Name: "test-api", SpecURL: "https://petstore3.swagger.io/api/v3/openapi.json"})
+	_ = r.Add(&app.APIConnection{ID: "test", Name: "test-api", SpecURL: "https://petstore3.swagger.io/api/v3/openapi.json"})
 
 	tr := mcp.NewToolRegistry(r)
 	// Refresh fetches the spec and populates tools; errors on network access in test, but the struct is ready
@@ -438,7 +438,7 @@ func TestServer_MCPInfo_WithTools(t *testing.T) {
 	}
 
 	var body map[string]interface{}
-	json.NewDecoder(rec.Body).Decode(&body)
+	_ = json.NewDecoder(rec.Body).Decode(&body)
 
 	// With a ToolRegistry (even empty), endpoint and transport are set
 	if body["endpoint"] != "http://:9876/mcp" {

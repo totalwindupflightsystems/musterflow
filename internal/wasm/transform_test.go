@@ -92,10 +92,10 @@ func TestList_FiltersNonWasmFiles(t *testing.T) {
 	reg := NewRegistry(dir)
 
 	// Create a mix of files
-	os.WriteFile(filepath.Join(dir, "valid.wasm"), []byte("wasm"), 0644)
-	os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("docs"), 0644)
-	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("config"), 0644)
-	os.MkdirAll(filepath.Join(dir, "subdir"), 0755)
+	_ = os.WriteFile(filepath.Join(dir, "valid.wasm"), []byte("wasm"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("docs"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("config"), 0644)
+	_ = os.MkdirAll(filepath.Join(dir, "subdir"), 0755)
 
 	transforms, err := reg.List()
 	if err != nil {
@@ -115,7 +115,7 @@ func TestList_ReturnsCorrectPaths(t *testing.T) {
 	reg := NewRegistry(dir)
 
 	wasmFile := filepath.Join(dir, "test.wasm")
-	os.WriteFile(wasmFile, []byte("fake"), 0644)
+	_ = os.WriteFile(wasmFile, []byte("fake"), 0644)
 
 	transforms, err := reg.List()
 	if err != nil {

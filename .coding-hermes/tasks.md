@@ -274,7 +274,7 @@
 - **Discovered:** 2026-07-09 discovery sweep (board empty). Reproduced with GitHub (1192 endpoints) + Petstore (19 endpoints) connected.
 - **Result (2026-07-10):** 5 files changed (+217/-4). GLM-5.2 via ollama-cloud. Added NewStoreReadOnly (access_mode=read_only), LoadReadOnly (skips migration), dashboard POST /api/apis endpoint, CLI connectViaDashboard/disconnectViaDashboard routing, isPortInUse detection in main.go. All 11 test packages green. GitReins Tier 1 PASS, Tier 2 5/5 PASS.
 
-## [ ] TASK-027: Create README.md
+## [x] TASK-027: Create README.md
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
@@ -284,7 +284,7 @@
 - **AC-027.3:** Badges for Go version, build status, license.
 - **Discovered:** 2026-07-09 discovery sweep. Project has SKILL.md but no README.md.
 
-## [ ] TASK-028: Fix 10 pre-existing errcheck lint warnings
+## [x] TASK-028: Fix pre-existing errcheck lint warnings
 - **Priority:** low
 - **Model:** deepseek-v4-pro (direct — mechanical lint fixes)
 - **Files:** internal/catalog/client_test.go, internal/completion/install.go, internal/config/config_test.go, internal/mcp/server.go

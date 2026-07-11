@@ -142,7 +142,7 @@ func (s *Store) Remove(id string) error {
 // Has returns true if a connection with the given ID exists.
 func (s *Store) Has(id string) bool {
 	var exists bool
-	s.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM api_connections WHERE id = ?)`, id).Scan(&exists)
+	_ = s.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM api_connections WHERE id = ?)`, id).Scan(&exists)
 	return exists
 }
 

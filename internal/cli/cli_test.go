@@ -35,7 +35,8 @@ func captureStdout(fn func()) string {
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	// io.Copy in test setups
+	_, _ = io.Copy(&buf, r)
 	return buf.String()
 }
 
@@ -106,7 +107,7 @@ func TestListCommand_Empty(t *testing.T) {
 
 func TestListCommand_WithAPIs(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
-	r.Add(&app.APIConnection{
+	_ = r.Add(&app.APIConnection{
 		ID:        "abc123",
 		Name:      "github",
 		SpecURL:   "https://api.github.com",
@@ -206,7 +207,7 @@ func TestStartCommand(t *testing.T) {
 
 func TestStartCommand_WithConnectedAPIs(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
-	r.Add(&app.APIConnection{
+	_ = r.Add(&app.APIConnection{
 		ID:   "test",
 		Name: "test-api",
 	})
@@ -243,7 +244,7 @@ func TestMCPCommand_NoAPIs(t *testing.T) {
 
 func TestMCPCommand_WithAPIs(t *testing.T) {
 	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
-	r.Add(&app.APIConnection{
+	_ = r.Add(&app.APIConnection{
 		ID:            "gh",
 		Name:          "github",
 		Description:   "GitHub API",
@@ -294,7 +295,7 @@ func TestFlowCommand(t *testing.T) {
 func TestExecuteAndFormat_JSON(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"items":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}`))
+		_, _ = w.Write([]byte(`{"items":[{"id":1,"name":"one"},{"id":2,"name":"two"}]}`))
 	}))
 	defer ts.Close()
 
@@ -317,7 +318,7 @@ func TestExecuteAndFormat_JSON(t *testing.T) {
 func TestExecuteAndFormat_Table(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"key":"value"}`))
+		_, _ = w.Write([]byte(`{"key":"value"}`))
 	}))
 	defer ts.Close()
 
@@ -341,7 +342,7 @@ func TestExecuteAndFormat_Raw(t *testing.T) {
 	body := `raw output`
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	}))
 	defer ts.Close()
 
@@ -364,7 +365,7 @@ func TestExecuteAndFormat_Raw(t *testing.T) {
 func TestExecuteAndFormat_HTTPError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error":"not found"}`))
+		_, _ = w.Write([]byte(`{"error":"not found"}`))
 	}))
 	defer ts.Close()
 
@@ -384,7 +385,7 @@ func TestExecuteAndFormat_HTTPError(t *testing.T) {
 func TestExecuteAndFormat_Array(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{"name":"a","val":1},{"name":"b","val":2}]`))
+		_, _ = w.Write([]byte(`[{"name":"a","val":1},{"name":"b","val":2}]`))
 	}))
 	defer ts.Close()
 
@@ -490,7 +491,7 @@ func TestBuildRequest_MissingFlag(t *testing.T) {
 func TestExecuteAndFormat_YAML(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"message":"hello"}`))
+		_, _ = w.Write([]byte(`{"message":"hello"}`))
 	}))
 	defer ts.Close()
 
@@ -567,7 +568,7 @@ func TestBuildRequest(t *testing.T) {
 	}
 
 	// Set a flag value to test
-	cmd.Flag("limit").Value.Set("10")
+	_ = cmd.Flag("limit").Value.Set("10")
 	cmd.Flag("limit").Changed = true
 
 	builder, err := BuildRequest(cmd, opts)
@@ -592,7 +593,7 @@ func TestBuildRequest_WithPathParams(t *testing.T) {
 		},
 	}
 
-	cmd.Flag("user-id").Value.Set("42")
+	_ = cmd.Flag("user-id").Value.Set("42")
 	cmd.Flag("user-id").Changed = true
 
 	builder, err := BuildRequest(cmd, opts)
@@ -619,7 +620,7 @@ func TestBuildRequest_WithBodyFlags(t *testing.T) {
 		},
 	}
 
-	cmd.Flag("name").Value.Set("Alice")
+	_ = cmd.Flag("name").Value.Set("Alice")
 	cmd.Flag("name").Changed = true
 
 	builder, err := BuildRequest(cmd, opts)
@@ -652,7 +653,7 @@ func TestBuildRequest_WithAuthToken(t *testing.T) {
 func TestLoadSpecData_HTTP(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"openapi":"3.0.0"}`))
+		_, _ = w.Write([]byte(`{"openapi":"3.0.0"}`))
 	}))
 	defer ts.Close()
 
@@ -695,7 +696,7 @@ func TestCreateAPISubcommand(t *testing.T) {
 	if cmd.RunE == nil {
 		t.Error("expected RunE to be set")
 	}
-	cmd.Help()
+	_ = cmd.Help()
 
 	// Verify ValidArgsFunction is set for dynamic completion (AC-009.2)
 	if cmd.ValidArgsFunction == nil {
@@ -787,7 +788,7 @@ func TestImportCommand_NilStore(t *testing.T) {
 	root := NewRootCommand(r)
 
 	jsonlFile := filepath.Join(t.TempDir(), "dummy.jsonl")
-	os.WriteFile(jsonlFile, []byte(`{"id":"test","name":"test-api"}`), 0644)
+	_ = os.WriteFile(jsonlFile, []byte(`{"id":"test","name":"test-api"}`), 0644)
 	root.SetArgs([]string{"import", jsonlFile})
 
 	err := root.Execute()
@@ -1932,7 +1933,7 @@ func TestCatalogCommand_PushExec(t *testing.T) {
 	specJSON := `{"openapi":"3.0.3","info":{"title":"Push Test API","version":"1.0"},"paths":{}}`
 	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(specJSON))
+		_, _ = w.Write([]byte(specJSON))
 	}))
 	defer specServer.Close()
 
@@ -1993,7 +1994,7 @@ func TestCatalogCommand_PushExec_NotFound(t *testing.T) {
 func TestExecuteAndFormat_JSONL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{"name":"a","val":1},{"name":"b","val":2}]`))
+		_, _ = w.Write([]byte(`[{"name":"a","val":1},{"name":"b","val":2}]`))
 	}))
 	defer ts.Close()
 
@@ -2018,7 +2019,7 @@ func TestExecuteAndFormat_JSONL(t *testing.T) {
 func TestExecuteAndFormat_PlainText(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("Hello, World!"))
+		_, _ = w.Write([]byte("Hello, World!"))
 	}))
 	defer ts.Close()
 
@@ -2041,7 +2042,7 @@ func TestExecuteAndFormat_PlainText(t *testing.T) {
 func TestExecuteAndFormat_CSVFile(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{"id":1,"name":"one"},{"id":2,"name":"two"}]`))
+		_, _ = w.Write([]byte(`[{"id":1,"name":"one"},{"id":2,"name":"two"}]`))
 	}))
 	defer ts.Close()
 
@@ -2074,7 +2075,7 @@ func TestExecuteAndFormat_CSVFile(t *testing.T) {
 func TestExecuteAndFormat_OutputFileError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	}))
 	defer ts.Close()
 

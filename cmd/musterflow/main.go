@@ -147,7 +147,7 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 	// Resolve port: CLI flag > config file > default with auto-discovery
 	port := cfg.Port
 	if flagDashboardAddr != "" {
-		fmt.Sscanf(flagDashboardAddr, ":%d", &port)
+		_, _ = fmt.Sscanf(flagDashboardAddr, ":%d", &port)
 	}
 
 	port, err := config.FindPort(port)
@@ -204,7 +204,7 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 	cancel()
 
 	fmt.Println("\nShutting down...")
-	httpServer.Shutdown(ctx)
+	_ = httpServer.Shutdown(ctx)
 	wg.Wait()
 	fmt.Println("Goodbye.")
 	return nil

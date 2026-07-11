@@ -62,7 +62,7 @@ func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      nil,
 		"error": map[string]interface{}{
@@ -299,7 +299,7 @@ func exampleValueForType(t string) interface{} {
 func writeJSON(w http.ResponseWriter, code int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -312,7 +312,7 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	var payload map[string]interface{}
 	if r.Body != nil {
-		json.NewDecoder(r.Body).Decode(&payload)
+		_ = json.NewDecoder(r.Body).Decode(&payload)
 	}
 
 	engine := workflow.NewEngine(

@@ -46,8 +46,8 @@ func TestLoad_ValidYAML(t *testing.T) {
 
 	// Create musterflow dir and config
 	cfgDir := filepath.Join(tmpDir, ".musterflow")
-	os.MkdirAll(cfgDir, 0755)
-	os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte("port: 9999\ndefault_format: json\nauto_completion: false\n"), 0644)
+	_ = os.MkdirAll(cfgDir, 0755)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte("port: 9999\ndefault_format: json\nauto_completion: false\n"), 0644)
 
 	cfg, err := Load()
 	if err != nil {
@@ -69,8 +69,8 @@ func TestLoad_InvalidYAML(t *testing.T) {
 	t.Setenv("HOME", tmpDir)
 
 	cfgDir := filepath.Join(tmpDir, ".musterflow")
-	os.MkdirAll(cfgDir, 0755)
-	os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte("::: this is not yaml :::"), 0644)
+	_ = os.MkdirAll(cfgDir, 0755)
+	_ = os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte("::: this is not yaml :::"), 0644)
 
 	cfg, err := Load()
 	if err != nil {

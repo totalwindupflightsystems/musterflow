@@ -61,8 +61,8 @@ func TestRegistry_List(t *testing.T) {
 		t.Errorf("expected empty, got %d", len(conns))
 	}
 
-	r.Add(&APIConnection{ID: "a", Name: "A", SpecURL: "url", BaseURL: "url"})
-	r.Add(&APIConnection{ID: "b", Name: "B", SpecURL: "url", BaseURL: "url"})
+	_ = r.Add(&APIConnection{ID: "a", Name: "A", SpecURL: "url", BaseURL: "url"})
+	_ = r.Add(&APIConnection{ID: "b", Name: "B", SpecURL: "url", BaseURL: "url"})
 
 	conns = r.List()
 	if len(conns) != 2 {
@@ -77,7 +77,7 @@ func TestRegistry_Remove(t *testing.T) {
 	}
 	defer r.Close()
 
-	r.Add(&APIConnection{ID: "x", Name: "X", SpecURL: "url", BaseURL: "url"})
+	_ = r.Add(&APIConnection{ID: "x", Name: "X", SpecURL: "url", BaseURL: "url"})
 
 	if err := r.Remove("x"); err != nil {
 		t.Fatalf("Remove: %v", err)
@@ -106,7 +106,7 @@ func TestRegistry_Persistence(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 
-	r.Add(&APIConnection{ID: "p1", Name: "P1", SpecURL: "url1", BaseURL: "url1"})
+	_ = r.Add(&APIConnection{ID: "p1", Name: "P1", SpecURL: "url1", BaseURL: "url1"})
 	r.Close()
 
 	// Reload
@@ -128,7 +128,7 @@ func TestRegistry_Persistence(t *testing.T) {
 func TestConnect(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"openapi": "3.0.0",
 			"info": {"title": "Test API", "version": "1.0.0", "description": "A test API"},
 			"servers": [{"url": "https://test.example.com"}],
@@ -175,7 +175,7 @@ func TestConnect_InvalidURL(t *testing.T) {
 
 func TestConnect_BadSpec(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`not json`))
+		_, _ = w.Write([]byte(`not json`))
 	}))
 	defer ts.Close()
 
@@ -192,7 +192,7 @@ func TestConnect_BadSpec(t *testing.T) {
 func TestConnect_FileSpec(t *testing.T) {
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "test-spec.json")
-	os.WriteFile(specPath, []byte(`{
+	_ = os.WriteFile(specPath, []byte(`{
 		"openapi": "3.0.0",
 		"info": {"title": "File API", "version": "1.0"},
 		"paths": {
@@ -218,7 +218,7 @@ func TestConnect_FileSpec(t *testing.T) {
 func TestConnect_CustomName(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"openapi": "3.0.0",
 			"info": {"title": "Original Name", "version": "1.0"},
 			"paths": {"/x": {"get": {"operationId": "getX"}}}
@@ -245,7 +245,7 @@ func TestConnect_CustomName(t *testing.T) {
 func TestConnect_CustomBaseURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"openapi": "3.0.0",
 			"info": {"title": "Base Test", "version": "1.0"},
 			"servers": [{"url": "https://original.example.com"}],
@@ -275,7 +275,7 @@ func TestDisconnect(t *testing.T) {
 	_ = r.Load()
 	defer r.Close()
 
-	r.Add(&APIConnection{ID: "disc", Name: "D", SpecURL: "url", BaseURL: "url"})
+	_ = r.Add(&APIConnection{ID: "disc", Name: "D", SpecURL: "url", BaseURL: "url"})
 	if err := Disconnect(r, "disc"); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestStore_Remove(t *testing.T) {
 	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
 	defer store.Close()
 
-	store.Add(&APIConnection{ID: "r1", Name: "R1", SpecURL: "url", BaseURL: "url"})
+	_ = store.Add(&APIConnection{ID: "r1", Name: "R1", SpecURL: "url", BaseURL: "url"})
 	if err := store.Remove("r1"); err != nil {
 		t.Fatalf("Remove: %v", err)
 	}
@@ -379,8 +379,8 @@ func TestJSONL_ExportImport(t *testing.T) {
 	store, _ := NewStore(filepath.Join(dir, "test.db"))
 	defer store.Close()
 
-	store.Add(&APIConnection{ID: "e1", Name: "E1", SpecURL: "url", BaseURL: "url"})
-	store.Add(&APIConnection{ID: "e2", Name: "E2", SpecURL: "url", BaseURL: "url"})
+	_ = store.Add(&APIConnection{ID: "e1", Name: "E1", SpecURL: "url", BaseURL: "url"})
+	_ = store.Add(&APIConnection{ID: "e2", Name: "E2", SpecURL: "url", BaseURL: "url"})
 
 	exportPath := filepath.Join(dir, "export.jsonl")
 	if err := ExportJSONL(store, exportPath); err != nil {
@@ -410,7 +410,7 @@ func TestMigrateJSONToStore(t *testing.T) {
 
 	// Write legacy JSON registry
 	jsonPath := filepath.Join(dir, "registry.json")
-	os.WriteFile(jsonPath, []byte(`{"legacy-1":{"id":"legacy-1","name":"Legacy API","spec_url":"url","base_url":"url"}}`), 0644)
+	_ = os.WriteFile(jsonPath, []byte(`{"legacy-1":{"id":"legacy-1","name":"Legacy API","spec_url":"url","base_url":"url"}}`), 0644)
 
 	store, _ := NewStore(filepath.Join(dir, "musterflow.db"))
 	defer store.Close()
@@ -441,7 +441,7 @@ func TestLoad_WithLegacyJSON(t *testing.T) {
 	dir := t.TempDir()
 
 	// Write legacy JSON
-	os.WriteFile(filepath.Join(dir, "registry.json"), []byte(`{"old":{"id":"old","name":"Old","spec_url":"url","base_url":"url"}}`), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "registry.json"), []byte(`{"old":{"id":"old","name":"Old","spec_url":"url","base_url":"url"}}`), 0644)
 
 	r := NewRegistry(dir)
 	if err := r.Load(); err != nil {
@@ -465,7 +465,7 @@ func TestStore_Has(t *testing.T) {
 	if store.Has("nonexistent") {
 		t.Error("Has should return false")
 	}
-	store.Add(&APIConnection{ID: "h1", Name: "H1", SpecURL: "url", BaseURL: "url"})
+	_ = store.Add(&APIConnection{ID: "h1", Name: "H1", SpecURL: "url", BaseURL: "url"})
 	if !store.Has("h1") {
 		t.Error("Has should return true")
 	}
@@ -537,7 +537,7 @@ func TestDefaultDataDir(t *testing.T) {
 func TestRefresh_Success(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"openapi": "3.0.0",
 			"info": {"title": "Refreshed API", "version": "2.0.0", "description": "Updated"},
 			"servers": [{"url": "https://refreshed.example.com"}],
@@ -559,7 +559,7 @@ func TestRefresh_Success(t *testing.T) {
 	defer r.Close()
 
 	// Register initial connection
-	r.Add(&APIConnection{
+	_ = r.Add(&APIConnection{
 		ID:            "refresh-test",
 		Name:          "Old Name",
 		SpecURL:       ts.URL + "/openapi.json",
@@ -610,7 +610,7 @@ func TestRefresh_NotFound(t *testing.T) {
 func TestRefresh_BaseURLChange(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"openapi": "3.0.0",
 			"info": {"title": "URL Test", "version": "1.0.0"},
 			"servers": [{"url": "https://new-base.example.com"}],
@@ -627,7 +627,7 @@ func TestRefresh_BaseURLChange(t *testing.T) {
 	}
 	defer r.Close()
 
-	r.Add(&APIConnection{
+	_ = r.Add(&APIConnection{
 		ID:            "url-change",
 		Name:          "URL Test",
 		SpecURL:       ts.URL + "/openapi.json",
@@ -648,7 +648,7 @@ func TestRefresh_BaseURLChange(t *testing.T) {
 func TestRefresh_AuthTypePreserved(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"openapi": "3.0.0",
 			"info": {"title": "Auth Test", "version": "1.0.0"},
 			"paths": {
@@ -664,7 +664,7 @@ func TestRefresh_AuthTypePreserved(t *testing.T) {
 	}
 	defer r.Close()
 
-	r.Add(&APIConnection{
+	_ = r.Add(&APIConnection{
 		ID:            "auth-preserve",
 		Name:          "Auth Test",
 		SpecURL:       ts.URL + "/openapi.json",
@@ -698,7 +698,7 @@ func TestExportJSONL_WriteError(t *testing.T) {
 	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
 	defer store.Close()
 
-	store.Add(&APIConnection{ID: "x", Name: "X", SpecURL: "url", BaseURL: "url"})
+	_ = store.Add(&APIConnection{ID: "x", Name: "X", SpecURL: "url", BaseURL: "url"})
 
 	// Write to a directory path (should fail)
 	err := ExportJSONL(store, t.TempDir())
@@ -720,7 +720,7 @@ func TestImportJSONL_NonexistentFile(t *testing.T) {
 func TestImportJSONL_InvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	badPath := filepath.Join(dir, "bad.jsonl")
-	os.WriteFile(badPath, []byte(`not valid json`), 0644)
+	_ = os.WriteFile(badPath, []byte(`not valid json`), 0644)
 
 	store, _ := NewStore(filepath.Join(dir, "test.db"))
 	defer store.Close()
@@ -735,7 +735,7 @@ func TestLoad_CreateDirError(t *testing.T) {
 	// Create a file where a directory should go — mkdirAll should fail
 	parent := t.TempDir()
 	blocked := filepath.Join(parent, "blocked")
-	os.WriteFile(blocked, []byte("block"), 0444) // read-only file
+	_ = os.WriteFile(blocked, []byte("block"), 0444) // read-only file
 
 	r := NewRegistry(filepath.Join(blocked, "subdir"))
 	err := r.Load()

@@ -283,7 +283,7 @@ func TestExecute_NonJSONResponse(t *testing.T) {
 	// Create a server that returns plain text, not JSON
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("hello world"))
+		_, _ = w.Write([]byte("hello world"))
 	}))
 	defer srv.Close()
 
