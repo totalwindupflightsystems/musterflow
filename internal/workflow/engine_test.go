@@ -194,9 +194,9 @@ func TestList_SkipsNonStarFiles(t *testing.T) {
 
 	_, _ = e.Create("flow1", "real", false)
 	// Write a non-.star file
-	os.WriteFile(filepath.Join(dir, "README.txt"), []byte("docs"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "README.txt"), []byte("docs"), 0644)
 	// Write a directory
-	os.MkdirAll(filepath.Join(dir, "subdir"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, "subdir"), 0755)
 
 	flows, err := e.List()
 	if err != nil {

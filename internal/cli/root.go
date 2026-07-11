@@ -549,7 +549,7 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 			key, val := args[0], args[1]
 			switch key {
 			case "port":
-				fmt.Sscanf(val, "%d", &cfg.Port)
+				_, _ = fmt.Sscanf(val, "%d", &cfg.Port)
 			case "default_format":
 				cfg.DefaultFormat = val
 			case "auto_completion":

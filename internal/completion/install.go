@@ -140,7 +140,7 @@ func ShouldPrompt(autoCompletionEnabled bool) bool {
 func PromptInstall(shell Shell) bool {
 	fmt.Printf("\n🔧 Shell completions not found. Install %s completions? [Y/n] ", shell)
 	var response string
-	fmt.Scanln(&response)
+	_, _ = fmt.Scanln(&response)
 	response = strings.ToLower(strings.TrimSpace(response))
 	return response == "" || response == "y" || response == "yes"
 }

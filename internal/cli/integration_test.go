@@ -21,16 +21,16 @@ func TestIntegration_ConnectAndExecute_FullPipeline(t *testing.T) {
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/todos":
 			w.WriteHeader(200)
-			w.Write([]byte(`[{"id":1,"title":"Buy milk","done":false},{"id":2,"title":"Walk dog","done":true}]`))
+			_, _ = w.Write([]byte(`[{"id":1,"title":"Buy milk","done":false},{"id":2,"title":"Walk dog","done":true}]`))
 		case r.Method == "POST" && r.URL.Path == "/todos":
 			w.WriteHeader(201)
-			w.Write([]byte(`{"id":3,"title":"Write tests","done":false}`))
+			_, _ = w.Write([]byte(`{"id":3,"title":"Write tests","done":false}`))
 		case r.Method == "GET" && r.URL.Path == "/todos/1":
 			w.WriteHeader(200)
-			w.Write([]byte(`{"id":1,"title":"Buy milk","done":false}`))
+			_, _ = w.Write([]byte(`{"id":1,"title":"Buy milk","done":false}`))
 		default:
 			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not found"}`))
+			_, _ = w.Write([]byte(`{"error":"not found"}`))
 		}
 	}))
 	defer apiServer.Close()
@@ -68,7 +68,7 @@ func TestIntegration_ConnectAndExecute_FullPipeline(t *testing.T) {
 	// --- Spec server (serves the OpenAPI spec) ---
 	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(specJSON))
+		_, _ = w.Write([]byte(specJSON))
 	}))
 	defer specServer.Close()
 
@@ -148,7 +148,7 @@ func TestIntegration_ConnectAndExecute_FullPipeline(t *testing.T) {
 func TestIntegration_ConnectAndExecute_JSONFormat(t *testing.T) {
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{"id":1,"title":"Buy milk","done":false}]`))
+		_, _ = w.Write([]byte(`[{"id":1,"title":"Buy milk","done":false}]`))
 	}))
 	defer apiServer.Close()
 
@@ -169,7 +169,7 @@ func TestIntegration_ConnectAndExecute_JSONFormat(t *testing.T) {
 
 	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(specJSON))
+		_, _ = w.Write([]byte(specJSON))
 	}))
 	defer specServer.Close()
 
@@ -221,7 +221,7 @@ func TestIntegration_ConnectAndExecute_JSONFormat(t *testing.T) {
 func TestIntegration_ConnectAndExecute_HTTPError(t *testing.T) {
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
-		w.Write([]byte(`{"error":"not found","message":"No todos here"}`))
+		_, _ = w.Write([]byte(`{"error":"not found","message":"No todos here"}`))
 	}))
 	defer apiServer.Close()
 
@@ -242,7 +242,7 @@ func TestIntegration_ConnectAndExecute_HTTPError(t *testing.T) {
 
 	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(specJSON))
+		_, _ = w.Write([]byte(specJSON))
 	}))
 	defer specServer.Close()
 
@@ -285,7 +285,7 @@ func TestIntegration_ConnectAndExecute_PathParam(t *testing.T) {
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" && r.URL.Path == "/todos/42" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"id":42,"title":"Answer everything","done":false}`))
+			_, _ = w.Write([]byte(`{"id":42,"title":"Answer everything","done":false}`))
 			return
 		}
 		w.WriteHeader(404)
@@ -310,7 +310,7 @@ func TestIntegration_ConnectAndExecute_PathParam(t *testing.T) {
 
 	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(specJSON))
+		_, _ = w.Write([]byte(specJSON))
 	}))
 	defer specServer.Close()
 
@@ -356,7 +356,7 @@ func TestIntegration_ConnectAndExecute_PathParam(t *testing.T) {
 func TestIntegration_ConnectAndExecute_Disconnect(t *testing.T) {
 	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
   "openapi": "3.0.3",
   "info": {"title": "Todo API", "version": "1.0.0"},
   "servers": [{"url": "http://localhost:0"}],
@@ -407,14 +407,14 @@ func TestIntegration_ConnectAndExecute_Refresh(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		// Return different version on second call to verify refresh works
 		if callCount == 0 {
-			w.Write([]byte(`{
+			_, _ = w.Write([]byte(`{
   "openapi": "3.0.3",
   "info": {"title": "Todo API", "version": "1.0.0"},
   "servers": [{"url": "http://localhost:0"}],
   "paths": {"/todos":{"get":{"operationId":"listTodos","responses":{"200":{"description":"OK"}}},"post":{"operationId":"createTodo","responses":{"201":{"description":"Created"}}}}}
 }`))
 		} else {
-			w.Write([]byte(`{
+			_, _ = w.Write([]byte(`{
   "openapi": "3.0.3",
   "info": {"title": "Todo API", "version": "2.0.0"},
   "servers": [{"url": "http://localhost:0"}],

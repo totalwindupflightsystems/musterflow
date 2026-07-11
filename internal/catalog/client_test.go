@@ -26,7 +26,7 @@ func TestFetchEntryValid(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/entries/test-entry.json" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(body)
+			_, _ = w.Write(body)
 			return
 		}
 		http.NotFound(w, r)
@@ -71,7 +71,7 @@ func TestFetchEntryNotFound(t *testing.T) {
 func TestFetchEntryInvalidJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("{not valid json"))
+		_, _ = w.Write([]byte("{not valid json"))
 	}))
 	defer srv.Close()
 
@@ -92,7 +92,7 @@ func TestSearchValidCatalog(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/index.json" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(body)
+			_, _ = w.Write(body)
 			return
 		}
 		http.NotFound(w, r)
@@ -116,7 +116,7 @@ func TestClientSearchEmptyCatalog(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/index.json" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte("[]"))
+			_, _ = w.Write([]byte("[]"))
 			return
 		}
 		http.NotFound(w, r)
@@ -149,7 +149,7 @@ func TestSearchBadStatusCode(t *testing.T) {
 func TestSearchInvalidJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("{broken"))
+		_, _ = w.Write([]byte("{broken"))
 	}))
 	defer srv.Close()
 

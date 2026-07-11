@@ -25,5 +25,5 @@ func indexHTML() string {
 // serveIndex serves the dashboard HTML with proper content type.
 func serveIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	io.WriteString(w, indexHTML())
+	_, _ = io.WriteString(w, indexHTML())
 }

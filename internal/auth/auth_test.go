@@ -241,8 +241,8 @@ func TestManager_List(t *testing.T) {
 	}
 
 	// Add two
-	mgr.Add("api-1", Credential{Type: CredentialAPIKey, Key: "key1111111111111111"})
-	mgr.Add("api-2", Credential{Type: CredentialBearer, Key: "tok2222222222222222"})
+	_ = mgr.Add("api-1", Credential{Type: CredentialAPIKey, Key: "key1111111111111111"})
+	_ = mgr.Add("api-2", Credential{Type: CredentialBearer, Key: "tok2222222222222222"})
 
 	entries = mgr.List()
 	if len(entries) != 2 {
@@ -261,7 +261,7 @@ func TestManager_List_ShortKey(t *testing.T) {
 	cfg, _ := tempConfig(t)
 	mgr := NewManager(cfg)
 
-	mgr.Add("api", Credential{Type: CredentialAPIKey, Key: "short"})
+	_ = mgr.Add("api", Credential{Type: CredentialAPIKey, Key: "short"})
 
 	entries := mgr.List()
 	if len(entries) != 1 {
@@ -325,7 +325,7 @@ func TestManager_List_MTLS_Paths(t *testing.T) {
 	cfg, _ := tempConfig(t)
 	mgr := NewManager(cfg)
 
-	mgr.Add("mtls-api", Credential{
+	_ = mgr.Add("mtls-api", Credential{
 		Type:     CredentialMTLS,
 		CertPath: "/etc/certs/client.crt",
 		KeyPath:  "/etc/certs/client.key",
@@ -345,7 +345,7 @@ func TestManager_Add_Overwrite(t *testing.T) {
 	mgr := NewManager(cfg)
 
 	// Add initial
-	mgr.Add("api", Credential{Type: CredentialAPIKey, Key: "first-key"})
+	_ = mgr.Add("api", Credential{Type: CredentialAPIKey, Key: "first-key"})
 
 	// Overwrite with new cred
 	err := mgr.Add("api", Credential{Type: CredentialBearer, Key: "second-key"})

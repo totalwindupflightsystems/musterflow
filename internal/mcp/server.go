@@ -52,7 +52,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(rpcResponse{
+		_ = json.NewEncoder(w).Encode(rpcResponse{
 			JSONRPC: "2.0",
 			ID:      nil,
 			Error: &rpcError{
@@ -105,7 +105,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func writeRPCError(w http.ResponseWriter, id interface{}, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(rpcResponse{
+	_ = json.NewEncoder(w).Encode(rpcResponse{
 		JSONRPC: "2.0",
 		ID:      id,
 		Error: &rpcError{

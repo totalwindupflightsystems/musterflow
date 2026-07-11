@@ -94,7 +94,7 @@ func TestPromptInstall_DefaultYes(t *testing.T) {
 
 	// Write newline (empty input = default yes) and close
 	go func() {
-		w.Write([]byte("\n"))
+		_, _ = w.Write([]byte("\n"))
 		w.Close()
 	}()
 
@@ -115,7 +115,7 @@ func TestPromptInstall_ExplicitYes(t *testing.T) {
 	os.Stdin = r
 
 	go func() {
-		w.Write([]byte("y\n"))
+		_, _ = w.Write([]byte("y\n"))
 		w.Close()
 	}()
 
@@ -136,7 +136,7 @@ func TestPromptInstall_No(t *testing.T) {
 	os.Stdin = r
 
 	go func() {
-		w.Write([]byte("n\n"))
+		_, _ = w.Write([]byte("n\n"))
 		w.Close()
 	}()
 
