@@ -5,6 +5,69 @@
 > **Quality:** GitReins Tier 1 (secrets/lint/build/test) + Tier 2 (LLM evaluator) on every task.
 > **Project:** /home/kara/musterflow — Go 1.26.1, imports muster engine from /home/kara/muster via replace directive.
 
+## [ ] FIX-031: `musterflow refresh` via dashboard returns 405 Method Not Allowed
+- **Priority:** high
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** internal/dashboard/ (ADD endpoint), internal/cli/root.go (VERIFY routing)
+- **AC-031.1:** `musterflow refresh <api-id>` works when dashboard is running. Currently returns "refresh via dashboard: method not allowed" because `/api/apis/<id>/refresh` endpoint doesn't exist.
+- **AC-031.2:** Dashboard adds a `POST /api/apis/<id>/refresh` endpoint that re-fetches the OpenAPI spec and regenerates commands.
+- **AC-031.3:** All existing tests pass. `go test -short -count=1 ./...` green.
+- **Discovered:** 2026-07-11 discovery sweep. CLI routes through dashboard (TASK-029) but dashboard has no refresh endpoint.
+
+## [ ] FIX-032: MCP info endpoint shows `http://:9876/mcp` (missing hostname)
+- **Priority:** medium
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** internal/dashboard/ (FIX endpoint URL construction)
+- **AC-032.1:** `GET /api/mcp/info` returns `"endpoint": "http://localhost:9876/mcp"` not `"http://:9876/mcp"`.
+- **AC-032.2:** The endpoint URL correctly includes the hostname regardless of which interface the server binds to.
+- **AC-032.3:** All existing tests pass. `go test -short -count=1 ./...` green.
+- **Discovered:** 2026-07-11 discovery sweep. Dashboard shows correct URL in HTML but API endpoint drops the host.
+
+## [ ] FIX-033: `musterflow mcp` doesn't route through dashboard API
+- **Priority:** medium
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** internal/cli/root.go (MODIFY — add dashboard routing to mcp command)
+- **AC-033.1:** `musterflow mcp` queries dashboard API when dashboard is running instead of trying to open DuckDB directly. Should call `GET /api/mcp/info` and display tool count and endpoint URL.
+- **AC-033.2:** `musterflow mcp` still works standalone when dashboard is not running (existing behavior with direct DuckDB access).
+- **AC-033.3:** All existing tests pass. `go test -short -count=1 ./...` green.
+- **Discovered:** 2026-07-11 discovery sweep. mcp command shows "No APIs connected" despite dashboard having 2 APIs. Unlike list/catalog, it doesn't route through dashboard.
+
+## [ ] DOC-034: README typo — `swagger-store-openapi-3-0` → `swagger-petstore-openapi-3-0`
+- **Priority:** low
+- **Model:** N/A — config-only, foreman direct edit
+- **Files:** README.md (line 64)
+- **AC-034.1:** Line 64 uses correct subcommand name `swagger-petstore-openapi-3-0` matching the actual connected API.
+- **Discovered:** 2026-07-11 doc audit. Quick Start example uses wrong API name.
+
+## [ ] DOC-035: README claims Homebrew/`go install` support but no release pipeline exists
+- **Priority:** low
+- **Model:** N/A — config-only, foreman direct edit
+- **Files:** README.md (lines 40-48)
+- **AC-035.1:** Installation section only documents `go build` from source. Remove Homebrew and `go install` references until a release pipeline is set up.
+- **AC-035.2:** Or: set up goreleaser + Homebrew tap as part of a CI/release task.
+- **Discovered:** 2026-07-11 doc audit. `brew install musterflow` and `go install ...@latest` are aspirational, not functional.
+
+## [ ] DOC-036: README claims "Pre-seeded with 10 APIs" but catalog has 0 entries
+- **Priority:** low
+- **Model:** N/A — foreman direct edit
+- **Files:** README.md (line 111)
+- **AC-036.1:** Either seed the catalog with 10 APIs OR update README to accurately describe current state.
+- **AC-036.2:** Catalog search returns actual results.
+- **Discovered:** 2026-07-11 discovery sweep. `catalog search` returns 0 results. README claims pre-seeded catalog.
+
+## [ ] CI-037: No build/test/lint CI workflow — only docker.yml
+- **Priority:** medium
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** .github/workflows/ci.yml (CREATE)
+- **AC-037.1:** New `ci.yml` workflow runs `go build ./...`, `go vet ./...`, `go test -short -count=1 ./...` on push to main.
+- **AC-037.2:** Workflow includes golangci-lint run.
+- **AC-037.3:** CI badge in README links to this workflow.
+- **Discovered:** 2026-07-11 CI audit. Only `docker.yml` exists, triggered on tag push only. No code quality verification on main.
+
 ## [x] TASK-029: Fix CLI commands not routing through dashboard API when dashboard is running (completed 2026-07-11, commit 2a59e2c)
 - **Priority:** high
 - **Model:** glm-5.2
@@ -56,49 +119,3 @@
 ## [x] TASK-026: Fix DuckDB lock conflict — CLI unusable while dashboard is running (completed 2026-07-10)
 ## [x] TASK-027: Create README.md
 ## [x] TASK-028: Fix pre-existing errcheck lint warnings
-
-## [ ] TASK-031: Connect 4 APIs to prove product value — GitHub, Stripe, Linear, Slack
-- **Priority:** high
-- **Model:** glm-5.2
-- **Provider:** ollama-cloud
-- **Files:** internal/cli/root.go (read-only), internal/app/connect.go (read-only), catalog/seed.json (MODIFY)
-- **AC-031.1:** Connect GitHub with a real fine-grained token. `musterflow auth add gh --type bearer --key <token>` → `musterflow gh user get` returns actual GitHub user data.
-- **AC-031.2:** Connect Stripe in test mode. `musterflow connect https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json --name stripe` → `musterflow stripe balance get` works with test key.
-- **AC-031.3:** Connect Linear. `musterflow connect https://raw.githubusercontent.com/linear/linear/master/packages/sdk/src/schema.graphql --name linear` — note Linear may need GraphQL→OpenAPI conversion or a community spec.
-- **AC-031.4:** Connect Slack for notifications. `musterflow connect https://raw.githubusercontent.com/slackapi/slack-api-specs/master/web-api/slack_web_openapi_v2.json --name slack` → `musterflow slack chat postMessage --channel test --text "Hello from MusterFlow"` works.
-- **AC-031.5:** All 4 APIs show up in `musterflow list` with correct endpoint counts. `go test -short -count=1 ./...` passes.
-- **Verify:** `musterflow list | grep -E "gh|stripe|linear|slack"` shows all 4, each with endpoint count > 0.
-
-## [ ] TASK-032: Catalog CI validation — GitHub Action for PR quality gates
-- **Priority:** medium
-- **Model:** glm-5.2
-- **Provider:** ollama-cloud
-- **Files:** .github/workflows/catalog-ci.yml (NEW)
-- **AC-032.1:** GitHub Action triggers on PR to totalwindupflightsystems/musterflow-catalog main branch.
-- **AC-032.2:** Validates entries.json against JSON schema (must have id, name, type, spec_url, description fields).
-- **AC-032.3:** Fetches each spec_url and runs OpenAPI validation (go run muster's openapi parser).
-- **AC-032.4:** Computes quality scores (domain reputation + spec structure) and posts as PR comment.
-- **AC-032.5:** Action file committed to musterflow-catalog repo's .github/workflows/ directory.
-
-## [ ] TASK-033: Docker integration smoke test — build, start, health check, connect, execute
-- **Priority:** medium
-- **Model:** glm-5.2
-- **Provider:** ollama-cloud
-- **Files:** tests/smoke.sh (NEW), Dockerfile (read-only)
-- **AC-033.1:** Smoke script builds Docker image, starts container, waits for health check.
-- **AC-033.2:** Inside container: `musterflow connect https://petstore3.swagger.io/api/v3/openapi.json` → success.
-- **AC-033.3:** Inside container: `musterflow petstore listPets --limit 3` → returns HTTP response (200 or auth error, not transport error).
-- **AC-033.4:** Script cleans up container and reports pass/fail exit code.
-- **Verify:** `bash tests/smoke.sh` returns exit 0.
-
-## [ ] TASK-034: End-to-end demo — 2 mock APIs + Starlark flow + webhook trigger
-- **Priority:** high
-- **Model:** glm-5.2
-- **Provider:** ollama-cloud
-- **Files:** tests/e2e/ (NEW directory with mock servers + test runner)
-- **AC-034.1:** Two httptest mock API servers (Stripe-like webhook sender + GitHub-like issue tracker).
-- **AC-034.2:** Connect both mock APIs to MusterFlow.
-- **AC-034.3:** Create a Starlark flow: `on stripe:charge.succeeded → gh issues create(title="Payment: $amount")`.
-- **AC-034.4:** Trigger the webhook → verify the flow executes → verify the GitHub issue was "created" (logged by mock server).
-- **AC-034.5:** Test script returns exit 0 on success, exit 1 on failure.
-- **Verify:** `go test -count=1 -v ./tests/e2e/...` passes.
