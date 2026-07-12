@@ -413,8 +413,8 @@ func TestServer_MCPInfo_NoRegistry(t *testing.T) {
 	if body["tool_count"].(float64) != 0 {
 		t.Errorf("expected tool_count=0 when no registry, got %v", body["tool_count"])
 	}
-	if body["endpoint"] != "http://:9876/mcp" {
-		t.Errorf("expected endpoint http://:9876/mcp, got %v", body["endpoint"])
+	if body["endpoint"] != "http://localhost:9876/mcp" {
+		t.Errorf("expected endpoint http://localhost:9876/mcp, got %v", body["endpoint"])
 	}
 }
 
@@ -441,8 +441,8 @@ func TestServer_MCPInfo_WithTools(t *testing.T) {
 	_ = json.NewDecoder(rec.Body).Decode(&body)
 
 	// With a ToolRegistry (even empty), endpoint and transport are set
-	if body["endpoint"] != "http://:9876/mcp" {
-		t.Errorf("expected endpoint http://:9876/mcp, got %v", body["endpoint"])
+	if body["endpoint"] != "http://localhost:9876/mcp" {
+		t.Errorf("expected endpoint http://localhost:9876/mcp, got %v", body["endpoint"])
 	}
 	if body["transport"] != "HTTP JSON-RPC 2.0" {
 		t.Errorf("expected transport 'HTTP JSON-RPC 2.0', got %v", body["transport"])
