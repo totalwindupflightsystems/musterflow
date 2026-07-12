@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
@@ -144,11 +145,20 @@ func (s *Server) handleAPIAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Path[len("/api/apis/"):]
-	if id == "" {
+	path := r.URL.Path[len("/api/apis/"):]
+	if path == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing api id"})
 		return
 	}
+
+	// Check for /refresh suffix
+	if strings.HasSuffix(path, "/refresh") && r.Method == http.MethodPost {
+		id := strings.TrimSuffix(path, "/refresh")
+		s.handleRefreshAPI(w, r, id)
+		return
+	}
+
+	id := path
 
 	switch r.Method {
 	case http.MethodGet:
@@ -167,6 +177,24 @@ func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 	}
+}
+
+// handleRefreshAPI handles POST /api/apis/<id>/refresh
+func (s *Server) handleRefreshAPI(w http.ResponseWriter, r *http.Request, apiID string) {
+	result, err := app.Refresh(r.Context(), s.registry, apiID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"name":            result.Connection.Name,
+		"old_version":     result.OldVersion,
+		"new_version":     result.NewVersion,
+		"version_changed": result.VersionChanged,
+		"old_endpoints":   result.OldEndpoints,
+		"new_endpoints":   result.NewEndpoints,
+	})
 }
 
 // handleCatalogSearch searches the community catalog.
