@@ -7,6 +7,7 @@ require (
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/spf13/cobra v1.8.0
 	github.com/wojons/muster v0.0.0
+	golang.org/x/term v0.44.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

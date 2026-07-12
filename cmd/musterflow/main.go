@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/auth"
@@ -211,12 +212,12 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 }
 
 // isTerminal returns true if stdin is a terminal (interactive session).
+// Uses golang.org/x/term which correctly distinguishes a real TTY from
+// character devices like /dev/null that report ModeCharDevice but are not
+// interactive — preventing the completion prompt from blocking in cron,
+// pipes, and other non-interactive contexts.
 func isTerminal() bool {
-	stat, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return (stat.Mode() & os.ModeCharDevice) != 0
+	return term.IsTerminal(int(os.Stdin.Fd()))
 }
 
 // isPortInUse returns true if something is listening on the given TCP address.
