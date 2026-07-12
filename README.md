@@ -34,18 +34,6 @@ $ musterflow catalog search github
 
 ## Installation
 
-### Go Install
-
-```bash
-go install github.com/totalwindupflightsystems/musterflow/cmd/musterflow@latest
-```
-
-### Homebrew
-
-```bash
-brew install musterflow
-```
-
 ### From Source
 
 ```bash
@@ -108,7 +96,7 @@ musterflow catalog push petstore     # Share your API connection
 musterflow catalog pull github       # Install a community API
 ```
 
-Pre-seeded with 10 APIs: GitHub, Stripe, Slack, Discord, OpenAI, Notion, Linear, Jira, Twilio, Cloudflare — all with verified OpenAPI spec URLs.
+Discover and install APIs from the community catalog. Anyone can share their API connections.
 
 ### 🔐 Auth — Per-API Credential Management
 

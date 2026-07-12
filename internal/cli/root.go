@@ -692,6 +692,10 @@ func newMCPCommand(registry *app.Registry) *cobra.Command {
 		Use:   "mcp",
 		Short: "MCP endpoint information",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// If the dashboard is running, route through its API to avoid lock conflicts.
+			if dashboardBaseURL != "" {
+				return mcpViaDashboard()
+			}
 			fmt.Println("MCP endpoint: http://localhost:9876/mcp")
 			fmt.Println("Transport: stdio JSON-RPC / HTTP SSE")
 			fmt.Println()
@@ -708,6 +712,48 @@ func newMCPCommand(registry *app.Registry) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+// mcpViaDashboard fetches MCP endpoint information from the dashboard HTTP API
+// to avoid DuckDB lock conflicts when the dashboard holds the write lock.
+func mcpViaDashboard() error {
+	resp, err := http.Get(dashboardBaseURL + "/api/mcp/info")
+	if err != nil {
+		return fmt.Errorf("dashboard MCP info request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Endpoint  string `json:"endpoint"`
+		Transport string `json:"transport"`
+		ToolCount int    `json:"tool_count"`
+		Tools     []struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			Example     string `json:"example"`
+		} `json:"tools"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode dashboard response: %w", err)
+	}
+
+	fmt.Println("MCP endpoint:", result.Endpoint)
+	fmt.Println("Transport:", result.Transport)
+	fmt.Println()
+	if result.ToolCount == 0 {
+		fmt.Println("No APIs connected. Connect APIs to expose them as MCP tools.")
+		return nil
+	}
+	fmt.Printf("Exposed MCP tools from %d APIs:\n\n", result.ToolCount)
+	for _, t := range result.Tools {
+		fmt.Printf("  [%s] %s\n", t.Name, t.Description)
+	}
+	fmt.Println("\nConnect an MCP client to " + result.Endpoint + " to use these tools.")
+	return nil
 }
 
 func loadAPISubcommands(root *cobra.Command, registry *app.Registry) {

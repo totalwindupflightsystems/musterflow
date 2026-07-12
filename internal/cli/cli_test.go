@@ -2181,3 +2181,83 @@ func TestBuildRequest_WithGlobalAuth(t *testing.T) {
 		t.Fatal("expected non-nil builder")
 	}
 }
+
+func TestMCPCommand_ViaDashboard(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/mcp/info" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"endpoint": "http://localhost:9876/mcp",
+			"transport": "HTTP JSON-RPC 2.0",
+			"tool_count": 2,
+			"tools": [
+				{"name": "github_list_repos", "description": "List GitHub repos", "example": "{}"},
+				{"name": "slack_send", "description": "Send a Slack message", "example": "{}"}
+			]
+		}`))
+	}))
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"mcp"})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("mcp via dashboard: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "MCP endpoint: http://localhost:9876/mcp") {
+		t.Errorf("expected MCP endpoint in output, got: %s", output)
+	}
+	if !strings.Contains(output, "HTTP JSON-RPC 2.0") {
+		t.Errorf("expected transport from dashboard, got: %s", output)
+	}
+	if !strings.Contains(output, "github_list_repos") {
+		t.Errorf("expected tool name from dashboard, got: %s", output)
+	}
+}
+
+func TestMCPCommand_ViaDashboard_NoTools(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"endpoint": "http://localhost:9876/mcp",
+			"transport": "HTTP JSON-RPC 2.0",
+			"tool_count": 0,
+			"tools": []
+		}`))
+	}))
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"mcp"})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("mcp via dashboard: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "No APIs connected") {
+		t.Errorf("expected 'No APIs connected' message, got: %s", output)
+	}
+}
