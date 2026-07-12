@@ -61,7 +61,7 @@ go build -o musterflow ./cmd/musterflow/
 musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
 
 # 2. Call it from the CLI — subcommands generated automatically
-musterflow swagger-store-openapi-3-0 listPets --status available
+musterflow swagger-petstore-openapi-3-0 listPets --status available
 
 # 3. Start the dashboard and MCP server
 musterflow start
