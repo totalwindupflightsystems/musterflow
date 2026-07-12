@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 // Shell represents a supported shell type.
@@ -137,7 +139,18 @@ func ShouldPrompt(autoCompletionEnabled bool) bool {
 
 // PromptInstall asks the user if they want to install completions.
 // Returns true if the user accepted.
+// Returns false immediately when stdin is not a real terminal (pipe,
+// /dev/null, cron, etc.) to avoid blocking on non-interactive input.
 func PromptInstall(shell Shell) bool {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return false
+	}
+	return promptInstallInteractive(shell)
+}
+
+// promptInstallInteractive contains the actual prompt-and-read logic.
+// It is called by PromptInstall only after stdin is confirmed to be a TTY.
+func promptInstallInteractive(shell Shell) bool {
 	fmt.Printf("\n🔧 Shell completions not found. Install %s completions? [Y/n] ", shell)
 	var response string
 	_, _ = fmt.Scanln(&response)

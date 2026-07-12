@@ -98,7 +98,7 @@ func TestPromptInstall_DefaultYes(t *testing.T) {
 		w.Close()
 	}()
 
-	result := PromptInstall(ShellBash)
+	result := promptInstallInteractive(ShellBash)
 	if !result {
 		t.Error("expected true for empty input (default yes)")
 	}
@@ -119,7 +119,7 @@ func TestPromptInstall_ExplicitYes(t *testing.T) {
 		w.Close()
 	}()
 
-	result := PromptInstall(ShellZsh)
+	result := promptInstallInteractive(ShellZsh)
 	if !result {
 		t.Error("expected true for 'y'")
 	}
@@ -140,9 +140,30 @@ func TestPromptInstall_No(t *testing.T) {
 		w.Close()
 	}()
 
-	result := PromptInstall(ShellBash)
+	result := promptInstallInteractive(ShellBash)
 	if result {
 		t.Error("expected false for 'n'")
+	}
+}
+
+// TestPromptInstall_NonTerminal verifies that PromptInstall returns false
+// when stdin is not a real terminal (pipe, /dev/null, cron, etc.).
+func TestPromptInstall_NonTerminal(t *testing.T) {
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdin = r
+	defer r.Close()
+	defer w.Close()
+
+	// A pipe is not a TTY, so PromptInstall should short-circuit to false
+	// without reading anything or blocking.
+	if result := PromptInstall(ShellBash); result {
+		t.Error("expected PromptInstall to return false for non-terminal stdin")
 	}
 }
 
