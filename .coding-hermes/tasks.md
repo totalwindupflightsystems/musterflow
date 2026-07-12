@@ -23,7 +23,7 @@
 - **AC-032.3:** All 10 test packages pass. `go vet ./...` clean. `gitreins guard` PASS. ✅
 - **Resolved:** 2026-07-12. GLM-5.2 worker. One-line fix + test assertion update.
 
-## [ ] FIX-033: `musterflow mcp` doesn't route through dashboard API
+## [x] FIX-033: `musterflow mcp` doesn't route through dashboard API (completed 2026-07-12, commit 6743e74)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
@@ -39,7 +39,7 @@
 - **Files:** README.md (line 64)
 - **Resolved:** 2026-07-12. Fixed in commit 0708770.
 
-## [ ] DOC-035: README claims Homebrew/`go install` support but no release pipeline exists
+## [x] DOC-035: README claims Homebrew/`go install` support but no release pipeline exists (completed 2026-07-12, commit 6743e74)
 - **Priority:** low
 - **Model:** N/A — config-only, foreman direct edit
 - **Files:** README.md (lines 40-48)
@@ -47,7 +47,7 @@
 - **AC-035.2:** Or: set up goreleaser + Homebrew tap as part of a CI/release task.
 - **Discovered:** 2026-07-11 doc audit.
 
-## [ ] DOC-036: README claims "Pre-seeded with 10 APIs" but catalog has 0 entries
+## [x] DOC-036: README claims "Pre-seeded with 10 APIs" but catalog has 0 entries (completed 2026-07-12, commit 6743e74)
 - **Priority:** low
 - **Model:** N/A — foreman direct edit
 - **Files:** README.md (line 111)
