@@ -5,7 +5,7 @@
 > **Quality:** GitReins Tier 1 (secrets/lint/build/test) + Tier 2 (LLM evaluator) on every task.
 > **Project:** /home/kara/musterflow — Go 1.26.1, imports muster engine from /home/kara/muster via replace directive.
 
-## [ ] TASK-029: Fix CLI commands not routing through dashboard API when dashboard is running
+## [x] TASK-029: Fix CLI commands not routing through dashboard API when dashboard is running (completed 2026-07-11, commit 2a59e2c)
 - **Priority:** high
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
