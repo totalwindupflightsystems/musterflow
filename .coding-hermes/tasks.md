@@ -18,7 +18,7 @@
 - **Verify:** Start dashboard in background, run `musterflow list`, verify 2 connected APIs shown (GitHub v3, Petstore).
 - **Discovered:** 2026-07-11 discovery sweep. Dashboard shows 2 APIs via curl, but CLI reports "No APIs connected" because newListCommand calls registry.List() directly instead of routing through dashboard API. connect/disconnect already route correctly — list, catalog, and refresh need the same pattern.
 
-## [ ] TASK-030: Fix completion prompt blocking non-interactive CLI use
+## [x] TASK-030: Fix completion prompt blocking non-interactive CLI use (completed 2026-07-11, commit 664386e)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
