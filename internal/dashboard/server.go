@@ -233,7 +233,7 @@ type mcpToolInfo struct {
 // handleMCPInfo returns information about the MCP endpoint and its tools.
 // GET /api/mcp/info
 func (s *Server) handleMCPInfo(w http.ResponseWriter, r *http.Request) {
-	endpoint := fmt.Sprintf("http://%s/mcp", s.addr)
+	endpoint := fmt.Sprintf("http://localhost%s/mcp", s.addr)
 
 	if s.toolRegistry == nil {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
