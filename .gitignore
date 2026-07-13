@@ -1,3 +1,12 @@
 /musterflow
 /musterflowd
 .gitreins/config.yaml.bak
+
+# GitReins — local state files (rebuildable)
+.gitreins/history/
+.gitreins/tasks.yaml
+
+# Hilo — local cache files (rebuildable)
+.vfs/graph/graph.db
+.vfs/graph/graph.db.wal
+.vfs/graph/.last_warm
