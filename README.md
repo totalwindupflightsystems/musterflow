@@ -4,7 +4,7 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.26.1-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/totalwindupflightsystems/musterflow)
+[![CI](https://github.com/totalwindupflightsystems/musterflow/actions/workflows/ci.yml/badge.svg)](https://github.com/totalwindupflightsystems/musterflow/actions/workflows/ci.yml)
 
 Connect an OpenAPI spec → get an instant CLI with subcommands for every endpoint, an HTTP MCP server for AI agents, and a Starlark workflow engine for automation.
 

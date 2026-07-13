@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout musterflow
+        uses: actions/checkout@v4
+
+      - name: Checkout muster engine
+        uses: actions/checkout@v4
+        with:
+          repository: wojons/muster
+          path: /tmp/muster
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Point muster replace at CI checkout
+        run: sed -i 's|/home/kara/muster|/tmp/muster|g' go.mod
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -short -count=1 ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.3
+          args: --timeout=5m
