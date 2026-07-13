@@ -55,7 +55,7 @@
 - **AC-036.2:** Catalog search returns actual results.
 - **Discovered:** 2026-07-11 discovery sweep.
 
-## [ ] CI-037: No build/test/lint CI workflow — only docker.yml
+## [x] CI-037: No build/test/lint CI workflow — only docker.yml (completed 2026-07-13, commit 44e86d8)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
