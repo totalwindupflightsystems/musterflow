@@ -67,4 +67,19 @@
 
 ## [x] TASK-029: Fix CLI commands not routing through dashboard API when dashboard is running (completed 2026-07-11, commit 2a59e2c)
 ## [x] TASK-030: Fix completion prompt blocking non-interactive CLI use (completed 2026-07-11, commit 664386e)
+## [x] DOC-038: Add MIT LICENSE file to match README badge (completed 2026-07-14, commit 7e6ccaf)
+- **Priority:** low
+- **Model:** N/A — foreman direct
+- **Files:** LICENSE (CREATE)
+- **AC-038.1:** LICENSE file exists at repo root with standard MIT license text.
+- **AC-038.2:** Copyright line matches project owner.
+- **Discovered:** 2026-07-14 discovery sweep.
+
+## [x] DOC-039: Add AGENTS.md for agent-maintained project documentation (completed 2026-07-14, commit 7e6ccaf)
+- **Priority:** low
+- **Model:** N/A — foreman direct
+- **Files:** AGENTS.md (CREATE)
+- **AC-039.1:** AGENTS.md exists at repo root documenting project conventions, build commands, test patterns, and agent workflow.
+- **Discovered:** 2026-07-14 discovery sweep.
+
 ## [x] TASK-001 through TASK-028 (historical)
