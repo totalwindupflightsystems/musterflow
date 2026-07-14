@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MusterFlow — Product Requirements Document</title>
+<style>
+:root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; --yellow: #d2991d; --red: #f85149; --purple: #a371f7; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.6; }
+nav { background:var(--card); border-bottom:1px solid var(--border); padding:1rem 2rem; position:sticky; top:0; z-index:10; display:flex; gap:2rem; flex-wrap:wrap; align-items:center; }
+nav a { color:var(--muted); text-decoration:none; font-size:.9rem; }
+nav a:hover { color:var(--accent); }
+nav .brand { font-weight:700; color:#fff; font-size:1.1rem; }
+nav .brand span { color:var(--accent); }
+.container { max-width:960px; margin:0 auto; padding:2rem; }
+h1 { font-size:2.5rem; color:#fff; margin-bottom:.5rem; }
+h2 { font-size:1.6rem; color:#fff; margin:3rem 0 1rem; padding-bottom:.5rem; border-bottom:1px solid var(--border); }
+h3 { font-size:1.15rem; color:var(--accent); margin:1.5rem 0 .5rem; }
+p, li { color:var(--text); margin-bottom:.75rem; }
+.subtitle { color:var(--muted); font-size:1.1rem; margin-bottom:2rem; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin-bottom:1rem; }
+.badge { display:inline-block; padding:.15rem .5rem; border-radius:4px; font-size:.75rem; font-weight:600; margin-right:.5rem; }
+.badge.mvp { background:#1f3a23; color:var(--green); }
+.badge.p2 { background:#3d2e00; color:var(--yellow); }
+.badge.p3 { background:#1a1a2e; color:var(--purple); }
+table { width:100%; border-collapse:collapse; margin:1rem 0; }
+th, td { padding:.6rem .8rem; text-align:left; border-bottom:1px solid var(--border); font-size:.9rem; }
+th { color:var(--muted); font-weight:600; }
+code { background:#21262d; padding:.1rem .4rem; border-radius:4px; font-size:.9em; }
+pre { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1rem; overflow-x:auto; margin:1rem 0; }
+pre code { background:none; padding:0; }
+.block { background:var(--card); border-left:3px solid var(--accent); padding:1rem 1.5rem; margin:1rem 0; border-radius:0 8px 8px 0; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+@media (max-width:768px) { .two-col { grid-template-columns:1fr; } .container { padding:1rem; } h1 { font-size:1.8rem; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="brand">MusterFlow <span>PRD</span></a>
+  <a href="#vision">Vision</a>
+  <a href="#product">Product</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#milestones">Milestones</a>
+  <a href="#competitive">Competitive</a>
+  <a href="#risks">Risks</a>
+</nav>
+
+<div class="container">
+
+<h1>MusterFlow</h1>
+<p class="subtitle">Turn any API into a CLI, an MCP tool, and a workflow — one binary, self-hosted, community-powered.</p>
+
+<div class="two-col">
+  <div class="card">
+    <h3>Project</h3>
+    <p><strong>Name:</strong> MusterFlow<br>
+    <strong>GitHub:</strong> totalwindupflightsystems/musterflow<br>
+    <strong>License:</strong> MIT<br>
+    <strong>Language:</strong> Go 1.26<br>
+    <strong>Domains:</strong> musterflow.com, musterflow.dev</p>
+  </div>
+  <div class="card">
+    <h3>Status</h3>
+    <p><strong>Phase:</strong> MVP — 24/24 core tasks complete<br>
+    <strong>Binary:</strong> 61MB static, CGO_ENABLED=0<br>
+    <strong>Tests:</strong> 10 packages, 271 tests<br>
+    <strong>CLI coverage:</strong> 68.8%<br>
+    <strong>Engine:</strong> Muster (56 packages, verified green)</p>
+  </div>
+</div>
+
+<!-- ─── VISION ─────────────────────────────────────────── -->
+<h2 id="vision">1. Vision</h2>
+
+<p>Every SaaS company ships an API. Every developer spends hours wiring those APIs into CLIs, chatbots, and automation scripts. MusterFlow eliminates that work: paste an OpenAPI URL, get a typed CLI, MCP tools for AI agents, and a workflow engine — instantly.</p>
+
+<div class="block">
+  <strong>The 30-second demo:</strong><br>
+  <code>brew install musterflow</code> → <code>musterflow start</code> → paste <code>https://api.github.com</code> → <code>musterflow gh issues list --repo cli/cli</code> works. Paste Stripe. <code>musterflow flow create</code> → <code>on stripe:charge.succeeded → gh issues create(title="Payment: $amount")</code>. They tweet.
+</div>
+
+<p><strong>Why now:</strong> AI agents (Claude, GPT, Hermes) are bottlenecked on API integration. Every new API requires custom integration code. MCP protocol standardizes tool calling — MusterFlow makes every API an MCP tool without code. The Context7 model proved community-contributed catalogs work for docs. MusterFlow applies the same model to API execution.</p>
+
+<!-- ─── PRODUCT ────────────────────────────────────────── -->
+<h2 id="product">2. Product</h2>
+
+<h3>2.1 Four Surfaces, One Binary</h3>
+
+<div class="two-col">
+  <div class="card">
+    <h3>🖥 Web Dashboard</h3>
+    <p>Connect APIs, browse community catalog, manage workflows, view audit logs. Self-hosted, local. Dark theme, responsive.</p>
+    <code>musterflow start</code> → <code>localhost:9876</code>
+  </div>
+  <div class="card">
+    <h3>⌨ CLI</h3>
+    <p>Every connected API becomes typed subcommands with shell completion. Table, JSON, CSV, JSONL, Parquet output.</p>
+    <code>musterflow gh issues list --state open</code>
+  </div>
+  <div class="card">
+    <h3>🤖 MCP Endpoint</h3>
+    <p>Every connected API is an MCP tool. AI agents (Claude, GPT, Hermes) call any API without integration code.</p>
+    <code>http://localhost:9876/mcp</code>
+  </div>
+  <div class="card">
+    <h3>⚡ Workflow Engine</h3>
+    <p>Chain APIs with Starlark DSL. Webhook triggers. WASM transforms. Community-published workflows.</p>
+    <code>musterflow flow create → on stripe:charge → gh issues create</code>
+  </div>
+</div>
+
+<h3>2.2 The Context7 Community Model</h3>
+<table>
+  <tr><th>Feature</th><th>Context7</th><th>MusterFlow</th></tr>
+  <tr><td>Community submits</td><td>Library docs (MDX)</td><td>OpenAPI specs</td></tr>
+  <tr><td>AI agent gets</td><td>Up-to-date docs in context</td><td>Typed MCP tools for any API</td></tr>
+  <tr><td>Human gets</td><td>—</td><td>CLI + dashboard + workflows</td></tr>
+  <tr><td>Surface</td><td>Docs retrieval (read-only)</td><td>Execute (CLI calls, MCP tools, workflow chains)</td></tr>
+  <tr><td>Quality</td><td>Community votes</td><td>Automated scoring (domain + spec structure)</td></tr>
+  <tr><td>Catalog</td><td>Proprietary</td><td>Public GitHub repo — forkable</td></tr>
+</table>
+
+<h3>2.3 Feature Matrix</h3>
+<table>
+  <tr><th>Feature</th><th>Phase</th><th>Status</th></tr>
+  <tr><td>API connection (OpenAPI URL → CLI + MCP)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete</td></tr>
+  <tr><td>Lazy command generation</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete</td></tr>
+  <tr><td>Auth per API (apikey, bearer, OAuth2, mTLS)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete — 80.3% coverage</td></tr>
+  <tr><td>Output formats (table, JSON, CSV, JSONL, Parquet)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete</td></tr>
+  <tr><td>Shell completion (bash, zsh, fish)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete — 87.3% coverage</td></tr>
+  <tr><td>Dashboard (API browser, catalog, MCP info)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete — 81.9% coverage</td></tr>
+  <tr><td>Community catalog (push/pull/search)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete — 94.9% coverage</td></tr>
+  <tr><td>MCP HTTP endpoint</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete — 84.6% coverage</td></tr>
+  <tr><td>DuckDB storage + JSONL export</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete — 83.0% coverage</td></tr>
+  <tr><td>Config system (YAML, port auto-discovery)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete — 86.8% coverage</td></tr>
+  <tr><td>Spec refresh (re-fetch, re-parse, version tracking)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete</td></tr>
+  <tr><td>Quality scoring (official/community/untested)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete</td></tr>
+  <tr><td>Docker multi-arch image (amd64+arm64)</td><td><span class="badge mvp">MVP</span></td><td>✅ Complete</td></tr>
+  <tr><td>Landing page (musterflow.com)</td><td><span class="badge mvp">MVP</span></td><td>✅ Deployed</td></tr>
+  <tr><td>Catalog browser (catalog.musterflow.com)</td><td><span class="badge mvp">MVP</span></td><td>✅ Deployed — 10 APIs seeded</td></tr>
+  <tr><td>GitHub CI (build/test/lint)</td><td><span class="badge mvp">MVP</span></td><td>⚠ In progress (CI-037)</td></tr>
+  <tr><td>Workflow engine (Starlark DSL + webhooks)</td><td><span class="badge p2">Phase 2</span></td><td>⚠ Skeletal — 86.8% coverage, needs integration</td></tr>
+  <tr><td>WASM transforms (wazero sandbox)</td><td><span class="badge p2">Phase 2</span></td><td>⚠ Skeletal — 87.5% coverage, needs wazero wiring</td></tr>
+  <tr><td>MCP stdio transport (Claude/GPT native)</td><td><span class="badge p2">Phase 2</span></td><td>❌ Not started</td></tr>
+  <tr><td>Brew formula</td><td><span class="badge p2">Phase 2</span></td><td>❌ Not started</td></tr>
+  <tr><td>Dashboard React/htmx frontend wired into binary</td><td><span class="badge p2">Phase 2</span></td><td>❌ Not started</td></tr>
+  <tr><td>Multi-tenancy (teams, shared vaults)</td><td><span class="badge p3">Phase 3</span></td><td>❌ Not started</td></tr>
+  <tr><td>Audit logging dashboard</td><td><span class="badge p3">Phase 3</span></td><td>❌ Not started</td></tr>
+  <tr><td>On-prem deployment guide</td><td><span class="badge p3">Phase 3</span></td><td>❌ Not started</td></tr>
+</table>
+
+<!-- ─── ARCHITECTURE ──────────────────────────────────── -->
+<h2 id="architecture">3. Architecture</h2>
+
+<h3>3.1 Engine: Muster</h3>
+<p>MusterFlow imports the Muster engine (<code>github.com/wojons/muster</code>) as a Go library. Muster provides the core primitives — MusterFlow adds packaging, dashboard, catalog, and workflow UX.</p>
+
+<table>
+  <tr><th>Muster Package</th><th>What It Does</th><th>MusterFlow Usage</th></tr>
+  <tr><td><code>pkg/openapi</code></td><td>Parse & validate OpenAPI specs, $ref resolution</td><td>Connect, refresh, catalog pull</td></tr>
+  <tr><td><code>pkg/generator</code></td><td>Generate cobra CLI commands from specs</td><td>Lazy command generation</td></tr>
+  <tr><td><code>pkg/mcp</code></td><td>MCP server, protocol, tool descriptors</td><td>HTTP MCP endpoint</td></tr>
+  <tr><td><code>pkg/request</code></td><td>HTTP request builder</td><td>All API calls</td></tr>
+  <tr><td><code>pkg/auth</code></td><td>OAuth2 flows, token management</td><td>Auth login command</td></tr>
+  <tr><td><code>pkg/wasm</code></td><td>wazero-based WASM runtime</td><td>Transform execution (Phase 2)</td></tr>
+  <tr><td><code>pkg/dsl</code></td><td>Starlark interpreter</td><td>Workflow DSL (Phase 2)</td></tr>
+</table>
+
+<h3>3.2 Repository Layout</h3>
+<pre><code>/home/kara/musterflow/
+├── cmd/musterflow/main.go       # Single binary entry point
+├── internal/
+│   ├── app/                     # API registry, DuckDB store, JSONL
+│   ├── auth/                    # Credential management (apikey, bearer, OAuth2, mTLS)
+│   ├── catalog/                 # Community catalog client, scoring
+│   ├── cli/                     # Cobra command tree, execution, formats
+│   ├── completion/              # Shell completion (bash, zsh, fish)
+│   ├── config/                  # YAML config, port auto-discovery
+│   ├── dashboard/               # HTTP server, API handlers, health
+│   ├── mcp/                     # HTTP JSON-RPC MCP bridge
+│   ├── wasm/                    # WASM transform registry (Phase 2)
+│   └── workflow/                # Starlark workflow engine (Phase 2)
+├── web/                         # Dashboard frontend (embedded)
+├── landing/                     # Landing page (deployed to musterflow.com)
+├── catalog/                     # Catalog seed data
+├── go.mod / go.sum
+├── Dockerfile
+├── docker-compose.yml
+└── .github/workflows/           # CI (docker.yml, ci.yml pending)</code></pre>
+
+<h3>3.3 Data Flow</h3>
+<pre><code>User pastes OpenAPI URL
+  → openapi.Parse() validates spec
+  → generator.GenerateCommands() builds cobra tree
+  → Registry stores connection in DuckDB
+  → CLI: musterflow &lt;api&gt; &lt;op&gt; --flag=val
+  → request.Builder.Execute() makes HTTP call
+  → response formatted (table/JSON/CSV/JSONL/Parquet)
+
+MCP path:
+  → handlers.Registry registers tools from connected APIs
+  → HTTP JSON-RPC server bridges to /mcp endpoint
+  → AI agent calls tools/call → ExecuteCommand → HTTP → formatted response
+
+Workflow path (Phase 2):
+  → Starlark DSL compiles to workflow steps
+  → Webhook trigger dispatches execution
+  → WASM transforms process data between steps
+</code></pre>
+
+<h3>3.4 Design Decisions (Locked)</h3>
+<table>
+  <tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr>
+  <tr><td>Language</td><td>Go</td><td>Single static binary, cross-platform, Muster is Go</td></tr>
+  <tr><td>Storage</td><td>DuckDB + JSONL</td><td>SQL for queries, JSONL for portability</td></tr>
+  <tr><td>Config</td><td>YAML (~/.musterflow/config.yaml)</td><td>Human-editable, Muster convention</td></tr>
+  <tr><td>Auth storage</td><td>Config YAML + OS keychain</td><td>Self-hosted, no secrets in repos</td></tr>
+  <tr><td>Catalog</td><td>Public GitHub repo</td><td>No SaaS dependency, forkable</td></tr>
+  <tr><td>MCP transport</td><td>HTTP JSON-RPC (MVP), stdio (Phase 2)</td><td>Dashboard integration needs HTTP; stdio for Claude/GPT</td></tr>
+  <tr><td>CLI framework</td><td>Cobra</td><td>Muster engine uses Cobra, completion built-in</td></tr>
+  <tr><td>WASM runtime</td><td>wazero (pure Go, no CGO)</td><td>Keeps binary static, no system deps</td></tr>
+  <tr><td>Workflow DSL</td><td>Starlark</td><td>Python-like, sandboxed, deterministic</td></tr>
+</table>
+
+<!-- ─── MILESTONES ────────────────────────────────────── -->
+<h2 id="milestones">4. Milestones</h2>
+
+<h3>4.1 Phase 1 — MVP (Current: ~85% complete)</h3>
+<table>
+  <tr><th>Milestone</th><th>Status</th><th>Remaining</th></tr>
+  <tr><td>Single binary builds, all tests green</td><td>✅</td><td>—</td></tr>
+  <tr><td>Connect any OpenAPI URL → typed CLI</td><td>✅</td><td>—</td></tr>
+  <tr><td>MCP HTTP endpoint</td><td>✅</td><td>Stdio transport</td></tr>
+  <tr><td>Community catalog (push/pull/search)</td><td>✅</td><td>CI validation</td></tr>
+  <tr><td>Dashboard (API browser, catalog, MCP info)</td><td>⚠</td><td>Frontend wiring</td></tr>
+  <tr><td>Auth per API (all 4 types)</td><td>✅</td><td>—</td></tr>
+  <tr><td>CLI coverage ≥ 85%</td><td>⚠</td><td>68.8% → 85%</td></tr>
+  <tr><td>Docker multi-arch image</td><td>✅</td><td>—</td></tr>
+  <tr><td>Landing page live</td><td>✅</td><td>—</td></tr>
+  <tr><td>GitHub CI (build/test/lint)</td><td>⚠</td><td>In progress</td></tr>
+</table>
+
+<h3>4.2 Phase 2 — Month 2 (0% complete)</h3>
+<table>
+  <tr><th>Milestone</th><th>Estimate</th></tr>
+  <tr><td>Dashboard React/htmx frontend wired into binary</td><td>2-3 days</td></tr>
+  <tr><td>MCP stdio transport (Claude/GPT native)</td><td>1-2 days</td></tr>
+  <tr><td>Workflow engine — real Starlark execution + webhook integration</td><td>3-4 days</td></tr>
+  <tr><td>WASM transforms — real wazero sandbox + network policy</td><td>3-4 days</td></tr>
+  <tr><td>Brew formula</td><td>0.5 day</td></tr>
+  <tr><td>End-to-end demo (2 APIs → Starlark flow → webhook → result)</td><td>1 day</td></tr>
+  <tr><td>Docker smoke test</td><td>1 day</td></tr>
+  <tr><td><strong>Total:</strong> Tweetable demo</td><td><strong>~2 weeks</strong></td></tr>
+  <tr><td><strong>Total:</strong> Production-ready</td><td><strong>~4 weeks</strong></td></tr>
+</table>
+
+<h3>4.3 Phase 3 — Month 3+ (0% complete)</h3>
+<ul>
+  <li>Multi-tenancy — teams, shared credential vaults</li>
+  <li>Audit logging dashboard</li>
+  <li>Team credential management</li>
+  <li>On-prem deployment guide</li>
+  <li>Enterprise SSO (OIDC/SAML)</li>
+  <li>Usage analytics (opt-in, local-only)</li>
+</ul>
+
+<!-- ─── COMPETITIVE ───────────────────────────────────── -->
+<h2 id="competitive">5. Competitive Landscape</h2>
+
+<table>
+  <tr><th>Product</th><th>What It Does</th><th>MusterFlow vs</th></tr>
+  <tr>
+    <td><strong>Context7</strong></td>
+    <td>Community-submitted library docs for AI agents</td>
+    <td>Context7 is read-only (docs retrieval). MusterFlow is execute (CLI + MCP tools + workflows). Same community model, different substrate.</td>
+  </tr>
+  <tr>
+    <td><strong>OpenAPI Generator</strong></td>
+    <td>Generate SDK clients from OpenAPI specs</td>
+    <td>Requires code generation, build step, language-specific output. MusterFlow is instant — no codegen, no build, any language via CLI + MCP.</td>
+  </tr>
+  <tr>
+    <td><strong>Postman</strong></td>
+    <td>GUI API client, collections, environments</td>
+    <td>SaaS, GUI-first. MusterFlow is CLI-first, self-hosted, AI-agent-native via MCP. Postman is for humans; MusterFlow is for humans and agents.</td>
+  </tr>
+  <tr>
+    <td><strong>n8n / Zapier</strong></td>
+    <td>Visual workflow automation</td>
+    <td>SaaS, GUI drag-and-drop, proprietary. MusterFlow workflows are code (Starlark), version-controlled, self-hosted. WASM transforms are community-published.</td>
+  </tr>
+  <tr>
+    <td><strong>Pipedream</strong></td>
+    <td>API integration platform</td>
+    <td>SaaS, JavaScript-based. MusterFlow is self-hosted, Go binary, Starlark DSL. No vendor lock-in.</td>
+  </tr>
+  <tr>
+    <td><strong>MCP.so / Smithery</strong></td>
+    <td>MCP server directories</td>
+    <td>Requires per-API MCP server code. MusterFlow generates MCP tools from any OpenAPI spec with zero code. Catalog is a GitHub repo, not a proprietary directory.</td>
+  </tr>
+</table>
+
+<h3>5.1 Moat</h3>
+<ul>
+  <li><strong>Zero-code MCP tool generation.</strong> No other product turns an OpenAPI URL into working MCP tools without writing server code.</li>
+  <li><strong>Community catalog as GitHub repo.</strong> Not a proprietary directory — forkable, PR-driven, no registration. Teams can run their own catalog.</li>
+  <li><strong>One binary, four surfaces.</strong> CLI + MCP + dashboard + workflows from a single <code>brew install</code>. No split installs, no SaaS dependency.</li>
+  <li><strong>Self-hosted, MIT license.</strong> User's keys, user's machine, user's data. Nothing phones home.</li>
+</ul>
+
+<!-- ─── RISKS ─────────────────────────────────────────── -->
+<h2 id="risks">6. Risks & Mitigations</h2>
+
+<table>
+  <tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr>
+  <tr>
+    <td>OpenAPI spec quality varies wildly across APIs</td>
+    <td>High</td>
+    <td>Quality scoring system (domain reputation + spec structure). Community flags bad specs. Muster parser handles common spec issues.</td>
+  </tr>
+  <tr>
+    <td>Cold start — empty catalog at launch</td>
+    <td>High</td>
+    <td>Seed with 10 high-value APIs (GitHub, Stripe, Slack, Discord, OpenAI, Notion, Linear, Jira, Twilio, Cloudflare). The value is immediate even with one API.</td>
+  </tr>
+  <tr>
+    <td>API auth complexity (OAuth2, mTLS, custom schemes)</td>
+    <td>Medium</td>
+    <td>Muster engine already handles all 4 auth types. OAuth2 flow skeleton complete. Keychain integration for OS-native secret storage.</td>
+  </tr>
+  <tr>
+    <td>MCP protocol still evolving</td>
+    <td>Medium</td>
+    <td>HTTP JSON-RPC works today. Stdio transport added in Phase 2. Protocol updates are additive.</td>
+  </tr>
+  <tr>
+    <td>Competition from well-funded tools (Postman, Zapier)</td>
+    <td>Low</td>
+    <td>Different market: self-hosted, AI-agent-native, open-source. Postman/Zapier are SaaS for humans. MusterFlow is infrastructure for agents.</td>
+  </tr>
+  <tr>
+    <td>WASM transform security (untrusted community code)</td>
+    <td>Medium</td>
+    <td>wazero sandbox with deny-network default. Capability negotiation. Community audit surface (GitHub PR review).</td>
+  </tr>
+  <tr>
+    <td>Muster engine dependency (single maintainer)</td>
+    <td>Medium</td>
+    <td>Muster is MIT-licensed, 56 packages, full test coverage. MusterFlow imports it as a library — can be vendored. Generator, parser, MCP server are the critical paths.</td>
+  </tr>
+</table>
+
+<!-- ─── SUCCESS METRICS ───────────────────────────────── -->
+<h2 id="success">7. Success Metrics</h2>
+
+<div class="block">
+  <strong>Tweetable MVP:</strong> Someone who has never heard of MusterFlow runs <code>brew install musterflow</code>, connects GitHub, runs a real CLI command, chains two APIs in a workflow, and tweets about it — all within 5 minutes of discovery.
+</div>
+
+<table>
+  <tr><th>Metric</th><th>Target</th></tr>
+  <tr><td>Time from discovery to first API call</td><td>&lt; 2 minutes</td></tr>
+  <tr><td>APIs in community catalog at launch</td><td>10 (seeded)</td></tr>
+  <tr><td>CLI test coverage</td><td>≥ 85%</td></tr>
+  <tr><td>End-to-end demo reliability</td><td>Passes 100% of CI runs</td></tr>
+  <tr><td>Binary size</td><td>&lt; 65MB (currently 61MB)</td></tr>
+  <tr><td>Docker image size</td><td>&lt; 15MB (currently 11MB)</td></tr>
+  <tr><td>Time to generate CLI commands from spec</td><td>&lt; 1 second for typical API</td></tr>
+</table>
+
+<footer style="margin-top:4rem; padding:2rem 0; border-top:1px solid var(--border); color:var(--muted); text-align:center; font-size:.85rem;">
+  MusterFlow PRD · v0.1.0 · July 2026 · <a href="https://musterflow.com" style="color:var(--accent);">musterflow.com</a> · MIT License
+</footer>
+
+</div>
+</body>
+</html>
