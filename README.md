@@ -24,12 +24,7 @@ $ musterflow swagger-petstore-openapi-3-0 listPets --limit 5
 └────┴───────────────┴────────┘
 
 $ musterflow catalog search github
-┌──────────────────┬─────────────────────────────────┬──────────┬───────┐
-│ NAME             │ DESCRIPTION                     │ TYPE     │ SCORE │
-├──────────────────┼─────────────────────────────────┼──────────┼───────┤
-│ GitHub           │ GitHub REST API v3              │ official │ 10/10 │
-│ GitHub Enterprise│ GitHub Enterprise Server API    │ official │ 9/10  │
-└──────────────────┴─────────────────────────────────┴──────────┴───────┘
+No catalog entries found.
 ```
 
 ## Installation

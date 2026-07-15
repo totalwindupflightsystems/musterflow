@@ -82,4 +82,13 @@
 - **AC-039.1:** AGENTS.md exists at repo root documenting project conventions, build commands, test patterns, and agent workflow.
 - **Discovered:** 2026-07-14 discovery sweep.
 
+## [x] DOC-040: README catalog search example shows results but catalog returns empty (revisit DOC-036)
+- **Priority:** low
+- **Model:** N/A — foreman direct edit or investigation
+- **Files:** README.md (lines 26-32), internal/catalog/ (INVESTIGATE)
+- **AC-040.1:** Either: (a) seed the catalog with data so `musterflow catalog search github` returns results matching the README example, OR (b) update the README example to reflect empty catalog state.
+- **AC-040.2:** If seeding: verify `musterflow catalog search <term>` returns expected results with correct scoring.
+- **AC-040.3:** `go build ./... && go vet ./... && go test -short -count=1 ./...` green.
+- **Discovered:** 2026-07-15 discovery sweep. DOC-036 was marked complete but the catalog still returns 0 entries. The README catalog search example (lines 26-32) shows GitHub API search results — need to either seed data or fix docs.
+
 ## [x] TASK-001 through TASK-028 (historical)
