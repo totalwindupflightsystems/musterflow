@@ -92,3 +92,23 @@
 - **Discovered:** 2026-07-15 discovery sweep. DOC-036 was marked complete but the catalog still returns 0 entries. The README catalog search example (lines 26-32) shows GitHub API search results — need to either seed data or fix docs.
 
 ## [x] TASK-001 through TASK-028 (historical)
+
+## [ ] SEC-041: GO-2026-5856 — TLS privacy leak in crypto/tls (CRITICAL)
+- **Priority:** critical
+- **Model:** N/A — infra, foreman handles or escalate
+- **Files:** N/A — Go toolchain upgrade needed
+- **AC-041.1:** Go version upgraded to 1.26.5 across the system.
+- **AC-041.2:** `govulncheck ./...` shows zero findings for GO-2026-5856.
+- **AC-041.3:** All 11 test packages pass after upgrade.
+- **Discovered:** 2026-07-17 discovery sweep. Standard library vuln in crypto/tls (Encrypted Client Hello privacy leak). Fixed in Go 1.26.5. Local snap Go (1.26.4) doesn't have the fix. **Note:** Security scanner blocked automatic download of Go 1.26.5 tarball from go.dev — may need manual download or apt update.
+
+## [ ] DEPS-042: GO-2025-3787 — mapstructure v2.2.1 log info leak (MODERATE)
+- **Priority:** medium
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** go.mod (UPDATE mapstructure/v2 to v2.3.0+)
+- **AC-042.1:** `go mod edit -require github.com/go-viper/mapstructure/v2@v2.3.0` applied.
+- **AC-042.2:** `go mod tidy` completes without errors.
+- **AC-042.3:** `go build ./... && go vet ./... && go test -short -count=1 ./...` all pass.
+- **AC-042.4:** `govulncheck ./...` shows zero findings for GO-2025-3787.
+- **Discovered:** 2026-07-17 discovery sweep. Indirect dep via DuckDB driver.
