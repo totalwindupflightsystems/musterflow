@@ -4,7 +4,7 @@
 
 MusterFlow turns any OpenAPI spec into a CLI, an MCP tool, and a workflow engine. Connect an OpenAPI spec URL → get instant CLI subcommands for every endpoint, an HTTP MCP server for AI agents, and a Starlark workflow engine for automation.
 
-- **Language:** Go 1.26.1
+- **Language:** Go 1.26.5
 - **Module:** `github.com/totalwindupflightsystems/musterflow`
 - **Engine dependency:** `github.com/wojons/muster` (via `replace` directive to `/home/kara/muster`)
 - **CLI binary:** `cmd/musterflow/main.go`
