@@ -93,7 +93,7 @@
 
 ## [x] TASK-001 through TASK-028 (historical)
 
-## [ ] SEC-041: GO-2026-5856 — TLS privacy leak in crypto/tls (CRITICAL)
+## [x] SEC-041: GO-2026-5856 — TLS privacy leak in crypto/tls (CRITICAL) (completed 2026-07-17, go1.26.5 upgrade)
 - **Priority:** critical
 - **Model:** N/A — infra, foreman handles or escalate
 - **Files:** N/A — Go toolchain upgrade needed
@@ -102,7 +102,7 @@
 - **AC-041.3:** All 11 test packages pass after upgrade.
 - **Discovered:** 2026-07-17 discovery sweep. Standard library vuln in crypto/tls (Encrypted Client Hello privacy leak). Fixed in Go 1.26.5. Local snap Go (1.26.4) doesn't have the fix. **Note:** Security scanner blocked automatic download of Go 1.26.5 tarball from go.dev — may need manual download or apt update.
 
-## [ ] DEPS-042: GO-2025-3787 — mapstructure v2.2.1 log info leak (MODERATE)
+## [x] DEPS-042: GO-2025-3787 — mapstructure v2.2.1 log info leak (MODERATE) (completed 2026-07-17)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
