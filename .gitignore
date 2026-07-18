@@ -6,7 +6,11 @@
 .gitreins/history/
 .gitreins/tasks.yaml
 
+# Build artifacts
+bin/
+
 # Hilo — local cache files (rebuildable)
 .vfs/graph/graph.db
 .vfs/graph/graph.db.wal
 .vfs/graph/.last_warm
+.vfs/graph/edges.jsonl
