@@ -50,7 +50,7 @@
 - **Discovered:** 2026-07-20 11-point audit, check 6 (performance). All 10 packages return ok with 0 benchmarks.
 - **Resolved:** 2026-07-20. GLM-5.2 worker via ollama-cloud. 7 benchmarks, +97/-2 lines across 7 _test.go files.
 
-## [ ] SPEC-047: Create specs/ directory with axiom-level specs
+## [x] SPEC-047: Create specs/ directory with axiom-level specs (completed 2026-07-20, commit 7656e78)
 - **Priority:** low
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
