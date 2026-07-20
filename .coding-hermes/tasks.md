@@ -5,6 +5,67 @@
 > **Quality:** GitReins Tier 1 (secrets/lint/build/test) + Tier 2 (LLM evaluator) on every task.
 > **Project:** /home/kara/musterflow — Go 1.26.5, imports muster engine from /home/kara/muster via replace directive.
 
+## [ ] DEPS-043: Upgrade kin-openapi v0.133.0 → v0.142.0
+- **Priority:** medium
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** go.mod (UPDATE kin-openapi)
+- **AC-043.1:** `go get github.com/getkin/kin-openapi@v0.142.0` succeeds.
+- **AC-043.2:** `go mod tidy` clean.
+- **AC-043.3:** `go build ./... && go vet ./... && go test -short -count=1 ./...` all pass.
+- **AC-043.4:** Verify API compatibility — v0.133→v0.142 is 9 minor versions in v0 range (may have breaking changes per Go convention).
+- **Discovered:** 2026-07-20 11-point audit, check 4 (package upgrades).
+
+## [ ] DEPS-044: Upgrade cobra v1.8.0 → v1.10.2
+- **Priority:** medium
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** go.mod (UPDATE cobra)
+- **AC-044.1:** `go get github.com/spf13/cobra@v1.10.2` succeeds.
+- **AC-044.2:** `go mod tidy` clean.
+- **AC-044.3:** `go build ./... && go vet ./... && go test -short -count=1 ./...` all pass.
+- **AC-044.4:** All 15+ CLI subcommands still register and function — cobra API may have changed between v1.8 and v1.10.
+- **Discovered:** 2026-07-20 11-point audit, check 4 (package upgrades).
+
+## [ ] DEPS-045: Upgrade x/term v0.44.0 → v0.45.0
+- **Priority:** low
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** go.mod (UPDATE x/term)
+- **AC-045.1:** `go get golang.org/x/term@v0.45.0` succeeds.
+- **AC-045.2:** `go mod tidy` clean.
+- **AC-045.3:** `go build ./... && go vet ./... && go test -short -count=1 ./...` all pass.
+- **Discovered:** 2026-07-20 11-point audit, check 4 (package upgrades).
+
+## [ ] PERF-046: Add benchmarks for hot paths (0 benchmarks across 10 packages)
+- **Priority:** low
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** internal/app/*_test.go, internal/cli/*_test.go, internal/dashboard/*_test.go (ADD BenchmarkX functions)
+- **AC-046.1:** At least 1 benchmark per non-trivial package: app, auth, catalog, cli, dashboard, mcp, workflow.
+- **AC-046.2:** `go test -bench=. -run='^$' ./... | grep -c 'Benchmark'` returns >0.
+- **AC-046.3:** `go test -short -count=1 ./...` still passes (benchmarks don't break existing tests).
+- **Discovered:** 2026-07-20 11-point audit, check 6 (performance). All 10 packages return ok with 0 benchmarks.
+
+## [ ] SPEC-047: Create specs/ directory with axiom-level specs
+- **Priority:** low
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** specs/ (CREATE directory + spec files)
+- **AC-047.1:** specs/ directory exists with at least specs/cli.md and specs/dashboard.md.
+- **AC-047.2:** Each spec follows coding-hermes-specs standard: exact Go interfaces, error paths, config, edge cases, test scenarios.
+- **AC-047.3:** Specs match actual code (15 CLI commands, 8 dashboard routes, data models).
+- **Discovered:** 2026-07-20 11-point audit, check 1 (spec alignment). No specs/ directory exists.
+
+## [ ] DUCKBRAIN-048: Populate DuckBrain with project state/conventions/pitfalls
+- **Priority:** low
+- **Model:** N/A — foreman direct (MCP calls)
+- **Files:** DuckBrain namespace=coding-hermes, keyPrefix=/projects/musterflow/
+- **AC-048.1:** At least 3 entries under /projects/musterflow/: architecture, conventions, pitfalls.
+- **AC-048.2:** Architecture entry covers: Go 1.26.5, muster engine via replace directive, package structure (10 packages), CLI-dashboard routing pattern.
+- **AC-048.3:** Conventions entry covers: worker model (GLM-5.2 via ollama-cloud), foreman model (deepseek-v4-pro), test patterns, GitReins guard usage.
+- **Discovered:** 2026-07-20 11-point audit, check 9 (DuckBrain sync). 0 memories under /projects/musterflow/.
+
 ## [x] FIX-031: `musterflow refresh` via dashboard returns 405 Method Not Allowed (completed 2026-07-12 — stale, already implemented in TASK-029 commit 2a59e2c)
 - **Priority:** high
 - **Model:** glm-5.2
@@ -112,3 +173,7 @@
 - **AC-042.3:** `go build ./... && go vet ./... && go test -short -count=1 ./...` all pass.
 - **AC-042.4:** `govulncheck ./...` shows zero findings for GO-2025-3787.
 - **Discovered:** 2026-07-17 discovery sweep. Indirect dep via DuckDB driver.
+
+## [ ] NEVER-DONE — Run coding-hermes-never-done 11-point audit
+
+Load coding-hermes-never-done skill. Run ALL 11 checks: spec alignment, doc coverage, test gaps, package upgrades, pitfall hunt, performance audit, endpoint verification, CI/CD health, DuckBrain sync, code quality, middle-out wiring. Create a task for EVERY gap found. This task is never complete — the audit always finds something.

@@ -13,4 +13,3 @@ bin/
 .vfs/graph/graph.db
 .vfs/graph/graph.db.wal
 .vfs/graph/.last_warm
-.vfs/graph/edges.jsonl
