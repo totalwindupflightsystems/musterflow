@@ -310,3 +310,14 @@ func TestRun_NilPayload(t *testing.T) {
 		t.Error("nil payload should not include trigger payload in output")
 	}
 }
+
+// --- PERF-046: Benchmarks for hot paths ---
+
+func BenchmarkEngine_Run(b *testing.B) {
+	e := NewEngine(b.TempDir(), "http://localhost:9876")
+	_, _ = e.Create("bench-flow", "pass", false)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = e.Run("bench-flow", nil)
+	}
+}

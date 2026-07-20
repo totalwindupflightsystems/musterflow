@@ -404,3 +404,13 @@ func toolNames(tools []handlers.Tool) []string {
 	}
 	return names
 }
+
+// --- PERF-046: Benchmarks for hot paths ---
+
+func BenchmarkNewHTTPServer(b *testing.B) {
+	handlerReg := handlers.NewRegistry()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = NewHTTPServer(handlerReg)
+	}
+}
