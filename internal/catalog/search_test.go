@@ -144,3 +144,20 @@ func resultIDs(entries []CatalogEntry) []string {
 	}
 	return ids
 }
+
+// --- PERF-046: Benchmarks for hot paths ---
+
+func BenchmarkSearch(b *testing.B) {
+	now := time.Now()
+	entries := []CatalogEntry{
+		{ID: "petstore", Name: "Petstore", Description: "A sample pet store API", AddedAt: now},
+		{ID: "github", Name: "GitHub API", Description: "GitHub REST API v3", AddedAt: now},
+		{ID: "stripe", Name: "Stripe", Description: "Payment processing API", AddedAt: now},
+		{ID: "petfinder", Name: "Petfinder", Description: "Find pets near you", AddedAt: now},
+		{ID: "weather", Name: "Weather API", Description: "Weather forecasts", AddedAt: now},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = Search(entries, "pet")
+	}
+}

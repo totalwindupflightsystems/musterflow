@@ -578,3 +578,13 @@ func generateTestCert(certPath, keyPath string) error {
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
 }
+
+// --- PERF-046: Benchmarks for hot paths ---
+
+func BenchmarkCredential_Validate(b *testing.B) {
+	cred := Credential{Type: CredentialAPIKey, Key: "sk-benchmark-test-key-12345"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = cred.Validate()
+	}
+}

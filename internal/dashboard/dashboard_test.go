@@ -537,9 +537,27 @@ func TestBuildToolExample_Basic(t *testing.T) {
 func TestBuildToolExample_EmptySchema(t *testing.T) {
 	result := buildToolExample("noParams", json.RawMessage{})
 	if !strings.Contains(result, "noParams") {
-		t.Errorf("expected tool name in example, got %s", result)
+		t.Errorf("expected tool name in example, got: %s", result)
 	}
 	if !strings.Contains(result, "tools/call") {
-		t.Errorf("expected method tools/call, got %s", result)
+		t.Errorf("expected method tools/call, got: %s", result)
+	}
+}
+
+// --- PERF-046: Benchmarks for hot paths ---
+
+func BenchmarkServer_APIsHandler(b *testing.B) {
+	r := app.NewRegistry(b.TempDir())
+	if err := r.Load(); err != nil {
+		b.Fatalf("Load: %v", err)
+	}
+	_ = r.Add(&app.APIConnection{ID: "a", Name: "api"})
+	s := NewServer(r, nil, nil, ":0")
+	handler := s.Handler()
+	req := httptest.NewRequest(http.MethodGet, "/api/apis", nil)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
 	}
 }

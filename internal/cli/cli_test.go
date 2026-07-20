@@ -2261,3 +2261,17 @@ func TestMCPCommand_ViaDashboard_NoTools(t *testing.T) {
 		t.Errorf("expected 'No APIs connected' message, got: %s", output)
 	}
 }
+
+// --- PERF-046: Benchmarks for hot paths ---
+
+func BenchmarkNewRootCommand(b *testing.B) {
+	r := app.NewRegistry(b.TempDir())
+	if err := r.Load(); err != nil {
+		b.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = NewRootCommand(r)
+	}
+}

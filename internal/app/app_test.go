@@ -744,3 +744,18 @@ func TestLoad_CreateDirError(t *testing.T) {
 		t.Error("expected error when data dir is blocked")
 	}
 }
+
+// --- PERF-046: Benchmarks for hot paths ---
+
+func BenchmarkRegistry_Get(b *testing.B) {
+	r := NewRegistry(b.TempDir())
+	if err := r.Load(); err != nil {
+		b.Fatalf("Load: %v", err)
+	}
+	defer r.Close()
+	_ = r.Add(&APIConnection{ID: "bench", Name: "Bench", SpecURL: "url", BaseURL: "url"})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = r.Get("bench")
+	}
+}
