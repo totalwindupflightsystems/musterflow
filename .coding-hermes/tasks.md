@@ -16,7 +16,7 @@
 - **AC-043.4:** Verify API compatibility — v0.133→v0.142 is 9 minor versions in v0 range (may have breaking changes per Go convention).
 - **Discovered:** 2026-07-20 11-point audit, check 4 (package upgrades).
 
-## [ ] DEPS-044: Upgrade cobra v1.8.0 → v1.10.2
+## [x] DEPS-044: Upgrade cobra v1.8.0 → v1.10.2 (completed 2026-07-20, commit 7850d4e)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
