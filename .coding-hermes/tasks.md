@@ -5,7 +5,7 @@
 > **Quality:** GitReins Tier 1 (secrets/lint/build/test) + Tier 2 (LLM evaluator) on every task.
 > **Project:** /home/kara/musterflow — Go 1.26.5, imports muster engine from /home/kara/muster via replace directive.
 
-## [ ] DEPS-043: Upgrade kin-openapi v0.133.0 → v0.142.0
+## [x] DEPS-043: Upgrade kin-openapi v0.133.0 → v0.142.0 (completed 2026-07-20, commit 5b5f37c)
 - **Priority:** medium
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
