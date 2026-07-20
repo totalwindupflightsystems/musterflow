@@ -59,14 +59,15 @@
 - **AC-047.3:** Specs match actual code (15 CLI commands, 8 dashboard routes, data models).
 - **Discovered:** 2026-07-20 11-point audit, check 1 (spec alignment). No specs/ directory exists.
 
-## [ ] DUCKBRAIN-048: Populate DuckBrain with project state/conventions/pitfalls
+## [x] DUCKBRAIN-048: Populate DuckBrain with project state/conventions/pitfalls (completed 2026-07-20, foreman-direct)
 - **Priority:** low
 - **Model:** N/A — foreman direct (MCP calls)
 - **Files:** DuckBrain namespace=coding-hermes, keyPrefix=/projects/musterflow/
-- **AC-048.1:** At least 3 entries under /projects/musterflow/: architecture, conventions, pitfalls.
-- **AC-048.2:** Architecture entry covers: Go 1.26.5, muster engine via replace directive, package structure (10 packages), CLI-dashboard routing pattern.
-- **AC-048.3:** Conventions entry covers: worker model (GLM-5.2 via ollama-cloud), foreman model (deepseek-v4-pro), test patterns, GitReins guard usage.
+- **AC-048.1:** At least 3 entries under /projects/musterflow/: architecture, conventions, pitfalls. ✅ (4 entries: architecture, conventions, pitfalls x2)
+- **AC-048.2:** Architecture entry covers: Go 1.26.5, muster engine via replace directive, package structure (10 packages), CLI-dashboard routing pattern. ✅ (includes module, DI container, DuckDB, Mustang theme, MCP endpoint)
+- **AC-048.3:** Conventions entry covers: worker model (GLM-5.2 via ollama-cloud), foreman model (deepseek-v4-pro), test patterns, GitReins guard usage. ✅ (17 CLI subcommands, 43 Hilo files, 287 edges)
 - **Discovered:** 2026-07-20 11-point audit, check 9 (DuckBrain sync). 0 memories under /projects/musterflow/.
+- **Resolved:** 2026-07-20. Foreman-direct. Architecture entry added (c4481ab5). Conventions + pitfalls already existed from prior ticks.
 
 ## [x] FIX-031: `musterflow refresh` via dashboard returns 405 Method Not Allowed (completed 2026-07-12 — stale, already implemented in TASK-029 commit 2a59e2c)
 - **Priority:** high
