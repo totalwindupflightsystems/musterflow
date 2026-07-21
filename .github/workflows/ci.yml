@@ -26,7 +26,7 @@ jobs:
           go-version: '1.26'
 
       - name: Point muster replace at CI checkout
-        run: sed -i 's|/home/kara/muster|muster|g' go.mod
+        run: sed -i 's|/home/kara/muster|./muster|g' go.mod
 
       - name: Install dependencies
         run: go mod download
