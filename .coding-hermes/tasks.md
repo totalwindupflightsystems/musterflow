@@ -270,4 +270,4 @@ Load coding-hermes-never-done skill. Run ALL 11 checks: spec alignment, doc cove
 - No worker spawned (no actionable code gaps)
 - **Idle counter: 2/7**
 
-**Commit:** <hash>
+**Commit:** a1ab999
