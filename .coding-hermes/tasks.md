@@ -191,7 +191,7 @@
 - **Priority:** low
 - **Status:** CANCELLED — ci.yml already has golangci-lint step (golangci/golangci-lint-action@v7, v2.3) at lines 42-46. The 11-point audit check 8 missed it.
 
-## [ ] QUALITY-051: Refactor root.go — extract large functions from 1408-line file
+## [x] QUALITY-051: Refactor root.go — extract large functions from 1408-line file (completed 2026-07-20, commit 3d126aa)
 - **Priority:** low
 - **Model:** glm-5.2
 - **Provider:** ollama-cloud
