@@ -204,3 +204,13 @@
 ## [ ] NEVER-DONE — Run coding-hermes-never-done 11-point audit
 
 Load coding-hermes-never-done skill. Run ALL 11 checks: spec alignment, doc coverage, test gaps, package upgrades, pitfall hunt, performance audit, endpoint verification, CI/CD health, DuckBrain sync, code quality, middle-out wiring. Create a task for EVERY gap found. This task is never complete — the audit always finds something.
+
+## [ ] FIX-052: CI fails — muster engine checkout uses absolute path /tmp/muster
+- **Priority:** high
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** .github/workflows/ci.yml (MODIFY — fix checkout path + sed replace)
+- **AC-052.1:** Change muster engine checkout path from `/tmp/muster` to `muster` (relative, under workspace).
+- **AC-052.2:** Update `sed` line: `s|/tmp/muster|muster|g` → `s|/home/kara/muster|muster|g` (the go.mod replace directive uses `/home/kara/muster`, not `/tmp/muster`).
+- **AC-052.3:** CI passes on next push (check `gh run list` after commit).
+- **Discovered:** 2026-07-20 foreman tick. CI runs fail with `Repository path '/tmp/muster' is not under '/home/runner/work/musterflow/musterflow'`. Pre-existing bug — would have failed on first push but remote didn't exist until CI-049.
