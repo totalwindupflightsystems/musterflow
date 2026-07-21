@@ -178,6 +178,33 @@
 - **AC-042.4:** `govulncheck ./...` shows zero findings for GO-2025-3787.
 - **Discovered:** 2026-07-17 discovery sweep. Indirect dep via DuckDB driver.
 
+## [ ] CI-049: Missing git remote — CI workflows can't trigger
+- **Priority:** medium
+- **Model:** N/A — foreman direct or infra
+- **Files:** .git/config (ADD remote)
+- **AC-049.1:** `git remote -v` shows origin pointing to GitHub repo (totalwindupflightsystems/musterflow or equivalent).
+- **AC-049.2:** After remote is added, `gh run list` shows CI runs for latest commits.
+- **Discovered:** 2026-07-20 11-point audit, check 8 (CI/CD). ci.yml + docker.yml exist but no `[remote]` in .git/config.
+
+## [ ] CI-050: ci.yml missing golangci-lint step
+- **Priority:** low
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** .github/workflows/ci.yml (MODIFY — add lint job)
+- **AC-050.1:** ci.yml includes golangci-lint run step.
+- **AC-050.2:** CI passes after lint is added (requires CI-049 remote fix first).
+- **Discovered:** 2026-07-20 11-point audit, check 8 (CI/CD). AC-037.2 required golangci-lint but the committed ci.yml only has build/vet/test steps.
+
+## [ ] QUALITY-051: Refactor root.go — extract large functions from 1408-line file
+- **Priority:** low
+- **Model:** glm-5.2
+- **Provider:** ollama-cloud
+- **Files:** internal/cli/root.go (SPLIT — extract executeCommand, newExecuteCommand, etc. to separate files)
+- **AC-051.1:** root.go reduced to under 800 lines by extracting helper functions to internal/cli/execute.go, internal/cli/formats.go, internal/cli/register.go, etc.
+- **AC-051.2:** `go build ./... && go vet ./... && go test -short -count=1 ./...` all pass after refactor.
+- **AC-051.3:** No exported API changes — all 17 CLI subcommands still register and function identically.
+- **Discovered:** 2026-07-20 11-point audit, check 10 (code quality). root.go is 1408 lines with executeCommand at 269 lines.
+
 ## [ ] NEVER-DONE — Run coding-hermes-never-done 11-point audit
 
 Load coding-hermes-never-done skill. Run ALL 11 checks: spec alignment, doc coverage, test gaps, package upgrades, pitfall hunt, performance audit, endpoint verification, CI/CD health, DuckBrain sync, code quality, middle-out wiring. Create a task for EVERY gap found. This task is never complete — the audit always finds something.
