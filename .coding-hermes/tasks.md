@@ -178,22 +178,18 @@
 - **AC-042.4:** `govulncheck ./...` shows zero findings for GO-2025-3787.
 - **Discovered:** 2026-07-17 discovery sweep. Indirect dep via DuckDB driver.
 
-## [ ] CI-049: Missing git remote — CI workflows can't trigger
+## [x] CI-049: Missing git remote — CI workflows can't trigger (completed 2026-07-20, foreman-direct)
 - **Priority:** medium
 - **Model:** N/A — foreman direct or infra
 - **Files:** .git/config (ADD remote)
-- **AC-049.1:** `git remote -v` shows origin pointing to GitHub repo (totalwindupflightsystems/musterflow or equivalent).
-- **AC-049.2:** After remote is added, `gh run list` shows CI runs for latest commits.
+- **AC-049.1:** `git remote -v` shows origin pointing to GitHub repo (totalwindupflightsystems/musterflow). ✅
+- **AC-049.2:** After remote is added, `gh run list` shows CI runs for latest commits. ✅ (ci + docker workflows queued)
 - **Discovered:** 2026-07-20 11-point audit, check 8 (CI/CD). ci.yml + docker.yml exist but no `[remote]` in .git/config.
+- **Resolved:** 2026-07-20. Created GitHub repo totalwindupflightsystems/musterflow via `gh repo create`, pushed master, CI workflows queued.
 
-## [ ] CI-050: ci.yml missing golangci-lint step
+## [x] CI-050: ci.yml missing golangci-lint step (cancelled 2026-07-20 — STALE)
 - **Priority:** low
-- **Model:** glm-5.2
-- **Provider:** ollama-cloud
-- **Files:** .github/workflows/ci.yml (MODIFY — add lint job)
-- **AC-050.1:** ci.yml includes golangci-lint run step.
-- **AC-050.2:** CI passes after lint is added (requires CI-049 remote fix first).
-- **Discovered:** 2026-07-20 11-point audit, check 8 (CI/CD). AC-037.2 required golangci-lint but the committed ci.yml only has build/vet/test steps.
+- **Status:** CANCELLED — ci.yml already has golangci-lint step (golangci/golangci-lint-action@v7, v2.3) at lines 42-46. The 11-point audit check 8 missed it.
 
 ## [ ] QUALITY-051: Refactor root.go — extract large functions from 1408-line file
 - **Priority:** low
