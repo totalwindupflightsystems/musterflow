@@ -244,3 +244,30 @@ Load coding-hermes-never-done skill. Run ALL 11 checks: spec alignment, doc cove
 - **Notes:** Lint step fails separately — golangci-lint v2.3.1 is compiled with Go 1.24, can't parse go.mod targeting 1.26.5. Pre-existing, not a FIX-052 regression. Docker build fails on DuckDB CGO compilation (arm64 cross-compile), also pre-existing.
 - **Discovered:** 2026-07-20 foreman tick. CI runs fail with `Repository path '/tmp/muster' is not under '/home/runner/work/musterflow/musterflow'`.
 - **Resolved:** 2026-07-20. Foreman-direct. 4 commits. 3 issues fixed: absolute path, missing GH_PAT for private repo, Go relative path syntax.
+
+### Idle Tick #2 — 2026-07-21 00:33 UTC
+
+**11-point audit results:**
+
+| # | Check | Result | Detail |
+|---|-------|--------|--------|
+| 1 | Spec alignment | PASS | specs/cli.md (33KB), specs/dashboard.md (25KB) |
+| 2 | Doc coverage | PASS → FIXED | CONTRIBUTING.md added (template — foreman-direct). README, AGENTS.md, LICENSE present |
+| 3 | Test gaps | PASS | cmd/musterflow/main.go only untested file (CLI entrypoint — low priority, unchanged) |
+| 4 | Package upgrades | PASS | All 6 direct deps current. Zero outdated |
+| 5 | Pitfall hunt | PASS | Zero nil,nil stubs. Zero TODOs/FIXMEs/HACKs |
+| 6 | Performance | PASS | 7 benchmarks across 7 packages |
+| 7 | Endpoint verification | PASS | govulncheck: 0 vulns. Binary builds, --help works, 17 subcommands |
+| 8 | CI/CD | FAIL (pre-existing) | ci: Lint (golangci-lint v2.3.1 Go 1.24 vs go.mod 1.26.5). docker: Build (DuckDB CGO cross-compile). Tests: 10/10 green. Unchanged from tick #1 |
+| 9 | DuckBrain sync | PASS | 5 entries under /projects/musterflow/ (architecture, conventions, pitfalls x2, idle-ticks) |
+| 10 | Code quality | PASS | Longest file: root.go 695 lines (↓from 1408). Worktree clean |
+| 11 | Middle-out wiring | PASS | Build clean. Binary runs. Dashboard routes wired. MCP endpoint wired |
+
+**Actions:**
+- Foreman-direct: added CONTRIBUTING.md (template file per never-done check 2 self-heal rule)
+- Cooldown reverted 43200s→1800s by daemon restart — re-fixed to 43200s via API PUT (1st reversion — warning)
+- CI lint + docker failures remain pre-existing (golangci-lint upstream Go version, DuckDB CGO cross-compile)
+- No worker spawned (no actionable code gaps)
+- **Idle counter: 2/7**
+
+**Commit:** <hash>
