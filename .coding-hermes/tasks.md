@@ -4,8 +4,8 @@
 > **Language:** Go 1.26.5 | **Repo:** github.com/totalwindupflightsystems/musterflow
 > **Foreman:** deepseek-v4-pro @ deepseek-foreman | **Worker:** GLM-5.2 via ollama-cloud
 > **DuckBrain:** 5 entries under /projects/musterflow/
-> **Status:** ALL PHASES COMPLETE. Idle tick 4/7. Cooldown: 43200s (12h).
-> **Last tick:** 2026-07-22 00:13 UTC
+> **Status:** ALL PHASES COMPLETE. Idle tick 4/7. U01 audit complete — 0 blocking gaps found. Cooldown: 43200s (12h).
+> **Last tick:** 2026-07-22 04:17 UTC
 > **Cooldown reversions:** 3 (last: daemon restart, re-fixed via API PUT)
 
 ---
@@ -14,7 +14,6 @@
 
 | ID | Task | Priority | Complexity | Deps | Tags | Model | Reasoning | Fallback |
 |----|------|----------|------------|------|------|-------|-----------|----------|
-| U01 | Usability & coverage audit — find gaps in endpoint wiring, UX flow, error handling, edge cases, test coverage | High | 3±1 | — | +++testing, ++endpoint-verification, ++code-review, +e2e, -vision | DS-V4-Flash | Medium | GLM-5.2 |
 | NEVER-DONE | 11-point audit sweep | Medium | 2 ± 1 | none | +++terminal, +++file-editing, +documentation | deepseek-v4-pro | Medium | GLM-5.2 |
 
 ## Completed (all tasks done)
