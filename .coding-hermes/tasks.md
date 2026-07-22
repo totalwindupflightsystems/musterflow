@@ -4,8 +4,9 @@
 > **Language:** Go 1.26.5 | **Repo:** github.com/totalwindupflightsystems/musterflow
 > **Foreman:** deepseek-v4-pro @ deepseek-foreman | **Worker:** GLM-5.2 via ollama-cloud
 > **DuckBrain:** 5 entries under /projects/musterflow/
-> **Status:** ALL PHASES COMPLETE. Idle tick 3/7. Cooldown: 43200s (12h).
-> **Last tick:** 2026-07-21 20:30 UTC
+> **Status:** ALL PHASES COMPLETE. Idle tick 4/7. Cooldown: 43200s (12h).
+> **Last tick:** 2026-07-22 00:13 UTC
+> **Cooldown reversions:** 3 (last: daemon restart, re-fixed via API PUT)
 
 ---
 
