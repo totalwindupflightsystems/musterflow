@@ -6,7 +6,7 @@
 > **DuckBrain:** 5 entries under /projects/musterflow/
 > **Status:** ALL PHASES COMPLETE. Idle tick 4/7. U01 audit complete — 0 blocking gaps found. Cooldown: 43200s (12h).
 > **Last tick:** 2026-07-22 04:17 UTC
-> **Cooldown reversions:** 3 (last: daemon restart, re-fixed via API PUT)
+> **Cooldown reversions:** 4 (last: daemon restart, re-fixed via API PUT)
 
 ---
 
