@@ -4,9 +4,9 @@
 > **Language:** Go 1.26.5 | **Repo:** github.com/totalwindupflightsystems/musterflow
 > **Foreman:** deepseek-v4-pro @ deepseek-foreman | **Worker:** GLM-5.2 via ollama-cloud
 > **DuckBrain:** 5 entries under /projects/musterflow/
-> **Status:** ALL PHASES COMPLETE. Idle tick 11/7+. NEVER-DONE audit #11 complete — 0 blocking gaps. Cooldown: 43200s (11th re-fix via API).
-> **Last tick:** 2026-07-23 08:15 UTC
-> **Cooldown reversions:** 10 (10th: daemon restart, CooldownS=7200 from fleet TOML overwrite; 11th re-fix via API to 43200s)
+> **Status:** ALL PHASES COMPLETE. Idle tick 12/7+. NEVER-DONE audit #12 complete — 0 blocking gaps. Cooldown: 43200s (12th re-fix via API).
+> **Last tick:** 2026-07-23 17:17 UTC
+> **Cooldown reversions:** 11 (11th→12th: daemon restart reverted 43200→7200 from fleet TOML; 12th re-fix via API to 43200s). Bane: please fix fleet TOML to set CooldownS=43200 for musterflow permanently.
 > **Host resource exhaustion:** Resolved (tick #7) — build/vet/tests all pass. fork/mem/threads normal.
 
 ---
