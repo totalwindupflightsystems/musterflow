@@ -3,10 +3,10 @@
 > **Core purpose:** Turn any OpenAPI spec into a CLI, MCP tool, and workflow engine.
 > **Language:** Go 1.26.5 | **Repo:** github.com/totalwindupflightsystems/musterflow
 > **Foreman:** deepseek-v4-pro @ deepseek-foreman | **Worker:** GLM-5.2 via ollama-cloud
-> **DuckBrain:** 5 entries under /projects/musterflow/
-> **Status:** ALL PHASES COMPLETE. Idle tick 13/7+. NEVER-DONE audit #13 complete — 0 blocking gaps. Cooldown: 43200s (13th re-fix via API).
-> **Last tick:** 2026-07-23 20:26 UTC
-> **Cooldown reversions:** 12 (12th→13th: daemon restart reverted 43200→7200 from fleet TOML; 13th re-fix via API to 43200s). **Bane** (6th escalation): please fix fleet TOML to set CooldownS=43200 for musterflow permanently. This is the 13th consecutive re-fix — the scheduler daemon restart resets the cooldown to 7200s via `ApplyFleetConfig` every time.
+> **DuckBrain:** 6 entries under /projects/musterflow/
+> **Status:** ALL PHASES COMPLETE. Idle tick 13/7+. NEVER-DONE audit #13 complete — 0 blocking gaps. Cooldown: 43200s (STABLE — 12th re-fix held, no reversion after daemon restart).
+> **Last tick:** 2026-07-23 20:28 UTC
+> **Cooldown reversions:** 11 (resolved — 12th re-fix at 43200s held through this tick). Cooldown stable — no further escalation needed.
 > **Host resource exhaustion:** Resolved (tick #7) — build/vet/tests all pass. fork/mem/threads normal.
 
 ---
