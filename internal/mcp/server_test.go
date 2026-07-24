@@ -56,7 +56,10 @@ func writeFile(path, content string) error {
 func TestToolRegistry_ListTools(t *testing.T) {
 	specPath := writeTempSpec(t)
 
-	reg := app.NewRegistry(t.TempDir()); if err := reg.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	reg := app.NewRegistry(t.TempDir())
+	if err := reg.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	conn := &app.APIConnection{
 		ID:      "test-api",
 		Name:    "test-petstore",
@@ -118,7 +121,10 @@ func TestToolRegistry_ListTools(t *testing.T) {
 func TestHTTPServer_ToolsCall(t *testing.T) {
 	specPath := writeTempSpec(t)
 
-	reg := app.NewRegistry(t.TempDir()); if err := reg.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	reg := app.NewRegistry(t.TempDir())
+	if err := reg.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	conn := &app.APIConnection{
 		ID:      "test-api",
 		Name:    "test-petstore",
@@ -187,7 +193,10 @@ func TestHTTPServer_ToolsCall(t *testing.T) {
 func TestHTTPServer_ToolsList(t *testing.T) {
 	specPath := writeTempSpec(t)
 
-	reg := app.NewRegistry(t.TempDir()); if err := reg.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	reg := app.NewRegistry(t.TempDir())
+	if err := reg.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	conn := &app.APIConnection{
 		ID:      "test-api",
 		Name:    "test-petstore",
@@ -265,7 +274,10 @@ func TestToolRegistry_DynamicTools(t *testing.T) {
 		t.Fatalf("write spec2: %v", err)
 	}
 
-	reg := app.NewRegistry(t.TempDir()); if err := reg.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	reg := app.NewRegistry(t.TempDir())
+	if err := reg.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 
 	// Connect first API
 	conn1 := &app.APIConnection{

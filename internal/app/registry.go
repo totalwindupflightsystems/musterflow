@@ -12,16 +12,16 @@ import (
 
 // APIConnection represents a connected API in the user's local registry.
 type APIConnection struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	SpecURL     string    `json:"spec_url"`
-	BaseURL     string    `json:"base_url"`
-	Version     string    `json:"version"`
-	Description string    `json:"description"`
-	AuthType    string    `json:"auth_type"` // "none", "apikey", "oauth2", "bearer", "mtls"
-	AddedAt     time.Time `json:"added_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	EndpointCount int     `json:"endpoint_count"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	SpecURL       string    `json:"spec_url"`
+	BaseURL       string    `json:"base_url"`
+	Version       string    `json:"version"`
+	Description   string    `json:"description"`
+	AuthType      string    `json:"auth_type"` // "none", "apikey", "oauth2", "bearer", "mtls"
+	AddedAt       time.Time `json:"added_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	EndpointCount int       `json:"endpoint_count"`
 }
 
 // Registry stores connected APIs and manages persistence.

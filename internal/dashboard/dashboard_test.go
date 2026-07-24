@@ -14,7 +14,10 @@ import (
 )
 
 func TestServer_HealthEndpoint(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
@@ -36,7 +39,10 @@ func TestServer_HealthEndpoint(t *testing.T) {
 }
 
 func TestServer_HealthEndpoint_ConnectedCount(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	_ = r.Add(&app.APIConnection{ID: "a", Name: "first"})
 	_ = r.Add(&app.APIConnection{ID: "b", Name: "second"})
 
@@ -57,7 +63,10 @@ func TestServer_HealthEndpoint_ConnectedCount(t *testing.T) {
 }
 
 func TestServer_APIsEndpoint_Empty(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis", nil)
@@ -83,13 +92,16 @@ func TestServer_APIsEndpoint_Empty(t *testing.T) {
 }
 
 func TestServer_APIsEndpoint_WithData(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	_ = r.Add(&app.APIConnection{
-		ID:        "abc123",
-		Name:      "test-api",
-		SpecURL:   "https://example.com/openapi.json",
-		BaseURL:   "https://api.example.com",
-		AuthType:  "bearer",
+		ID:            "abc123",
+		Name:          "test-api",
+		SpecURL:       "https://example.com/openapi.json",
+		BaseURL:       "https://api.example.com",
+		AuthType:      "bearer",
 		EndpointCount: 10,
 	})
 
@@ -118,7 +130,10 @@ func TestServer_APIsEndpoint_WithData(t *testing.T) {
 }
 
 func TestServer_APIByID_NotFound(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis/nonexistent", nil)
@@ -131,13 +146,16 @@ func TestServer_APIByID_NotFound(t *testing.T) {
 }
 
 func TestServer_APIByID_Success(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	_ = r.Add(&app.APIConnection{
-		ID:        "found-me",
-		Name:      "found-api",
-		SpecURL:   "https://example.com/spec.json",
-		BaseURL:   "https://api.example.com",
-		AuthType:  "none",
+		ID:            "found-me",
+		Name:          "found-api",
+		SpecURL:       "https://example.com/spec.json",
+		BaseURL:       "https://api.example.com",
+		AuthType:      "none",
 		EndpointCount: 3,
 	})
 
@@ -161,7 +179,10 @@ func TestServer_APIByID_Success(t *testing.T) {
 }
 
 func TestServer_APIByID_MissingID(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/apis/", nil)
@@ -174,7 +195,10 @@ func TestServer_APIByID_MissingID(t *testing.T) {
 }
 
 func TestServer_APIByID_Delete(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	_ = r.Add(&app.APIConnection{ID: "delete-me", Name: "temp"})
 
 	s := NewServer(r, nil, nil, ":0")
@@ -194,7 +218,10 @@ func TestServer_APIByID_Delete(t *testing.T) {
 }
 
 func TestServer_APIByID_Delete_NotFound(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/apis/nonexistent", nil)
@@ -207,7 +234,10 @@ func TestServer_APIByID_Delete_NotFound(t *testing.T) {
 }
 
 func TestServer_APIByID_MethodNotAllowed(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodPut, "/api/apis/something", nil)
@@ -220,7 +250,10 @@ func TestServer_APIByID_MethodNotAllowed(t *testing.T) {
 }
 
 func TestServer_APIs_MethodNotAllowed(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodPost, "/api/apis", nil)
@@ -233,7 +266,10 @@ func TestServer_APIs_MethodNotAllowed(t *testing.T) {
 }
 
 func TestServer_IndexEndpoint(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -255,7 +291,10 @@ func TestServer_IndexEndpoint(t *testing.T) {
 }
 
 func TestServer_MCP_NoHandler(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
@@ -283,7 +322,10 @@ func TestServer_MCP_NoHandler(t *testing.T) {
 }
 
 func TestServer_MCP_WithHandler(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	// Set a simple MCP handler
@@ -312,7 +354,10 @@ func TestServer_MCP_WithHandler(t *testing.T) {
 }
 
 func TestServer_Handler(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	h := s.Handler()
@@ -324,7 +369,10 @@ func TestServer_Handler(t *testing.T) {
 // --- Catalog search tests ---
 
 func TestServer_CatalogSearch_NoQuery(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":0")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/catalog/search", nil)
@@ -344,7 +392,10 @@ func TestServer_CatalogSearch_NoQuery(t *testing.T) {
 }
 
 func TestServer_CatalogSearch_WithResults(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 
 	// Start httptest server that returns a catalog index
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -373,7 +424,10 @@ func TestServer_CatalogSearch_WithResults(t *testing.T) {
 }
 
 func TestServer_CatalogSearch_CatalogError(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 
 	// Server that returns 500
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -396,7 +450,10 @@ func TestServer_CatalogSearch_CatalogError(t *testing.T) {
 // --- MCP info tests ---
 
 func TestServer_MCPInfo_NoRegistry(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	s := NewServer(r, nil, nil, ":9876")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/mcp/info", nil)
@@ -419,7 +476,10 @@ func TestServer_MCPInfo_NoRegistry(t *testing.T) {
 }
 
 func TestServer_MCPInfo_WithTools(t *testing.T) {
-	r := app.NewRegistry(t.TempDir()); if err := r.Load(); err != nil { t.Fatalf("Load: %v", err) }
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
 	// Add an API connection — the ToolRegistry reads from it via Refresh()
 	_ = r.Add(&app.APIConnection{ID: "test", Name: "test-api", SpecURL: "https://petstore3.swagger.io/api/v3/openapi.json"})
 

@@ -135,12 +135,12 @@ func (s *Server) handleAPIAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"id":            result.Connection.ID,
-		"name":          result.Connection.Name,
-		"spec_title":    result.SpecTitle,
-		"spec_version":  result.SpecVersion,
+		"id":             result.Connection.ID,
+		"name":           result.Connection.Name,
+		"spec_title":     result.SpecTitle,
+		"spec_version":   result.SpecVersion,
 		"endpoint_count": result.EndpointCount,
-		"base_url":      result.Connection.BaseURL,
+		"base_url":       result.Connection.BaseURL,
 	})
 }
 

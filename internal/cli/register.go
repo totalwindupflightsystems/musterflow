@@ -214,7 +214,9 @@ func pushViaDashboard(apiID string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errBody struct{ Error string `json:"error"` }
+		var errBody struct {
+			Error string `json:"error"`
+		}
 		_ = json.NewDecoder(resp.Body).Decode(&errBody)
 		msg := errBody.Error
 		if msg == "" {

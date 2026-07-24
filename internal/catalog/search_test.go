@@ -16,45 +16,45 @@ func TestSearch(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		query       string
-		wantIDs     []string
-		wantMinLen  int
-		wantExact   bool // first result should be this ID
+		name       string
+		query      string
+		wantIDs    []string
+		wantMinLen int
+		wantExact  bool // first result should be this ID
 	}{
 		{
-			name:      "exact name match",
-			query:     "Petstore",
-			wantIDs:   []string{"petstore"},
+			name:       "exact name match",
+			query:      "Petstore",
+			wantIDs:    []string{"petstore"},
 			wantMinLen: 1,
 		},
 		{
-			name:      "prefix match",
-			query:     "Pet",
-			wantIDs:   []string{"petstore", "petfinder"},
+			name:       "prefix match",
+			query:      "Pet",
+			wantIDs:    []string{"petstore", "petfinder"},
 			wantMinLen: 2,
 		},
 		{
-			name:      "contains in name",
-			query:     "stripe",
-			wantIDs:   []string{"stripe"},
+			name:       "contains in name",
+			query:      "stripe",
+			wantIDs:    []string{"stripe"},
 			wantMinLen: 1,
 		},
 		{
-			name:      "no match",
-			query:     "xyznonexistent",
+			name:       "no match",
+			query:      "xyznonexistent",
 			wantMinLen: 0,
 		},
 		{
-			name:      "description only match",
-			query:     "payment",
-			wantIDs:   []string{"stripe"},
+			name:       "description only match",
+			query:      "payment",
+			wantIDs:    []string{"stripe"},
 			wantMinLen: 1,
 		},
 		{
-			name:      "ID match",
-			query:     "github",
-			wantIDs:   []string{"github"},
+			name:       "ID match",
+			query:      "github",
+			wantIDs:    []string{"github"},
 			wantMinLen: 1,
 		},
 		{
@@ -64,20 +64,20 @@ func TestSearch(t *testing.T) {
 			wantMinLen: 2,
 		},
 		{
-			name:      "empty query returns nil",
-			query:     "",
+			name:       "empty query returns nil",
+			query:      "",
 			wantMinLen: 0,
 		},
 		{
-			name:      "case insensitive - uppercase query",
-			query:     "PETSTORE",
-			wantIDs:   []string{"petstore"},
+			name:       "case insensitive - uppercase query",
+			query:      "PETSTORE",
+			wantIDs:    []string{"petstore"},
 			wantMinLen: 1,
 		},
 		{
-			name:      "case insensitive - mixed case query",
-			query:     "StRiPe",
-			wantIDs:   []string{"stripe"},
+			name:       "case insensitive - mixed case query",
+			query:      "StRiPe",
+			wantIDs:    []string{"stripe"},
 			wantMinLen: 1,
 		},
 	}

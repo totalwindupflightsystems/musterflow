@@ -32,8 +32,8 @@ func TestDetectShell(t *testing.T) {
 
 func TestInstallPath(t *testing.T) {
 	tests := []struct {
-		shell       Shell
-		wantSuffix  string
+		shell      Shell
+		wantSuffix string
 	}{
 		{ShellBash, ".bash_completion.d/musterflow"},
 		{ShellZsh, ".zsh/completions/_musterflow"},
