@@ -1,55 +1,58 @@
-# MusterFlow — Task Board (Model-Router Matrix)
+# MusterFlow — Model Router Task Matrix
 
 > **Core purpose:** Turn any OpenAPI spec into a CLI, MCP tool, and workflow engine.
 > **Language:** Go 1.26.5 | **Repo:** github.com/totalwindupflightsystems/musterflow
-> **Foreman:** deepseek-v4-pro @ deepseek-foreman | **Worker:** GLM-5.2 via ollama-cloud
-> **DuckBrain:** MCP transport down this tick (Connection Error)
-> **Status:** ALL PHASES COMPLETE. Idle tick 14/7+. NEVER-DONE audit #14 complete — 0 blocking gaps. Cooldown: 43200s (14th re-fix after daemon restart reversion).
-> **Last tick:** 2026-07-24 00:15 UTC
-> **Cooldown reversions:** 13 (14th re-fix: scheduler daemon restarted, CooldownS reverted 43200→7200s, PUT back to 43200s). Bane escalation continues — TOML fleet config fix needed for persistence.
-> **Host resource exhaustion:** Resolved (tick #7) — build/vet/tests all pass. fork/mem/threads normal.
+> **Status:** ALL PHASES COMPLETE. Zombie — 15+ idle ticks. Cooldown: 43200s (re-fixed 15th reversion).
 
----
+## Active Tasks
 
-## Task Matrix
+| ID | Task | Pri | Cpx | Deps | Tags | Model | Lvl | Fallback |
+|----|------|-----|-----|------|------|-------|-----|----------|
+| E2E-STUB-001 | ParquetWriter stub — WriteParquet returns error. Parquet export non-functional. | High | 3 | — | ++go, ++backend, ++parquet | MiniMax-M3 | Medium | GLM-5.2 |
+| E2E-STUB-002 | StarlarkEngine stub — Execute returns simulated output. Starlark DSL non-functional. | High | 4 | — | ++go, ++starlark, ++dsl | GLM-5.2 | High | DeepSeek V4 Pro |
+| E2E-STUB-003 | WASMAdapter stub — Run returns error. WASM sandbox non-functional. | High | 4 | — | ++go, ++wasm, ++sandbox | GLM-5.2 | High | DeepSeek V4 Pro |
+| E2E-001 | E2E Testing Tick (self-improving loop) 🔁 Recurring every 5-10 ticks | High | 4 | server running | ++browser, ++screenshots, ++verification | GPT-5.6 Luna | High | Step 3.7 Flash |
+| NEVER-DONE | 11-point audit sweep | Medium | 2 | — | ++terminal, ++file-editing, +documentation | DeepSeek V4 Pro | Medium | GLM-5.2 |
 
-| ID | Task | Priority | Complexity | Deps | Tags | Model | Reasoning | Fallback |
-|----|------|----------|------------|------|------|-------|-----------|----------|
-| NEVER-DONE | 11-point audit sweep | Medium | 2 ± 1 | none | +++terminal, +++file-editing, +documentation | deepseek-v4-pro | Medium | GLM-5.2 |
+## Completed
 
-## Completed (all tasks done)
-
-All 50+ tasks across historical TASK-001–TASK-030, FIX-031–FIX-033, DOC-034–DOC-040, SEC-041–042, DEPS-043–045, PERF-046, SPEC-047, DUCKBRAIN-048, CI-049–050, QUALITY-051, FIX-052 complete. Summary by phase:
+All 50+ tasks across historical TASK-001–TASK-030, FIX-031–FIX-033, DOC-034–040, SEC-041–042, DEPS-043–045, PERF-046, SPEC-047, DUCKBRAIN-048, CI-049–050, QUALITY-051, FIX-052 complete.
 
 | Phase | Purpose | Key outcomes |
 |-------|---------|--------------|
 | Core fixes | CLI-dashboard routing, MCP routing, completion prompt blocking | 17 CLI subcommands all route correctly |
-| Docs | README corrections, LICENSE, AGENTS.md, CONTRIBUTING.md | All standard repo files present |
-| Deps | kin-openapi v0.142, cobra v1.10.2, x/term v0.45, mapstructure v2.3 | 0 outdated direct deps |
-| CI | ci.yml + docker.yml, git remote, muster engine relative paths | CI: 10/10 test packages green |
+| Docs | README, LICENSE, AGENTS.md, CONTRIBUTING.md | All standard repo files present |
+| Deps | kin-openapi v0.142, cobra v1.10.2, x/term v0.45 | 0 outdated direct deps |
+| CI | ci.yml + docker.yml, muster engine paths | CI: 10/10 test packages green |
 | Perf | 7 benchmarks across 7 packages | Baseline established |
-| Quality | root.go 1408→695 lines, golangci-lint, code splitting | 0 TODOs/FIXMEs/HACKs |
-| Misc | SEC-041 go1.26.5 upgrade, DuckBrain seeding, specs/ created | 0 vulns, 0 stubs |
+| Quality | root.go refactor, golangci-lint, code splitting | 0 TODOs/FIXMEs/HACKs |
 
 ## Assumptions
 
 - Project is stable and complete — idle ticks find zero actionable gaps
-- 2 pre-existing CI failures (golangci-lint Go 1.24 vs go.mod 1.26.5, Docker DuckDB CGO cross-compile) are non-actionable infrastructure issues
+- 3 pre-existing CI failures (golangci-lint Go version mismatch, Docker DuckDB CGO, golangci-lint install) are non-actionable infrastructure issues
+- E2E-STUB-001/002/003 are real stubs — Parquet export, Starlark DSL, and WASM sandbox are non-functional
 - NEVER-DONE audit runs every foreman tick; if it finds gaps, tasks get added to matrix above
+- Cooldown reversion persists (15+ daemon restart reversions) — fleet TOML root cause
 
 ## Routing Notes
 
-- NEVER-DONE audit: foreman runs directly (deepseek-v4-pro) — needs full context, terminal, file search, memory access
-- Worker model (GLM-5.2) for any new Go implementation tasks that emerge
+- **Stub implementation (E2E-STUB-*):** MiniMax-M3 for bounded implementation (flat-rate prepaid). GLM-5.2 for WASM/Starlark (more complex, needs deeper Go knowledge). Escalate to V4 Pro if architecture changes needed.
+- **NEVER-DONE audit:** Foreman-direct (V4 Pro) — needs full context, terminal, file search, memory access
+- Worker model (GLM-5.2 via ollama-cloud) for any new Go implementation tasks that emerge
+- E2E testing: Luna for browser, Step 3.7 Flash for CLI/API
 
 ## Execution Order
 
-1. NEVER-DONE (runs every tick, creates new tasks if gaps found)
+1. E2E-STUB-001 (simplest — Parquet writer, mechanical) → E2E-STUB-002/E2E-STUB-003 (parallel — independent stubs)
+2. NEVER-DONE (runs every tick)
+3. E2E-001 (periodic)
 
 ## Escalation Conditions
 
+- Stub implementation reveals deeper architectural issues → escalate to GPT-5.6 Sol
 - Audit finds spec drift → escalate to foreman + create SPEC task
 - Audit finds test gap → escalate to worker (GLM-5.2 via ollama-cloud)
 - Audit finds new dependency vuln → escalate CRITICAL if stdlib, MEDIUM if transitive
 - Idle counter reaches 7 → escalate to Bane (project genuinely complete, consider archiving)
-- Cooldown reversion (daemon restart resetting 43200→1800s) → escalate to Bane (TOML config fix needed)
+- Cooldown reversion (daemon restart resetting 43200→900s) → escalate to Bane (TOML config fix needed)
