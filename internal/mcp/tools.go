@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/wojons/muster/pkg/mcp/handlers"
 	musterMcp "github.com/wojons/muster/pkg/mcp"
+	"github.com/wojons/muster/pkg/mcp/handlers"
 	"github.com/wojons/muster/pkg/openapi"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"

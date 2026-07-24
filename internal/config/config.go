@@ -13,18 +13,18 @@ import (
 
 // Config holds all MusterFlow configuration.
 type Config struct {
-	Port           int               `yaml:"port"`
-	DataDir        string            `yaml:"data_dir"`
-	DefaultFormat  string            `yaml:"default_format"`
-	AutoCompletion bool              `yaml:"auto_completion"`
+	Port           int                   `yaml:"port"`
+	DataDir        string                `yaml:"data_dir"`
+	DefaultFormat  string                `yaml:"default_format"`
+	AutoCompletion bool                  `yaml:"auto_completion"`
 	Auth           map[string]AuthConfig `yaml:"auth,omitempty"`
 }
 
 // AuthConfig holds per-API authentication settings.
 type AuthConfig struct {
-	Type     string `yaml:"type"`     // none, apikey, bearer, oauth2, mtls
-	Key      string `yaml:"key"`      // API key or bearer token (masked in display)
-	CertPath string `yaml:"cert,omitempty"` // mTLS client cert
+	Type     string `yaml:"type"`               // none, apikey, bearer, oauth2, mtls
+	Key      string `yaml:"key"`                // API key or bearer token (masked in display)
+	CertPath string `yaml:"cert,omitempty"`     // mTLS client cert
 	KeyPath  string `yaml:"key_path,omitempty"` // mTLS client key
 }
 

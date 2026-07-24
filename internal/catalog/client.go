@@ -21,22 +21,22 @@ type CatalogEntry struct {
 	SpecURL     string    `json:"spec_url,omitempty"`
 	Author      string    `json:"author"`
 	Version     string    `json:"version"`
-	Score       int       `json:"score"` // 0-10
-	QualityTier  string   `json:"quality_tier"` // "official", "community-inferred", "untested"
+	Score       int       `json:"score"`        // 0-10
+	QualityTier string    `json:"quality_tier"` // "official", "community-inferred", "untested"
 	AddedAt     time.Time `json:"added_at"`
 	Downloads   int       `json:"downloads"`
 }
 
 // Client interacts with the community catalog.
 type Client struct {
-	repoURL  string
+	repoURL    string
 	httpClient *http.Client
 }
 
 // NewClient creates a new catalog client.
 func NewClient() *Client {
 	return &Client{
-		repoURL: defaultCatalogRepo,
+		repoURL:    defaultCatalogRepo,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }
@@ -45,7 +45,7 @@ func NewClient() *Client {
 // Used for testing with httptest.Server.
 func NewClientWithRepoURL(repoURL string) *Client {
 	return &Client{
-		repoURL:  repoURL,
+		repoURL:    repoURL,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }

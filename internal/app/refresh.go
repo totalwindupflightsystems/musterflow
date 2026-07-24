@@ -53,11 +53,11 @@ func Refresh(ctx context.Context, registry *Registry, id string) (*RefreshResult
 	}
 
 	return &RefreshResult{
-		Connection:    conn,
-		OldVersion:    oldVersion,
-		NewVersion:    conn.Version,
-		OldEndpoints:  oldEndpoints,
-		NewEndpoints:  conn.EndpointCount,
+		Connection:     conn,
+		OldVersion:     oldVersion,
+		NewVersion:     conn.Version,
+		OldEndpoints:   oldEndpoints,
+		NewEndpoints:   conn.EndpointCount,
 		VersionChanged: oldVersion != conn.Version,
 	}, nil
 }

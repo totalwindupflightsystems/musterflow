@@ -10,15 +10,15 @@ import (
 func TestConnectionToCatalogEntry(t *testing.T) {
 	now := time.Now()
 	conn := &app.APIConnection{
-		ID:           "test-api",
-		Name:         "Test API",
-		SpecURL:      "https://example.com/spec.json",
-		BaseURL:      "https://api.example.com",
-		Version:      "2.1.0",
-		Description:  "A test API for unit testing",
-		AuthType:     "bearer",
-		AddedAt:      now,
-		UpdatedAt:    now,
+		ID:            "test-api",
+		Name:          "Test API",
+		SpecURL:       "https://example.com/spec.json",
+		BaseURL:       "https://api.example.com",
+		Version:       "2.1.0",
+		Description:   "A test API for unit testing",
+		AuthType:      "bearer",
+		AddedAt:       now,
+		UpdatedAt:     now,
 		EndpointCount: 15,
 	}
 

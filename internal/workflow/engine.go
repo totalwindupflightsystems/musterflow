@@ -12,7 +12,7 @@ import (
 type Flow struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Source      string `json:"source"` // Starlark source code
+	Source      string `json:"source"`  // Starlark source code
 	Webhook     bool   `json:"webhook"` // has webhook trigger
 	WebhookURL  string `json:"webhook_url,omitempty"`
 }
@@ -75,9 +75,9 @@ func (e *Engine) List() ([]Flow, error) {
 		}
 		name := entry.Name()[:len(entry.Name())-5] // strip .star
 		flows = append(flows, Flow{
-			Name:        name,
-			Source:      string(data),
-			WebhookURL:  fmt.Sprintf("%s/hooks/%s", e.baseURL, name),
+			Name:       name,
+			Source:     string(data),
+			WebhookURL: fmt.Sprintf("%s/hooks/%s", e.baseURL, name),
 		})
 	}
 	if flows == nil {

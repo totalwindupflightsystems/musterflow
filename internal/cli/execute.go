@@ -1,4 +1,5 @@
 package cli
+
 import (
 	"context"
 	"encoding/json"
@@ -8,9 +9,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/spf13/cobra"
 	"github.com/wojons/muster/pkg/request"
 	"github.com/wojons/muster/pkg/response"
-	"github.com/spf13/cobra"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/auth"
 )
