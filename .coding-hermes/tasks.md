@@ -3,10 +3,10 @@
 > **Core purpose:** Turn any OpenAPI spec into a CLI, MCP tool, and workflow engine.
 > **Language:** Go 1.26.5 | **Repo:** github.com/totalwindupflightsystems/musterflow
 > **Foreman:** deepseek-v4-pro @ deepseek-foreman | **Worker:** GLM-5.2 via ollama-cloud
-> **DuckBrain:** Namespace exists but MCP transport down this tick (no recall/write)
-> **Status:** ALL PHASES COMPLETE. Idle tick 14/7+. NEVER-DONE audit #14 complete — 0 blocking gaps. gofmt: 20 files formatted. Cooldown: 43200s (STABLE — 14th tick without reversion).
-> **Last tick:** 2026-07-23 21:20 UTC
-> **Cooldown reversions:** 13 (resolved — last reversion at tick #13, cooldown held 43200s for 2+ consecutive ticks). Stable — no escalation needed.
+> **DuckBrain:** MCP transport down this tick (Connection Error)
+> **Status:** ALL PHASES COMPLETE. Idle tick 14/7+. NEVER-DONE audit #14 complete — 0 blocking gaps. Cooldown: 43200s (14th re-fix after daemon restart reversion).
+> **Last tick:** 2026-07-24 00:15 UTC
+> **Cooldown reversions:** 13 (14th re-fix: scheduler daemon restarted, CooldownS reverted 43200→7200s, PUT back to 43200s). Bane escalation continues — TOML fleet config fix needed for persistence.
 > **Host resource exhaustion:** Resolved (tick #7) — build/vet/tests all pass. fork/mem/threads normal.
 
 ---
