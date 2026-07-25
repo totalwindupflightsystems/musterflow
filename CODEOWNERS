@@ -1,0 +1,12 @@
+# CODEOWNERS — MusterFlow
+
+# Global owners: all files default to Bane
+* @wojons
+
+# GitHub Actions / CI
+/.github/ @wojons
+
+# Critical security paths
+/internal/auth/ @wojons
+/internal/wasm/ @wojons
+/internal/workflow/ @wojons
