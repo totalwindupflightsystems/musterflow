@@ -239,11 +239,11 @@ func TestExecuteAndFormat_OutputFile(t *testing.T) {
 
 func TestParquetStub(t *testing.T) {
 	var buf bytes.Buffer
-	err := writeParquet(&buf, map[string]interface{}{"x": 1})
-	if err == nil {
-		t.Error("expected error from parquet stub")
+	err := writeParquet(&buf, map[string]interface{}{"x": "1"})
+	if err != nil {
+		t.Fatalf("writeParquet: %v", err)
 	}
-	if !strings.Contains(err.Error(), "Parquet support is not yet compiled in") {
-		t.Errorf("unexpected error: %v", err)
+	if buf.Len() == 0 {
+		t.Error("expected non-empty parquet output")
 	}
 }
