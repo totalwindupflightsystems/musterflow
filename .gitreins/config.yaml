@@ -22,7 +22,7 @@ evaluator:
   lsp_diagnostics: true
   static_analysis_diagnostics: true
 defaults:
-  model: glm-5.2
+  model: deepseek-v4-flash
   check_for_updates: true
   update_check_ttl: 24h
 history:
