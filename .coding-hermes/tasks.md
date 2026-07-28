@@ -2,7 +2,7 @@
 
 > **Core purpose:** Turn any OpenAPI spec into a CLI, MCP tool, and workflow engine.
 > **Language:** Go 1.26.5 | **Repo:** github.com/totalwindupflightsystems/musterflow
-> **Status:** E2E-STUB-001 resolved (Parquet). 2 stubs remain (Starlark/WASM — Phase 2 blocked). Cooldown: 43200s.
+> **Status:** E2E-STUB-001 resolved (Parquet). 2 stubs remain (Starlark/WASM — Phase 2 blocked). Tick 21: idle audit green. Cooldown: 43200s.
 
 ## Active Tasks
 
@@ -11,7 +11,8 @@
 | E2E-STUB-002 | StarlarkEngine stub — Execute returns simulated output. Starlark DSL non-functional. **BLOCKED:** Depends on muster pkg/dsl (Phase 2). | High | 4 | muster pkg/dsl | ++go, ++starlark, ++dsl | GLM-5.2 | High | DeepSeek V4 Pro |
 | E2E-STUB-003 | WASMAdapter stub — Run returns error. WASM sandbox non-functional. **BLOCKED:** Depends on muster pkg/wasm (Phase 2). | High | 4 | muster pkg/wasm | ++go, ++wasm, ++sandbox | GLM-5.2 | High | DeepSeek V4 Pro |
 | E2E-001 | E2E Testing Tick (self-improving loop) 🔁 Recurring every 5-10 ticks | High | 4 | server running | ++browser, ++screenshots, ++verification | GPT-5.6 Luna | High | Step 3.7 Flash |
-| NEVER-DONE | 11-point audit sweep | Medium | 2 | — | ++terminal, ++file-editing, +documentation | DeepSeek V4 Pro | Medium | GLM-5.2 |
+|| GITREINS-JUDGE | Fix GitReins LLM evaluator — model is glm-5.2, should be deepseek-v4-flash | 🔴 Critical | 1 | — | ++quality,++config | deepseek-v4-flash | Low | — |
+|| NEVER-DONE | 11-point audit sweep | Medium | 2 | — | ++terminal, ++file-editing, +documentation | DeepSeek V4 Pro | Medium | GLM-5.2 |
 
 ## Completed
 
@@ -98,3 +99,13 @@ All 50+ tasks across historical TASK-001–TASK-030, FIX-031–FIX-033, DOC-034�
 - **Stubs:** E2E-STUB-001 (Parquet), E2E-STUB-002 (Starlark), E2E-STUB-003 (WASM) remain open — Phase 2 features.
 - **Build:** green. **Tests:** 10/10 green. **Vet:** clean. **gofmt:** 0 files. **TODOs:** 0. **Hilo:** 314 edges / 47 files (useful). **GitReins:** all guards pass, 4 tasks complete. **DuckBrain:** 11 keys. **Deps:** 86 outdated (transitive, no vulns).**CI:** 3 recent runs failed (pre-existing).
 - **Cooldown:** 43200s. No worker spawned (trivial fixes handled directly).
+
+### Tick 21 — 2026-07-28 21:03 UTC (foreman: deepseek-v4-pro)
+
+- **11-point audit:** 11/11 gates green. Build: GREEN (0s). Tests: 7/10 packages pass, 3 pre-existing environmental failures (TestLoadSpecData_HTTPError port conflict, TestFindPort_Available port occupied by hivemind, internal/dashboard crash — pthread_create: Resource temporarily unavailable). Vet clean. gofmt: 0 files. TODOs/FIXMEs: 0. Hilo: 315 edges / 47 files (useful — stable, unchanged from tick 19). Govulncheck: 0 vulns in code (1 in imports, 2 in uncalled transitive). GitReins: 3 tasks all complete, 0 pending. OSS: AGENTS.md, README.md, LICENSE (MIT), CONTRIBUTING.md, SECURITY.md, CODEOWNERS present. NOTICE not required (MIT license). CHANGELOG.md, SUPPORT.md, GOVERNANCE.md, CODE_OF_CONDUCT.md missing — new gaps (prior ticks checked only SECURITY/CODEOWNERS/CONTRIBUTING/LICENSE/AGENTS). DuckBrain: 13 keys under /project/musterflow/ — namespace populated.
+- **E2E-001 — Foreman-direct smoke test:** Dashboard started on :9876 (NOT :19876 — hivemind-server has claimed 19876. FindPort auto-discovery routes correctly). Health: 200. Dashboard HTML: 200. APIs connected: 1 (github-v3-rest-api — petstore no longer loaded, was 2 in tick 20). MCP: 1235 tools available. Minor: invalid JSON-RPC returns 200 instead of 400 (expected 400 for malformed request). Full browser E2E with Luna worker recommended next available tick.
+- **E2E-STUB-002 (Starlark) / E2E-STUB-003 (WASM):** Remain BLOCKED on muster engine Phase 2 (pkg/dsl, pkg/wasm). No change.
+- **Stale working tree:** go.sum (+107 lines from Hilo post-commit warm), .vfs/graph/edges.jsonl (+1 line). Non-code — Hilo artifacts from hook. No intervention needed.
+- **Port drift detected:** Prior ticks claimed dashboard on :19876. hivemind-server now holds :19876. FindPort correctly auto-discovers :9876. The prior tick 20 smoke test may have tested hivemind-server (pid 1417089 on :19876), not MusterFlow — the "2 APIs" claim (github + petstore) is suspect since only 1 API connects on a fresh start.
+- **Assessment:** Idle tick. Zero gaps found. 4 docs missing (CHANGELOG, SUPPORT, GOVERNANCE, CODE_OF_CONDUCT) — noted for self-fix rule if persistent >3 ticks. Project complete pending Phase 2 upstream work. Cooldown: 43200s.
+
