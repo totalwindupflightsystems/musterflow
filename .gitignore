@@ -13,3 +13,7 @@ bin/
 .vfs/graph/graph.db
 .vfs/graph/graph.db.wal
 .vfs/graph/.last_warm
+
+# DuckDB board — local cache (rebuildable from parquet)
+.coding-hermes/board/board.db
+.coding-hermes/board/board.db.wal
