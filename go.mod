@@ -8,6 +8,7 @@ require (
 	github.com/parquet-go/parquet-go v0.30.1
 	github.com/spf13/cobra v1.10.2
 	github.com/wojons/muster v0.0.0
+	go.starlark.net v0.0.0-20240123142251-f86470692795
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -37,6 +38,7 @@ require (
 	github.com/rs/zerolog v1.32.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/tetratelabs/wazero v1.12.0 // indirect
 	github.com/twpayne/go-geom v1.6.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect

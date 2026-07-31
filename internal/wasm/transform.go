@@ -4,9 +4,12 @@
 package wasm
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	musterwasm "github.com/wojons/muster/pkg/wasm"
 )
 
 // Transform represents an installed WASM transform.
@@ -64,11 +67,29 @@ func (r *Registry) InstallFromCatalog(entryID string) error {
 			"Place .wasm files in %s to install transforms manually.", r.dir)
 }
 
-// Run executes a transform with the given input JSON.
-// This is a placeholder — full sandboxed execution in Phase 2.
-// Uses muster's pkg/wasm runtime (wazero, pure Go, no CGO).
+// Run executes a WASM transform at transformPath with the given inputJSON.
+// The module must follow the WASI stdin/stdout convention: it reads JSON from
+// stdin and writes the transformed output to stdout. Execution is sandboxed by
+// wazero via muster's pkg/wasm ModuleManager (default limits: 128MB memory,
+// 30s timeout, no network). Returns the stdout output as a string.
 func Run(transformPath string, inputJSON string) (string, error) {
-	return "", fmt.Errorf(
-		"WASM transform execution is not yet compiled in. "+
-			"This is a Phase 2 feature. Transform path: %s", transformPath)
+	if _, err := os.Stat(transformPath); err != nil {
+		return "", fmt.Errorf("wasm transform: module %q not found: %w", transformPath, err)
+	}
+
+	ctx := context.Background()
+	mgr := musterwasm.NewModuleManager(nil)
+	defer mgr.Close(ctx)
+
+	lm, err := mgr.Load(ctx, transformPath)
+	if err != nil {
+		return "", fmt.Errorf("wasm transform: load module %q: %w", transformPath, err)
+	}
+
+	out, err := mgr.Transform(ctx, lm, []byte(inputJSON))
+	if err != nil {
+		return "", fmt.Errorf("wasm transform: execute module %q: %w", transformPath, err)
+	}
+
+	return string(out), nil
 }

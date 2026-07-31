@@ -234,21 +234,21 @@ func TestList_CreatesDirectoryOnEmpty(t *testing.T) {
 
 // ── AC-020.4: Run tests ──────────────────────────────────────────────────
 
-func TestRun_ExistingFlow(t *testing.T) {
+func TestRun_ComputedOutput(t *testing.T) {
 	dir := t.TempDir()
 	e := NewEngine(dir, "http://localhost:9876")
 
-	_, err := e.Create("test-flow", "print('run')", false)
+	_, err := e.Create("compute", "print(6 * 7)", false)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	output, err := e.Run("test-flow", nil)
+	output, err := e.Run("compute", nil)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if !strings.Contains(output, `"test-flow" executed successfully`) {
-		t.Errorf("output = %q, want success message", output)
+	if output != "42" {
+		t.Errorf("output = %q, want 42", output)
 	}
 }
 
@@ -265,27 +265,25 @@ func TestRun_NonexistentFlow(t *testing.T) {
 	}
 }
 
-func TestRun_WithPayload(t *testing.T) {
+func TestRun_WithTriggerPayload(t *testing.T) {
 	dir := t.TempDir()
 	e := NewEngine(dir, "http://localhost:9876")
 
-	_, err := e.Create("payload-flow", "print('trigger')", false)
+	// Flow references the predeclared "trigger" global.
+	_, err := e.Create("trigger-flow", `print(trigger["user"])`, false)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	output, err := e.Run("payload-flow", map[string]interface{}{
+	output, err := e.Run("trigger-flow", map[string]interface{}{
 		"user": "alice",
 		"id":   42,
 	})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if !strings.Contains(output, "alice") {
-		t.Errorf("output = %q, want mention of trigger payload", output)
-	}
-	if !strings.Contains(output, "42") {
-		t.Errorf("output = %q, want mention of trigger payload id", output)
+	if output != "alice" {
+		t.Errorf("output = %q, want alice", output)
 	}
 }
 
@@ -293,21 +291,55 @@ func TestRun_NilPayload(t *testing.T) {
 	dir := t.TempDir()
 	e := NewEngine(dir, "http://localhost:9876")
 
-	_, err := e.Create("nil-payload", "pass", false)
+	// Flow without trigger references still runs with nil payload.
+	_, err := e.Create("no-trigger", "print('ok')", false)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	output, err := e.Run("nil-payload", nil)
+	output, err := e.Run("no-trigger", nil)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if !strings.Contains(output, "executed successfully") {
-		t.Errorf("output = %q, want success message", output)
+	if output != "ok" {
+		t.Errorf("output = %q, want ok", output)
 	}
-	// nil payload should not include "Trigger payload:" in output
-	if strings.Contains(output, "Trigger payload:") {
-		t.Error("nil payload should not include trigger payload in output")
+}
+
+func TestRun_NilPayload_TriggerIsNone(t *testing.T) {
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	// Flow that uses a conditional expression to check trigger is None.
+	_, err := e.Create("trigger-none", `print("none" if trigger == None else "set")`, false)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	output, err := e.Run("trigger-none", nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if output != "none" {
+		t.Errorf("output = %q, want none", output)
+	}
+}
+
+func TestRun_SyntaxError(t *testing.T) {
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	_, err := e.Create("bad-syntax", `print(`, false)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err = e.Run("bad-syntax", nil)
+	if err == nil {
+		t.Fatal("expected error for syntax-error flow")
+	}
+	if !strings.Contains(err.Error(), "parse flow bad-syntax") {
+		t.Errorf("error = %v, want parse error mentioning flow name", err)
 	}
 }
 

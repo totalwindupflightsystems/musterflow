@@ -140,15 +140,26 @@ func TestInstallFromCatalog_NotImplemented(t *testing.T) {
 	}
 }
 
-func TestRun_NotImplemented(t *testing.T) {
-	output, err := Run("/some/path.wasm", `{"key":"value"}`)
+func TestRun_RealTransform(t *testing.T) {
+	wasmPath := filepath.Join("testdata", "transform.wasm")
+	input := `{"name":"test"}`
+	want := `transformed:{"name":"test"}`
+
+	output, err := Run(wasmPath, input)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if output != want {
+		t.Errorf("output = %q, want %q", output, want)
+	}
+}
+
+func TestRun_ModuleNotFound(t *testing.T) {
+	_, err := Run(filepath.Join(t.TempDir(), "nope.wasm"), `{"x":1}`)
 	if err == nil {
-		t.Error("expected error (not yet implemented)")
+		t.Fatal("expected error for missing module")
 	}
-	if output != "" {
-		t.Errorf("expected empty output string, got %q", output)
-	}
-	if !strings.Contains(err.Error(), "not yet compiled") {
-		t.Errorf("expected 'not yet compiled' in error, got: %v", err)
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error = %v, want 'not found' mention", err)
 	}
 }
