@@ -3,7 +3,7 @@ module github.com/totalwindupflightsystems/musterflow
 go 1.26.5
 
 require (
-	github.com/getkin/kin-openapi v0.142.0
+	github.com/getkin/kin-openapi v0.145.0
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/parquet-go/parquet-go v0.30.1
 	github.com/spf13/cobra v1.10.2
