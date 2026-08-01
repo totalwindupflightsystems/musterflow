@@ -57,17 +57,19 @@ func run() error {
 	}
 
 	// Detect if the dashboard is already running on the configured port.
-	// If it is, open the DB read-only to avoid conflicting lock errors.
 	dashAddr := fmt.Sprintf("127.0.0.1:%d", cfg.Port)
 	dashRunning := isPortInUse(dashAddr)
 
 	// Load registry
 	registry := app.NewRegistry(cfg.DataDir)
 	if dashRunning {
-		if err := registry.LoadReadOnly(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not load registry (read-only): %v\n", err)
-		}
-		// Route write operations (connect/disconnect) through the dashboard API
+		// Skip LoadReadOnly: DuckDB read-only open still fails with a
+		// "Conflicting lock is held" error when the dashboard process holds
+		// the write lock.  The registry stays empty (store == nil) — this is
+		// fine because all commands that need registry data (list, connect,
+		// disconnect, catalog, refresh, mcp) route through the dashboard HTTP
+		// API via dashboardBaseURL.  Commands that don't use the registry
+		// (flow run, flow list) are unaffected.
 		cli.SetDashboardURL(fmt.Sprintf("http://%s", dashAddr))
 	} else {
 		if err := registry.Load(); err != nil {
