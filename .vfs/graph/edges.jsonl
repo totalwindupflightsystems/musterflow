@@ -321,3 +321,8 @@
 {"from":"internal/wasm/transform.go","to":"pkg:github.com/wojons/muster/pkg/wasm","rel":"imports","provenance":"ast_exact","confidence":1.0}
 {"from":"internal/wasm/testdata/transformdir/main.go","to":"std:io","rel":"imports","provenance":"ast_exact","confidence":1.0}
 {"from":"internal/wasm/testdata/transformdir/main.go","to":"std:os","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"cmd/musterflow/main_test.go","to":"std:net","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"cmd/musterflow/main_test.go","to":"std:testing","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"cmd/musterflow/main_test.go","to":"std:time","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"cmd/musterflow/main_test.go","to":"cmd/musterflow/main.go","rel":"tested_by","provenance":"heuristic","confidence":0.8}
+{"from":"cmd/musterflow/main.go","to":"cmd/musterflow/main_test.go","rel":"tests","provenance":"heuristic","confidence":0.8}
