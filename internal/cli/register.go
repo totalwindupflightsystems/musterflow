@@ -296,6 +296,115 @@ func pullViaDashboard(apiID string) error {
 	return nil
 }
 
+// flowListViaDashboard lists workflows via the dashboard HTTP API.
+func flowListViaDashboard() error {
+	resp, err := http.Get(dashboardBaseURL + "/api/flows")
+	if err != nil {
+		return fmt.Errorf("dashboard flow list request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Flows []struct {
+			Name       string `json:"name"`
+			WebhookURL string `json:"webhook_url"`
+		} `json:"flows"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode dashboard response: %w", err)
+	}
+
+	if len(result.Flows) == 0 {
+		fmt.Println("No workflows defined.")
+		fmt.Println("Create one with: musterflow flow create <name>")
+		return nil
+	}
+
+	fmt.Println("Workflows:")
+	for _, f := range result.Flows {
+		fmt.Printf("  %s", f.Name)
+		if f.WebhookURL != "" {
+			fmt.Printf("  webhook: %s", f.WebhookURL)
+		}
+		fmt.Println()
+	}
+	return nil
+}
+
+// flowCreateViaDashboard creates a workflow via the dashboard HTTP API.
+func flowCreateViaDashboard(name string, webhook bool) error {
+	payload := map[string]interface{}{
+		"name":    name,
+		"source":  "# Write your Starlark workflow here\n",
+		"webhook": webhook,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal flow create payload: %w", err)
+	}
+
+	resp, err := http.Post(dashboardBaseURL+"/api/flows", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("dashboard flow create request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Name       string `json:"name"`
+		WebhookURL string `json:"webhook_url"`
+		Error      string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode dashboard response: %w", err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		msg := result.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("create flow via dashboard: %s", msg)
+	}
+
+	fmt.Printf("✓ Created flow %q\n", result.Name)
+	if result.WebhookURL != "" {
+		fmt.Printf("  Webhook URL: %s\n", result.WebhookURL)
+	}
+	fmt.Printf("  Edit: %s/flows/%s.star\n", app.DefaultDataDir(), result.Name)
+	return nil
+}
+
+// flowRunViaDashboard runs a workflow via the dashboard HTTP API and prints
+// the raw output (no extra newline) to match the local engine.Run contract.
+func flowRunViaDashboard(name string) error {
+	resp, err := http.Post(dashboardBaseURL+"/api/flows/"+name+"/run", "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("dashboard flow run request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Result string `json:"result"`
+		Error  string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode dashboard response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		msg := result.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("run flow via dashboard: %s", msg)
+	}
+
+	fmt.Print(result.Result)
+	return nil
+}
+
 // mcpViaDashboard fetches MCP endpoint information from the dashboard HTTP API
 // to avoid DuckDB lock conflicts when the dashboard holds the write lock.
 func mcpViaDashboard() error {

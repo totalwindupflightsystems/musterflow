@@ -68,8 +68,8 @@ func run() error {
 		// the write lock.  The registry stays empty (store == nil) — this is
 		// fine because all commands that need registry data (list, connect,
 		// disconnect, catalog, refresh, mcp) route through the dashboard HTTP
-		// API via dashboardBaseURL.  Commands that don't use the registry
-		// (flow run, flow list) are unaffected.
+		// API via dashboardBaseURL.  Flow commands (create, list, run) also
+		// route through the dashboard HTTP API via dashboardBaseURL.
 		cli.SetDashboardURL(fmt.Sprintf("http://%s", dashAddr))
 	} else {
 		if err := registry.Load(); err != nil {

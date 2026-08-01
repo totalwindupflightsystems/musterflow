@@ -20,6 +20,7 @@ type Server struct {
 	catalogClient *catalog.Client
 	toolRegistry  *mcp.ToolRegistry
 	addr          string
+	flowsDir      string
 	mux           *http.ServeMux
 	mcpHandler    http.Handler
 }
@@ -31,6 +32,7 @@ func NewServer(registry *app.Registry, catalogClient *catalog.Client, toolRegist
 		catalogClient: catalogClient,
 		toolRegistry:  toolRegistry,
 		addr:          addr,
+		flowsDir:      filepath.Join(app.DefaultDataDir(), "flows"),
 		mux:           http.NewServeMux(),
 	}
 	s.registerRoutes()
@@ -47,6 +49,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/health", s.handleHealth)
 	s.mux.HandleFunc("/api/apis", s.handleAPIs)
 	s.mux.HandleFunc("/api/apis/", s.handleAPIByID)
+	s.mux.HandleFunc("/api/flows", s.handleFlows)
+	s.mux.HandleFunc("/api/flows/", s.handleFlowRun)
 	s.mux.HandleFunc("/api/catalog/search", s.handleCatalogSearch)
 	s.mux.HandleFunc("/api/mcp/info", s.handleMCPInfo)
 	s.mux.HandleFunc("/mcp", s.handleMCP)
@@ -330,6 +334,100 @@ func writeJSON(w http.ResponseWriter, code int, data interface{}) {
 	_ = json.NewEncoder(w).Encode(data)
 }
 
+// handleFlows handles GET /api/flows (list) and POST /api/flows (create).
+func (s *Server) handleFlows(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		engine := workflow.NewEngine(s.flowsDir, fmt.Sprintf("http://localhost%s", s.addr))
+		flows, err := engine.List()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		if flows == nil {
+			flows = []workflow.Flow{}
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"flows": flows})
+	case http.MethodPost:
+		s.handleFlowCreate(w, r)
+	default:
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+	}
+}
+
+// handleFlowCreate handles POST /api/flows to create a new flow.
+// Body: {"name": "...", "source": "...", "webhook": bool}
+func (s *Server) handleFlowCreate(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name    string `json:"name"`
+		Source  string `json:"source"`
+		Webhook bool   `json:"webhook"`
+	}
+	if r.Body == nil || r.ContentLength == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing request body"})
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
+		return
+	}
+	if body.Name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing flow name"})
+		return
+	}
+
+	engine := workflow.NewEngine(s.flowsDir, fmt.Sprintf("http://localhost%s", s.addr))
+	flow, err := engine.Create(body.Name, body.Source, body.Webhook)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, flow)
+}
+
+// handleFlowRun handles POST /api/flows/<name>/run to execute a flow.
+// Optional JSON body: {"trigger": {...}}
+func (s *Server) handleFlowRun(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Path[len("/api/flows/"):]
+	// Require the /run suffix
+	if !strings.HasSuffix(name, "/run") {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "unknown flow endpoint"})
+		return
+	}
+	name = strings.TrimSuffix(name, "/run")
+	if name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing flow name"})
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	var payload map[string]interface{}
+	if r.Body != nil && r.ContentLength != 0 {
+		var body struct {
+			Trigger map[string]interface{} `json:"trigger"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
+			return
+		}
+		payload = body.Trigger
+	}
+
+	engine := workflow.NewEngine(s.flowsDir, fmt.Sprintf("http://localhost%s", s.addr))
+	output, err := engine.Run(name, payload)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"result": output})
+}
+
 func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	// Extract flow name from path: /hooks/<name>
 	name := r.URL.Path[len("/hooks/"):]
@@ -344,7 +442,7 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	engine := workflow.NewEngine(
-		filepath.Join(app.DefaultDataDir(), "flows"),
+		s.flowsDir,
 		fmt.Sprintf("http://localhost%s", s.addr),
 	)
 	output, err := engine.Run(name, payload)

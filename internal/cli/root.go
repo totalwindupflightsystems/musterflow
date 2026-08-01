@@ -321,6 +321,9 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		Short: "Create a new workflow",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if dashboardBaseURL != "" {
+				return flowCreateViaDashboard(args[0], webhook)
+			}
 			engine := workflow.NewEngine(
 				filepath.Join(app.DefaultDataDir(), "flows"),
 				"http://localhost:9876",
@@ -345,6 +348,9 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		Use:   "list",
 		Short: "List workflows",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if dashboardBaseURL != "" {
+				return flowListViaDashboard()
+			}
 			engine := workflow.NewEngine(
 				filepath.Join(app.DefaultDataDir(), "flows"),
 				"http://localhost:9876",
@@ -375,6 +381,9 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		Short: "Run a workflow",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if dashboardBaseURL != "" {
+				return flowRunViaDashboard(args[0])
+			}
 			engine := workflow.NewEngine(
 				filepath.Join(app.DefaultDataDir(), "flows"),
 				"http://localhost:9876",

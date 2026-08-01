@@ -621,3 +621,230 @@ func BenchmarkServer_APIsHandler(b *testing.B) {
 		handler.ServeHTTP(rec, req)
 	}
 }
+
+// --- Flow API tests ---
+
+// newServerWithFlowsDir creates a Server with the flowsDir overridden to a
+// temp directory for hermetic testing of flow routes.
+func newServerWithFlowsDir(t *testing.T, flowsDir string) *Server {
+	t.Helper()
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := NewServer(r, nil, nil, ":0")
+	s.flowsDir = flowsDir
+	return s
+}
+
+func TestServer_FlowsList_Empty(t *testing.T) {
+	s := newServerWithFlowsDir(t, t.TempDir())
+
+	req := httptest.NewRequest(http.MethodGet, "/api/flows", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	flows, ok := body["flows"].([]interface{})
+	if !ok {
+		t.Fatalf("expected 'flows' array, got %v", body["flows"])
+	}
+	if len(flows) != 0 {
+		t.Errorf("expected empty flows array, got %d items", len(flows))
+	}
+}
+
+func TestServer_FlowsCreate_AndList(t *testing.T) {
+	dir := t.TempDir()
+	s := newServerWithFlowsDir(t, dir)
+
+	// Create a flow via POST
+	createBody := `{"name":"test-flow","source":"print('hello')","webhook":false}`
+	req := httptest.NewRequest(http.MethodPost, "/api/flows", strings.NewReader(createBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var created map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+	if created["name"] != "test-flow" {
+		t.Errorf("expected name 'test-flow', got %v", created["name"])
+	}
+
+	// Now list and verify the flow appears
+	req = httptest.NewRequest(http.MethodGet, "/api/flows", nil)
+	rec = httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	var listBody struct {
+		Flows []map[string]interface{} `json:"flows"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&listBody); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	if len(listBody.Flows) != 1 {
+		t.Fatalf("expected 1 flow, got %d", len(listBody.Flows))
+	}
+	if listBody.Flows[0]["name"] != "test-flow" {
+		t.Errorf("expected name 'test-flow', got %v", listBody.Flows[0]["name"])
+	}
+}
+
+func TestServer_FlowsCreate_MissingName(t *testing.T) {
+	s := newServerWithFlowsDir(t, t.TempDir())
+
+	createBody := `{"source":"print('x')"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/flows", strings.NewReader(createBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for missing name, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestServer_FlowsCreate_WebhookURL(t *testing.T) {
+	dir := t.TempDir()
+	s := newServerWithFlowsDir(t, dir)
+
+	createBody := `{"name":"hook-flow","source":"print('triggered')","webhook":true}`
+	req := httptest.NewRequest(http.MethodPost, "/api/flows", strings.NewReader(createBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var created map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+	webhookURL, ok := created["webhook_url"].(string)
+	if !ok || webhookURL == "" {
+		t.Errorf("expected non-empty webhook_url, got %v", created["webhook_url"])
+	}
+	if !strings.Contains(webhookURL, "/hooks/hook-flow") {
+		t.Errorf("expected webhook_url to contain /hooks/hook-flow, got %q", webhookURL)
+	}
+}
+
+func TestServer_FlowRun_Success(t *testing.T) {
+	dir := t.TempDir()
+	s := newServerWithFlowsDir(t, dir)
+
+	// Create a flow that prints two lines (matching the output contract)
+	createBody := `{"name":"e2e-flow","source":"print(\"42\")\nprint(\"trigger=none\")"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/flows", strings.NewReader(createBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Run the flow with nil body (content-length 0)
+	req = httptest.NewRequest(http.MethodPost, "/api/flows/e2e-flow/run", nil)
+	rec = httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var result map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&result); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+
+	output, ok := result["result"]
+	if !ok {
+		t.Fatal("expected 'result' key in response")
+	}
+	if !strings.Contains(output, "42") {
+		t.Errorf("expected result to contain '42', got %q", output)
+	}
+	if !strings.Contains(output, "trigger=none") {
+		t.Errorf("expected result to contain 'trigger=none', got %q", output)
+	}
+}
+
+func TestServer_FlowRun_Nonexistent(t *testing.T) {
+	s := newServerWithFlowsDir(t, t.TempDir())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/flows/nonexistent/run", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestServer_FlowRun_WithTrigger(t *testing.T) {
+	dir := t.TempDir()
+	s := newServerWithFlowsDir(t, dir)
+
+	// Create a flow that reads the trigger payload
+	createBody := `{"name":"trigger-flow","source":"print(trigger[\"user\"])"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/flows", strings.NewReader(createBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Run with a trigger payload
+	runBody := `{"trigger":{"user":"alice"}}`
+	req = httptest.NewRequest(http.MethodPost, "/api/flows/trigger-flow/run", strings.NewReader(runBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var result map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&result); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	if result["result"] != "alice" {
+		t.Errorf("expected result 'alice', got %q", result["result"])
+	}
+}
+
+func TestServer_FlowsList_MethodNotAllowed(t *testing.T) {
+	s := newServerWithFlowsDir(t, t.TempDir())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/flows", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", rec.Code)
+	}
+}
