@@ -32,7 +32,7 @@ func NewServer(registry *app.Registry, catalogClient *catalog.Client, toolRegist
 		catalogClient: catalogClient,
 		toolRegistry:  toolRegistry,
 		addr:          addr,
-		flowsDir:      filepath.Join(app.DefaultDataDir(), "flows"),
+		flowsDir:      filepath.Join(registry.DataDir(), "flows"),
 		mux:           http.NewServeMux(),
 	}
 	s.registerRoutes()
@@ -383,7 +383,13 @@ func (s *Server) handleFlowCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, flow)
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"name":        flow.Name,
+		"source":      flow.Source,
+		"webhook":     flow.Webhook,
+		"webhook_url": flow.WebhookURL,
+		"flows_dir":   s.flowsDir,
+	})
 }
 
 // handleFlowRun handles POST /api/flows/<name>/run to execute a flow.

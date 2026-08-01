@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -50,6 +51,11 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+
+	// Parse persistent flags BEFORE building the registry so --data-dir
+	// takes effect (cobra parses flags during ExecuteContext, which runs
+	// after the registry is constructed). See BUG-004.
+	flagDataDir = parseDataDirFlag(os.Args[1:])
 
 	// CLI flags override config
 	if flagDataDir != "" {
@@ -230,4 +236,21 @@ func isPortInUse(addr string) bool {
 	}
 	conn.Close()
 	return true
+}
+
+// parseDataDirFlag extracts the --data-dir value from raw CLI args.
+// Cobra only parses persistent flags during ExecuteContext, which runs after
+// the registry is constructed — so the flag must be read manually here for
+// the registry to honor it. Supports both "--data-dir <path>" and
+// "--data-dir=<path>" forms.
+func parseDataDirFlag(args []string) string {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--data-dir" && i+1 < len(args) {
+			return args[i+1]
+		}
+		if strings.HasPrefix(args[i], "--data-dir=") {
+			return strings.TrimPrefix(args[i], "--data-dir=")
+		}
+	}
+	return ""
 }

@@ -356,6 +356,7 @@ func flowCreateViaDashboard(name string, webhook bool) error {
 	var result struct {
 		Name       string `json:"name"`
 		WebhookURL string `json:"webhook_url"`
+		FlowsDir   string `json:"flows_dir"`
 		Error      string `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -373,7 +374,11 @@ func flowCreateViaDashboard(name string, webhook bool) error {
 	if result.WebhookURL != "" {
 		fmt.Printf("  Webhook URL: %s\n", result.WebhookURL)
 	}
-	fmt.Printf("  Edit: %s/flows/%s.star\n", app.DefaultDataDir(), result.Name)
+	flowsDir := result.FlowsDir
+	if flowsDir == "" {
+		flowsDir = app.DefaultDataDir()
+	}
+	fmt.Printf("  Edit: %s/%s.star\n", flowsDir, result.Name)
 	return nil
 }
 

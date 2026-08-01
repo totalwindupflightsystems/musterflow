@@ -6,6 +6,33 @@ import (
 	"time"
 )
 
+// TestParseDataDirFlag verifies the --data-dir flag is parsed from raw CLI
+// args in BOTH "--data-dir <path>" and "--data-dir=<path>" forms. This is
+// the BUG-004 regression test: cobra parses persistent flags only during
+// ExecuteContext (after the registry is built), so the flag must be read
+// manually before registry construction.
+func TestParseDataDirFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"space form", []string{"flow", "create", "x", "--data-dir", "/tmp/mf-dir"}, "/tmp/mf-dir"},
+		{"equals form", []string{"--data-dir=/tmp/mf-eq", "list"}, "/tmp/mf-eq"},
+		{"flag first", []string{"--data-dir", "/tmp/mf-first", "start"}, "/tmp/mf-first"},
+		{"absent", []string{"flow", "list"}, ""},
+		{"empty value", []string{"--data-dir=", "list"}, ""},
+		{"not data-dir", []string{"--dashboard-addr", ":9999", "start"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseDataDirFlag(tt.args); got != tt.want {
+				t.Errorf("parseDataDirFlag(%v) = %q, want %q", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
 // TestIsPortInUse_FreePort verifies that isPortInUse returns false when
 // nothing is listening on the given address. This is the dashboard-NOT-running
 // path — the code must still call registry.Load() in that case.
