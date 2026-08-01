@@ -312,3 +312,12 @@
 {"from":"internal/cli/api.go","to":"pkg:github.com/wojons/muster/pkg/generator","rel":"imports","provenance":"ast_exact","confidence":1.0}
 {"from":"internal/cli/api.go","to":"pkg:github.com/wojons/muster/pkg/openapi","rel":"imports","provenance":"ast_exact","confidence":1.0}
 {"from":"internal/cli/api.go","to":"pkg:github.com/totalwindupflightsystems/musterflow/internal/app","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/workflow/engine.go","to":"std:bytes","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/workflow/engine.go","to":"std:strings","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/workflow/engine.go","to":"pkg:github.com/wojons/muster/pkg/dsl","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/workflow/engine.go","to":"pkg:go.starlark.net/starlark","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/cli/parquet_stub.go","to":"pkg:github.com/parquet-go/parquet-go","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/wasm/transform.go","to":"std:context","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/wasm/transform.go","to":"pkg:github.com/wojons/muster/pkg/wasm","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/wasm/testdata/transformdir/main.go","to":"std:io","rel":"imports","provenance":"ast_exact","confidence":1.0}
+{"from":"internal/wasm/testdata/transformdir/main.go","to":"std:os","rel":"imports","provenance":"ast_exact","confidence":1.0}
