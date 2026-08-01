@@ -92,7 +92,7 @@ func FindPort(startPort int) (int, error) {
 		addr := fmt.Sprintf(":%d", port)
 		ln, err := net.Listen("tcp", addr)
 		if err == nil {
-			ln.Close()
+			_ = ln.Close()
 			return port, nil
 		}
 	}

@@ -564,7 +564,7 @@ func generateTestCert(certPath, keyPath string) error {
 	if err != nil {
 		return err
 	}
-	defer certFile.Close()
+	defer func() { _ = certFile.Close() }()
 	if err := pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
 		return err
 	}
@@ -572,7 +572,7 @@ func generateTestCert(certPath, keyPath string) error {
 	if err != nil {
 		return err
 	}
-	defer keyFile.Close()
+	defer func() { _ = keyFile.Close() }()
 	return pem.Encode(keyFile, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),

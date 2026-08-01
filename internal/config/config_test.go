@@ -130,7 +130,7 @@ func TestFindPort_Occupied(t *testing.T) {
 	if err != nil {
 		t.Skipf("cannot bind for test: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	port, err := FindPort(19877)
 	if err != nil {

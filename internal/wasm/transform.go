@@ -63,8 +63,8 @@ func (r *Registry) List() ([]Transform, error) {
 // This is a placeholder — full catalog integration in Phase 2.
 func (r *Registry) InstallFromCatalog(entryID string) error {
 	return fmt.Errorf(
-		"WASM transform catalog integration is not yet implemented. "+
-			"Place .wasm files in %s to install transforms manually.", r.dir)
+		"WASM transform catalog integration is not yet implemented; "+
+			"place .wasm files in %s to install transforms manually", r.dir)
 }
 
 // Run executes a WASM transform at transformPath with the given inputJSON.
@@ -79,7 +79,7 @@ func Run(transformPath string, inputJSON string) (string, error) {
 
 	ctx := context.Background()
 	mgr := musterwasm.NewModuleManager(nil)
-	defer mgr.Close(ctx)
+	defer func() { _ = mgr.Close(ctx) }()
 
 	lm, err := mgr.Load(ctx, transformPath)
 	if err != nil {

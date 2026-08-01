@@ -31,7 +31,7 @@ func connectViaDashboard(specURL, baseURL, nameInput, authType string) error {
 	if err != nil {
 		return fmt.Errorf("dashboard connect request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		ID            string `json:"id"`
@@ -74,7 +74,7 @@ func disconnectViaDashboard(apiID string) error {
 	if err != nil {
 		return fmt.Errorf("dashboard disconnect request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		var result struct {
@@ -99,7 +99,7 @@ func listViaDashboard() error {
 	if err != nil {
 		return fmt.Errorf("dashboard list request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
@@ -136,7 +136,7 @@ func catalogSearchViaDashboard(query string) error {
 	if err != nil {
 		return fmt.Errorf("dashboard catalog search: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
@@ -172,7 +172,7 @@ func refreshViaDashboard(apiID string) error {
 	if err != nil {
 		return fmt.Errorf("dashboard refresh request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Name           string `json:"name"`
@@ -211,7 +211,7 @@ func pushViaDashboard(apiID string) error {
 	if err != nil {
 		return fmt.Errorf("dashboard get request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		var errBody struct {
@@ -270,7 +270,7 @@ func pullViaDashboard(apiID string) error {
 	if err != nil {
 		return fmt.Errorf("dashboard pull request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		ID            string `json:"id"`
@@ -302,7 +302,7 @@ func flowListViaDashboard() error {
 	if err != nil {
 		return fmt.Errorf("dashboard flow list request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
@@ -351,7 +351,7 @@ func flowCreateViaDashboard(name string, webhook bool) error {
 	if err != nil {
 		return fmt.Errorf("dashboard flow create request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Name       string `json:"name"`
@@ -389,7 +389,7 @@ func flowRunViaDashboard(name string) error {
 	if err != nil {
 		return fmt.Errorf("dashboard flow run request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Result string `json:"result"`
@@ -417,7 +417,7 @@ func mcpViaDashboard() error {
 	if err != nil {
 		return fmt.Errorf("dashboard MCP info request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)

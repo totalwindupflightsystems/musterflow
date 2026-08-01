@@ -32,7 +32,7 @@ func startCallbackServer(port int) (string, error) {
 			return
 		}
 		ch <- result{code: code}
-		fmt.Fprint(w, "Authorization successful! You may close this window.")
+		_, _ = fmt.Fprint(w, "Authorization successful! You may close this window.")
 	})
 
 	addr := fmt.Sprintf(":%d", port)
@@ -51,13 +51,13 @@ func startCallbackServer(port int) (string, error) {
 	// Wait for callback or timeout
 	select {
 	case res := <-ch:
-		srv.Close()
+		_ = srv.Close()
 		if res.err != nil {
 			return "", res.err
 		}
 		return res.code, nil
 	case <-time.After(5 * time.Minute):
-		srv.Close()
+		_ = srv.Close()
 		return "", fmt.Errorf("timed out waiting for authorization (5 minutes)")
 	}
 }

@@ -37,7 +37,7 @@ func writeParquet(w io.Writer, data interface{}) error {
 
 	schema := buildParquetSchema(keys)
 	writer := parquet.NewWriter(w, schema)
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	for _, rec := range records {
 		if err := writer.Write(rec); err != nil {

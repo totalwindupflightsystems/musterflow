@@ -57,7 +57,7 @@ func (c *Client) Search(query string) ([]CatalogEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetch catalog index: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil // catalog may not exist yet
@@ -82,7 +82,7 @@ func (c *Client) FetchEntry(id string) (*CatalogEntry, []byte, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("fetch entry: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, nil, fmt.Errorf("entry %s not found (status %d)", id, resp.StatusCode)

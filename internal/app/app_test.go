@@ -25,7 +25,7 @@ func TestRegistry_Add_Get(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	conn := &APIConnection{
 		ID:      "test-id",
@@ -54,7 +54,7 @@ func TestRegistry_List(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	conns := r.List()
 	if len(conns) != 0 {
@@ -75,7 +75,7 @@ func TestRegistry_Remove(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	_ = r.Add(&APIConnection{ID: "x", Name: "X", SpecURL: "url", BaseURL: "url"})
 
@@ -92,7 +92,7 @@ func TestRegistry_Remove_NotFound(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	if err := r.Remove("nonexistent"); err == nil {
 		t.Error("expected error")
@@ -107,14 +107,14 @@ func TestRegistry_Persistence(t *testing.T) {
 	}
 
 	_ = r.Add(&APIConnection{ID: "p1", Name: "P1", SpecURL: "url1", BaseURL: "url1"})
-	r.Close()
+	_ = r.Close()
 
 	// Reload
 	r2 := NewRegistry(dir)
 	if err := r2.Load(); err != nil {
 		t.Fatalf("Reload: %v", err)
 	}
-	defer r2.Close()
+	defer func() { _ = r2.Close() }()
 
 	conns := r2.List()
 	if len(conns) != 1 {
@@ -146,7 +146,7 @@ func TestConnect(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	result, err := Connect(context.Background(), r, ConnectOptions{
 		SpecURL: ts.URL + "/openapi.json",
@@ -165,7 +165,7 @@ func TestConnect(t *testing.T) {
 func TestConnect_InvalidURL(t *testing.T) {
 	r := NewRegistry(t.TempDir())
 	_ = r.Load()
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	_, err := Connect(context.Background(), r, ConnectOptions{SpecURL: "http://invalid.example.com/nonexistent.json"})
 	if err == nil {
@@ -181,7 +181,7 @@ func TestConnect_BadSpec(t *testing.T) {
 
 	r := NewRegistry(t.TempDir())
 	_ = r.Load()
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	_, err := Connect(context.Background(), r, ConnectOptions{SpecURL: ts.URL})
 	if err == nil {
@@ -204,7 +204,7 @@ func TestConnect_FileSpec(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	result, err := Connect(context.Background(), r, ConnectOptions{SpecURL: specPath})
 	if err != nil {
@@ -228,7 +228,7 @@ func TestConnect_CustomName(t *testing.T) {
 
 	r := NewRegistry(t.TempDir())
 	_ = r.Load()
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	result, err := Connect(context.Background(), r, ConnectOptions{
 		SpecURL: ts.URL,
@@ -256,7 +256,7 @@ func TestConnect_CustomBaseURL(t *testing.T) {
 
 	r := NewRegistry(t.TempDir())
 	_ = r.Load()
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	result, err := Connect(context.Background(), r, ConnectOptions{
 		SpecURL: ts.URL,
@@ -273,7 +273,7 @@ func TestConnect_CustomBaseURL(t *testing.T) {
 func TestDisconnect(t *testing.T) {
 	r := NewRegistry(t.TempDir())
 	_ = r.Load()
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	_ = r.Add(&APIConnection{ID: "disc", Name: "D", SpecURL: "url", BaseURL: "url"})
 	if err := Disconnect(r, "disc"); err != nil {
@@ -287,7 +287,7 @@ func TestDisconnect(t *testing.T) {
 func TestDisconnect_NotFound(t *testing.T) {
 	r := NewRegistry(t.TempDir())
 	_ = r.Load()
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	if err := Disconnect(r, "nonexistent"); err == nil {
 		t.Error("expected error")
@@ -345,7 +345,7 @@ func TestStore_AddList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewStore: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	conn := &APIConnection{ID: "s1", Name: "S1", SpecURL: "url", BaseURL: "url"}
 	if err := store.Add(conn); err != nil {
@@ -363,7 +363,7 @@ func TestStore_AddList(t *testing.T) {
 
 func TestStore_Remove(t *testing.T) {
 	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	_ = store.Add(&APIConnection{ID: "r1", Name: "R1", SpecURL: "url", BaseURL: "url"})
 	if err := store.Remove("r1"); err != nil {
@@ -377,7 +377,7 @@ func TestStore_Remove(t *testing.T) {
 func TestJSONL_ExportImport(t *testing.T) {
 	dir := t.TempDir()
 	store, _ := NewStore(filepath.Join(dir, "test.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	_ = store.Add(&APIConnection{ID: "e1", Name: "E1", SpecURL: "url", BaseURL: "url"})
 	_ = store.Add(&APIConnection{ID: "e2", Name: "E2", SpecURL: "url", BaseURL: "url"})
@@ -389,7 +389,7 @@ func TestJSONL_ExportImport(t *testing.T) {
 
 	// Import into new store
 	store2, _ := NewStore(filepath.Join(dir, "test2.db"))
-	defer store2.Close()
+	defer func() { _ = store2.Close() }()
 
 	n, err := ImportJSONL(store2, exportPath)
 	if err != nil {
@@ -413,7 +413,7 @@ func TestMigrateJSONToStore(t *testing.T) {
 	_ = os.WriteFile(jsonPath, []byte(`{"legacy-1":{"id":"legacy-1","name":"Legacy API","spec_url":"url","base_url":"url"}}`), 0644)
 
 	store, _ := NewStore(filepath.Join(dir, "musterflow.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	n, err := MigrateJSONToStore(store, dir)
 	if err != nil {
@@ -447,7 +447,7 @@ func TestLoad_WithLegacyJSON(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load with legacy: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	conns := r.List()
 	if len(conns) != 1 {
@@ -460,7 +460,7 @@ func TestLoad_WithLegacyJSON(t *testing.T) {
 
 func TestStore_Has(t *testing.T) {
 	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	if store.Has("nonexistent") {
 		t.Error("Has should return false")
@@ -474,7 +474,7 @@ func TestStore_Has(t *testing.T) {
 func TestExportJSONL_EmptyStore(t *testing.T) {
 	dir := t.TempDir()
 	store, _ := NewStore(filepath.Join(dir, "test.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	exportPath := filepath.Join(dir, "empty.jsonl")
 	if err := ExportJSONL(store, exportPath); err != nil {
@@ -496,7 +496,7 @@ func TestRegistry_Store(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	store := r.Store()
 	if store == nil {
@@ -556,7 +556,7 @@ func TestRefresh_Success(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// Register initial connection
 	_ = r.Add(&APIConnection{
@@ -599,7 +599,7 @@ func TestRefresh_NotFound(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	_, err := Refresh(context.Background(), r, "nonexistent")
 	if err == nil {
@@ -625,7 +625,7 @@ func TestRefresh_BaseURLChange(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	_ = r.Add(&APIConnection{
 		ID:            "url-change",
@@ -662,7 +662,7 @@ func TestRefresh_AuthTypePreserved(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	_ = r.Add(&APIConnection{
 		ID:            "auth-preserve",
@@ -689,14 +689,14 @@ func TestNewStore_InvalidPath(t *testing.T) {
 	// Try to open DuckDB at /dev/null — should fail (not a valid DuckDB file)
 	store, err := NewStore("/dev/null/test.db")
 	if err == nil {
-		store.Close()
+		_ = store.Close()
 		t.Error("expected error for invalid path")
 	}
 }
 
 func TestExportJSONL_WriteError(t *testing.T) {
 	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	_ = store.Add(&APIConnection{ID: "x", Name: "X", SpecURL: "url", BaseURL: "url"})
 
@@ -709,7 +709,7 @@ func TestExportJSONL_WriteError(t *testing.T) {
 
 func TestImportJSONL_NonexistentFile(t *testing.T) {
 	store, _ := NewStore(filepath.Join(t.TempDir(), "test.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	_, err := ImportJSONL(store, "/nonexistent/path/file.jsonl")
 	if err == nil {
@@ -723,7 +723,7 @@ func TestImportJSONL_InvalidJSON(t *testing.T) {
 	_ = os.WriteFile(badPath, []byte(`not valid json`), 0644)
 
 	store, _ := NewStore(filepath.Join(dir, "test.db"))
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	_, err := ImportJSONL(store, badPath)
 	if err == nil {
@@ -740,7 +740,7 @@ func TestLoad_CreateDirError(t *testing.T) {
 	r := NewRegistry(filepath.Join(blocked, "subdir"))
 	err := r.Load()
 	if err == nil {
-		r.Close()
+		_ = r.Close()
 		t.Error("expected error when data dir is blocked")
 	}
 }
@@ -752,7 +752,7 @@ func BenchmarkRegistry_Get(b *testing.B) {
 	if err := r.Load(); err != nil {
 		b.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	_ = r.Add(&APIConnection{ID: "bench", Name: "Bench", SpecURL: "url", BaseURL: "url"})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

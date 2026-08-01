@@ -8,7 +8,7 @@ import (
 
 func TestDetectShell(t *testing.T) {
 	orig := os.Getenv("SHELL")
-	defer os.Setenv("SHELL", orig)
+	defer func() { _ = os.Setenv("SHELL", orig) }()
 
 	tests := []struct {
 		shellEnv string
@@ -22,7 +22,7 @@ func TestDetectShell(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		os.Setenv("SHELL", tt.shellEnv)
+		_ = os.Setenv("SHELL", tt.shellEnv)
 		got := DetectShell()
 		if got != tt.want {
 			t.Errorf("DetectShell() with SHELL=%q = %q, want %q", tt.shellEnv, got, tt.want)
@@ -95,7 +95,7 @@ func TestPromptInstall_DefaultYes(t *testing.T) {
 	// Write newline (empty input = default yes) and close
 	go func() {
 		_, _ = w.Write([]byte("\n"))
-		w.Close()
+		_ = w.Close()
 	}()
 
 	result := promptInstallInteractive(ShellBash)
@@ -116,7 +116,7 @@ func TestPromptInstall_ExplicitYes(t *testing.T) {
 
 	go func() {
 		_, _ = w.Write([]byte("y\n"))
-		w.Close()
+		_ = w.Close()
 	}()
 
 	result := promptInstallInteractive(ShellZsh)
@@ -137,7 +137,7 @@ func TestPromptInstall_No(t *testing.T) {
 
 	go func() {
 		_, _ = w.Write([]byte("n\n"))
-		w.Close()
+		_ = w.Close()
 	}()
 
 	result := promptInstallInteractive(ShellBash)
@@ -157,8 +157,8 @@ func TestPromptInstall_NonTerminal(t *testing.T) {
 		t.Fatalf("pipe: %v", err)
 	}
 	os.Stdin = r
-	defer r.Close()
-	defer w.Close()
+	defer func() { _ = r.Close() }()
+	defer func() { _ = w.Close() }()
 
 	// A pipe is not a TTY, so PromptInstall should short-circuit to false
 	// without reading anything or blocking.
@@ -183,8 +183,8 @@ func (e *fakeError) Error() string { return e.msg }
 func TestInstall_Success(t *testing.T) {
 	homeDir := t.TempDir()
 	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", homeDir)
-	defer os.Setenv("HOME", origHome)
+	_ = os.Setenv("HOME", homeDir)
+	defer func() { _ = os.Setenv("HOME", origHome) }()
 
 	expectedScript := "# musterflow bash completion"
 	err := Install(ShellBash, func(s Shell) (string, error) {
@@ -211,8 +211,8 @@ func TestInstall_Success(t *testing.T) {
 func TestShouldPrompt_WithInstalledCompletions(t *testing.T) {
 	homeDir := t.TempDir()
 	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", homeDir)
-	defer os.Setenv("HOME", origHome)
+	_ = os.Setenv("HOME", homeDir)
+	defer func() { _ = os.Setenv("HOME", origHome) }()
 
 	// Install a completion to simulate pre-existing installation
 	if err := Install(ShellBash, func(s Shell) (string, error) {
@@ -229,8 +229,8 @@ func TestShouldPrompt_WithInstalledCompletions(t *testing.T) {
 func TestInstalledShells_WithBashInstalled(t *testing.T) {
 	homeDir := t.TempDir()
 	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", homeDir)
-	defer os.Setenv("HOME", origHome)
+	_ = os.Setenv("HOME", homeDir)
+	defer func() { _ = os.Setenv("HOME", origHome) }()
 
 	// Install bash completion
 	if err := Install(ShellBash, func(s Shell) (string, error) {

@@ -117,7 +117,7 @@ func fetchSpec(specURL string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("http get: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("http status %d", resp.StatusCode)
 		}

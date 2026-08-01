@@ -107,7 +107,7 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 	if err != nil {
 		return fmt.Errorf("execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -138,13 +138,13 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 		if err != nil {
 			return fmt.Errorf("create output file: %w", err)
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		out = f
 	}
 
 	// Raw mode — just dump the body
 	if opts.Raw || len(body) == 0 {
-		fmt.Fprintln(out, string(body))
+		_, _ = fmt.Fprintln(out, string(body))
 		if resp.StatusCode >= 400 {
 			return fmt.Errorf("HTTP %s", resp.Status)
 		}
@@ -155,7 +155,7 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 	var data interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		// Not JSON — print raw
-		fmt.Fprintln(out, string(body))
+		_, _ = fmt.Fprintln(out, string(body))
 		if resp.StatusCode >= 400 {
 			return fmt.Errorf("HTTP %s", resp.Status)
 		}
@@ -169,7 +169,7 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 		if err != nil {
 			return fmt.Errorf("format JSON: %w", err)
 		}
-		fmt.Fprintln(out, string(pretty))
+		_, _ = fmt.Fprintln(out, string(pretty))
 	case "csv":
 		if err := writeCSV(out, data); err != nil {
 			return fmt.Errorf("format CSV: %w", err)
@@ -190,13 +190,13 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 		if err != nil {
 			return fmt.Errorf("format JSON: %w", err)
 		}
-		fmt.Fprintln(out, string(pretty))
+		_, _ = fmt.Fprintln(out, string(pretty))
 	default:
 		pretty, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
 			return fmt.Errorf("format JSON: %w", err)
 		}
-		fmt.Fprintln(out, string(pretty))
+		_, _ = fmt.Fprintln(out, string(pretty))
 	}
 
 	if resp.StatusCode >= 400 {
@@ -212,17 +212,17 @@ func printTable(out io.Writer, data interface{}) {
 	switch v := data.(type) {
 	case map[string]interface{}:
 		for key, val := range v {
-			fmt.Fprintf(w, "%s\t%v\t\n", key, formatValue(val))
+			_, _ = fmt.Fprintf(w, "%s	%v	\n", key, formatValue(val))
 		}
 	case []interface{}:
 		if len(v) == 0 {
-			fmt.Fprintln(out, "(empty)")
+			_, _ = fmt.Fprintln(out, "(empty)")
 			return
 		}
 		// Collect all unique keys
 		keys := collectKeys(v)
 		// Print header
-		fmt.Fprintf(w, "%s\t\n", strings.Join(keys, "\t"))
+		_, _ = fmt.Fprintf(w, "%s	\n", strings.Join(keys, "	"))
 		// Print rows
 		for _, item := range v {
 			if m, ok := item.(map[string]interface{}); ok {
@@ -230,13 +230,13 @@ func printTable(out io.Writer, data interface{}) {
 				for _, k := range keys {
 					row = append(row, formatValue(m[k]))
 				}
-				fmt.Fprintf(w, "%s\t\n", strings.Join(row, "\t"))
+				_, _ = fmt.Fprintf(w, "%s	\n", strings.Join(row, "	"))
 			}
 		}
 	default:
-		fmt.Fprintf(w, "%v\t\n", v)
+		_, _ = fmt.Fprintf(w, "%v	\n", v)
 	}
-	w.Flush()
+	_ = w.Flush()
 }
 
 func collectKeys(items []interface{}) []string {

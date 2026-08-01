@@ -22,13 +22,13 @@ func NewStore(dbPath string) (*Store, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("ping duckdb: %w", err)
 	}
 
 	s := &Store{db: db}
 	if err := s.migrate(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func NewStoreReadOnly(dbPath string) (*Store, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("ping duckdb (read-only): %w", err)
 	}
 
@@ -110,7 +110,7 @@ func (s *Store) List() ([]*APIConnection, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list connections: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var conns []*APIConnection
 	for rows.Next() {

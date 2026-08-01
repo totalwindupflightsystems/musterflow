@@ -42,7 +42,7 @@ func loadSpecData(specURL string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		return io.ReadAll(resp.Body)
 	}
 	return os.ReadFile(specURL)
@@ -94,11 +94,11 @@ func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 		if len(searchArgs) > 0 {
 			target, _, e := c.Find(searchArgs)
 			if e == nil && target != nil && target != c {
-				fmt.Fprint(target.OutOrStdout(), target.UsageString())
+				_, _ = fmt.Fprint(target.OutOrStdout(), target.UsageString())
 				return
 			}
 		}
-		fmt.Fprint(c.OutOrStdout(), c.UsageString())
+		_, _ = fmt.Fprint(c.OutOrStdout(), c.UsageString())
 	})
 	// ValidArgsFunction provides dynamic completion for lazily-generated
 	// API subcommands. Cobra's V2 bash completion (and built-in fish/zsh

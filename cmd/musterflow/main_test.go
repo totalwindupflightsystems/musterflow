@@ -58,7 +58,7 @@ func TestIsPortInUse_Listening(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	if !isPortInUse(ln.Addr().String()) {
 		t.Error("expected isPortInUse=true for a listening port")

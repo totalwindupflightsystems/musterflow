@@ -31,7 +31,7 @@ func captureStdout(fn func()) string {
 
 	fn()
 
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 
 	var buf bytes.Buffer
@@ -807,7 +807,7 @@ func TestExportCommand_LoadedRegistry(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	outPath := filepath.Join(t.TempDir(), "export.jsonl")
 	root := NewRootCommand(r)
@@ -847,7 +847,7 @@ func TestImportCommand_NonexistentFile(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"import", "/nonexistent/path/file.jsonl"})
@@ -876,7 +876,7 @@ func TestRefreshCommand_NonexistentAPI(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"refresh", "nonexistent-api-id"})
@@ -892,7 +892,7 @@ func TestRefreshCommand_MissingArg(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"refresh"})
@@ -982,7 +982,7 @@ func TestCatalogCommand_SearchOutput(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"catalog", "search", "github"})
@@ -1003,7 +1003,7 @@ func TestConnectCommand_InvalidURL(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"connect", "not-a-valid-url-xyz://"})
@@ -1099,7 +1099,7 @@ func TestCatalogCommand_PushNonexistent(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"catalog", "push", "nonexistent-api"})
@@ -1136,7 +1136,7 @@ func TestFlowCommand_ListOutput(t *testing.T) {
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"flow", "list"})
@@ -1447,7 +1447,7 @@ func freePort(t *testing.T) int {
 	if err != nil {
 		t.Fatalf("find free port: %v", err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 	return l.Addr().(*net.TCPAddr).Port
 }
 
@@ -1473,7 +1473,7 @@ func TestStartCallbackServer_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to reach callback server: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	select {
 	case code := <-done:
@@ -1502,7 +1502,7 @@ func TestStartCallbackServer_MissingCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to reach callback server: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	select {
 	case err := <-done:
@@ -1531,7 +1531,7 @@ func TestStartCallbackServer_ErrorParam(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to reach callback server: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	select {
 	case err := <-done:
@@ -1550,8 +1550,8 @@ func TestStartCallbackServer_ErrorParam(t *testing.T) {
 func setHome(t *testing.T, dir string) func() {
 	t.Helper()
 	old := os.Getenv("HOME")
-	os.Setenv("HOME", dir)
-	return func() { os.Setenv("HOME", old) }
+	_ = os.Setenv("HOME", dir)
+	return func() { _ = os.Setenv("HOME", old) }
 }
 
 func TestConfigCommand_ShowDefaults(t *testing.T) {
@@ -2314,7 +2314,7 @@ func BenchmarkNewRootCommand(b *testing.B) {
 	if err := r.Load(); err != nil {
 		b.Fatalf("Load: %v", err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = NewRootCommand(r)

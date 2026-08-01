@@ -18,7 +18,7 @@ func ExportJSONL(store *Store, path string) error {
 	if err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	enc := json.NewEncoder(f)
 	for _, conn := range conns {
@@ -36,7 +36,7 @@ func ImportJSONL(store *Store, path string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("open: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	dec := json.NewDecoder(f)
 	count := 0

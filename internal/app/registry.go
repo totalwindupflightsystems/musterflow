@@ -59,7 +59,7 @@ func (r *Registry) Load() error {
 	// Auto-migrate from legacy JSON
 	n, err := MigrateJSONToStore(store, r.dataDir)
 	if err != nil {
-		store.Close()
+		_ = store.Close()
 		return fmt.Errorf("migrate JSON: %w", err)
 	}
 	if n > 0 {
