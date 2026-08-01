@@ -1,0 +1,133 @@
+tasks:
+- id: task-026-duckdb-lock
+  title: "TASK-026: Fix DuckDB lock conflict \u2014 CLI + dashboard concurrency"
+  criteria:
+  - "AC-026.1: NewStoreReadOnly opens DuckDB with access_mode=read_only in internal/app/store.go\
+    \ \u2014 verify grep -q 'access_mode=read_only' internal/app/store.go"
+  - "AC-026.2: Registry has LoadReadOnly() that opens store read-only and skips migration\
+    \ \u2014 verify grep -q 'func.*LoadReadOnly' internal/app/registry.go and grep\
+    \ -q 'NewStoreReadOnly' internal/app/registry.go"
+  - "AC-026.3: Dashboard exposes POST /api/apis endpoint for connect via HTTP API\
+    \ \u2014 verify the registerRoutes function includes a POST handler for /api/apis"
+  - "AC-026.4: CLI connect/disconnect route through dashboard API when dashboardBaseURL\
+    \ is set \u2014 verify connectViaDashboard and disconnectViaDashboard functions\
+    \ exist in internal/cli/root.go"
+  - "AC-026.5: main.go detects running dashboard via isPortInUse and calls LoadReadOnly\
+    \ when dashboard is active \u2014 verify grep -q 'isPortInUse\\|LoadReadOnly'\
+    \ cmd/musterflow/main.go"
+  status: complete
+  created_at: '2026-07-10T05:38:55.691447+00:00'
+  completed_at: '2026-07-10T05:40:10.671520+00:00'
+- id: DEPS-045
+  title: "Upgrade x/term v0.44.0 \u2192 v0.45.0"
+  criteria:
+  - go get golang.org/x/term@v0.45.0 succeeds
+  - go mod tidy clean
+  - go build ./... && go vet ./... && go test -short -count=1 ./... all pass (config
+    flaky test pre-existing)
+  - Verify API compatibility
+  status: complete
+  created_at: '2026-07-20T20:48:35.365250+00:00'
+  completed_at: '2026-07-20T20:50:33.358008+00:00'
+- id: QUALITY-051
+  title: "Refactor root.go \u2014 extract large functions from 1408-line file"
+  criteria:
+  - root.go reduced to under 800 lines
+  - go build ./... passes
+  - go vet ./... passes
+  - go test -short -count=1 ./... all pass (except pre-existing config flaky)
+  - All 17 CLI subcommands still register and function
+  status: complete
+  created_at: '2026-07-21T00:38:07.911076+00:00'
+  completed_at: '2026-07-21T00:38:13.335213+00:00'
+- id: E2E-STUB-002
+  title: "Wire StarlarkEngine to muster pkg/dsl (Phase 2) \u2014 real execution"
+  criteria:
+  - internal/workflow/engine.go executes Starlark via muster dsl.NewInterpreter.Parse
+    + starlark.FileProgram (not Interpreter.Compile for in-memory sources)
+  - print output captured via custom starlark.Thread Print buffer; engine.Run returns
+    computed output (print(6*7) -> "42")
+  - trigger payload available as predeclared global; nil payload -> starlark.None;
+    flows guard `if trigger != None`
+  - go build ./... and go vet ./... pass; all 11 packages' tests pass
+  - commit 30e7e7c lands the wiring; live CLI flow run returns real computed output
+  status: complete
+  created_at: '2026-08-01T03:00:52.802160+00:00'
+  completed_at: '2026-08-01T03:01:03.267164+00:00'
+- id: E2E-STUB-003
+  title: "Wire WASMAdapter to muster pkg/wasm (Phase 2) \u2014 real transform execution"
+  criteria:
+  - 'internal/wasm/transform.go uses muster pkg/wasm ModuleManager (wazero, DefaultLimits
+    128MB/30s): mgr.Load(ctx, path) + mgr.Transform(ctx, lm, input)'
+  - 'WASI stdin/stdout module convention: module reads JSON from stdin, writes transformed
+    JSON to stdout'
+  - os.Stat pre-check for clean module-not-found error; deferred mgr.Close
+  - test fixture internal/wasm/testdata/transform.wasm is a real WASI Go build (GOOS=wasip1),
+    committed with source in transformdir/
+  - Run(testdata/transform.wasm, {"name":"test"}) == transformed:{"name":"test"} (real
+    transformation, not passthrough)
+  - go build ./... and go vet ./... pass; all 11 packages' tests pass
+  status: complete
+  created_at: '2026-08-01T03:00:58.866034+00:00'
+  completed_at: '2026-08-01T03:01:59.835625+00:00'
+- id: BUG-002
+  title: Route flow create/list/run through dashboard HTTP API when dashboard running
+  criteria:
+  - "AC-1: Dashboard registerRoutes includes GET /api/flows (list), POST /api/flows\
+    \ (create), POST /api/flows/<name>/run \u2014 verify in internal/dashboard/server.go"
+  - "AC-2: CLI flow commands route through dashboard when dashboardBaseURL != \"\"\
+    \ \u2014 flowListViaDashboard/flowCreateViaDashboard/flowRunViaDashboard exist\
+    \ in internal/cli/register.go and are called from newFlowCommand RunE in internal/cli/root.go"
+  - "AC-3: Output contract preserved \u2014 flow run prints raw result (42/trigger=none),\
+    \ flow list prints Workflows: with names"
+  - "AC-4: Tests added \u2014 dashboard flow routes (list empty, create+list, run,\
+    \ 404) in internal/dashboard/dashboard_test.go; existing tests stay green"
+  - 'AC-5: go build ./... && go vet ./... && go test -short -count=1 ./... all pass
+    (11/11 packages)'
+  - "AC-6: Live verification \u2014 with dashboard running, flow create/list/run work\
+    \ via CLI routing"
+  status: complete
+  created_at: '2026-08-01T09:44:59.761157+00:00'
+  completed_at: '2026-08-01T09:52:26.464180+00:00'
+- id: BUG-003
+  title: "Flow commands ignore registry data dir \u2014 ~/.musterflow/flows pollution\
+    \ breaks test isolation"
+  criteria:
+  - go build ./cmd/musterflow passes
+  - go vet ./internal/cli/ passes
+  - go test -short -count=1 ./... 11/11 packages green
+  - "flow create/list/run use registry.DataDir() not app.DefaultDataDir() \u2014 grep\
+    \ -q 'registry.DataDir()' internal/cli/root.go"
+  - TestFlowCommand_ListOutput passes with a leftover flow in ~/.musterflow/flows
+    (test isolation from real data dir)
+  status: complete
+  created_at: '2026-08-01T12:15:04.874345+00:00'
+  completed_at: '2026-08-01T12:15:08.417634+00:00'
+- id: BUG-004
+  title: Honor --data-dir flag and dashboard registry data dir for flow storage
+  criteria:
+  - '--data-dir CLI flag is honored for flow create/list/run (verified live: flow
+    lands in the flag dir, not ~/.musterflow)'
+  - 'Dashboard flow engine uses registry.DataDir() not app.DefaultDataDir() (verified:
+    dashboard-created flows land in configured dir)'
+  - CLI Edit line reflects the real flows dir from dashboard response
+  - Regression test TestParseDataDirFlag passes (6 cases)
+  - go build ./... && go vet ./... && go test ./... -count=1 all pass (11/11 pkgs)
+  - gitreins guard PASS
+  status: complete
+  created_at: '2026-08-01T16:46:11.904303+00:00'
+  completed_at: '2026-08-01T16:48:55.140358+00:00'
+- id: CI-LINT-001
+  title: "Fix CI Lint step \u2014 46 errcheck/staticcheck violations across 21 files\
+    \ (CI red since tick 20)"
+  criteria:
+  - 'golangci-lint run --timeout=5m reports 0 issues (was 46: 45 errcheck + 1 staticcheck)'
+  - go build ./... passes
+  - go vet ./... passes
+  - "go test -count=1 ./... passes \u2014 all 11 packages green"
+  - gofmt -l . reports no unformatted files
+  - gitreins guard PASS (secrets/static_analysis/go_build/go_lint/go_tests)
+  - commit 3cc0ee6 lands the fix with Co-authored-by trailer
+  status: complete
+  created_at: '2026-08-01T22:15:32.475784+00:00'
+  completed_at: '2026-08-01T22:15:36.021813+00:00'
