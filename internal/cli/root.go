@@ -325,7 +325,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 				return flowCreateViaDashboard(args[0], webhook)
 			}
 			engine := workflow.NewEngine(
-				filepath.Join(app.DefaultDataDir(), "flows"),
+				filepath.Join(registry.DataDir(), "flows"),
 				"http://localhost:9876",
 			)
 			flow, err := engine.Create(args[0], "# Write your Starlark workflow here\n", webhook)
@@ -336,7 +336,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 			if webhook {
 				fmt.Printf("  Webhook URL: %s\n", flow.WebhookURL)
 			}
-			fmt.Printf("  Edit: %s/flows/%s.star\n", app.DefaultDataDir(), flow.Name)
+			fmt.Printf("  Edit: %s/flows/%s.star\n", registry.DataDir(), flow.Name)
 			return nil
 		},
 	}
@@ -352,7 +352,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 				return flowListViaDashboard()
 			}
 			engine := workflow.NewEngine(
-				filepath.Join(app.DefaultDataDir(), "flows"),
+				filepath.Join(registry.DataDir(), "flows"),
 				"http://localhost:9876",
 			)
 			flows, err := engine.List()
@@ -385,7 +385,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 				return flowRunViaDashboard(args[0])
 			}
 			engine := workflow.NewEngine(
-				filepath.Join(app.DefaultDataDir(), "flows"),
+				filepath.Join(registry.DataDir(), "flows"),
 				"http://localhost:9876",
 			)
 			output, err := engine.Run(args[0], nil)
