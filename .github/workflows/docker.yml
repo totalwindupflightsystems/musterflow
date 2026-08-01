@@ -42,7 +42,7 @@ jobs:
 
       - name: Build static binary
         run: |
-          CGO_ENABLED=0 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
+          CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

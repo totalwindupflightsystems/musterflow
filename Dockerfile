@@ -14,6 +14,9 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
+# go-duckdb is a cgo wrapper around DuckDB's C library — the build needs gcc + musl-dev
+RUN apk add --no-cache gcc musl-dev
+
 # Copy muster engine from build context
 COPY --from=muster . /tmp/muster
 
@@ -26,7 +29,7 @@ COPY . .
 RUN go mod edit -replace github.com/wojons/muster=/tmp/muster && \
     go mod tidy
 
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
+RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
 
 FROM alpine:3.21
 
