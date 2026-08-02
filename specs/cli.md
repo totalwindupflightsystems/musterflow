@@ -337,7 +337,7 @@ type Config struct {
 | `catalog search` | (positional `<query>`) | `catalog.NewClient().Search(query)` or `catalogSearchViaDashboard(query)` |
 | `catalog push` | (positional `<api-id>`) | `registry.Get(id)` → `catalog.ConnectionToCatalogEntry(conn)` → print JSON |
 | `catalog pull` | (positional `<api-id>`) | `catalog.NewClient().FetchEntry(id)` → `app.Connect(ctx, registry, ...)` |
-| `flow create` | `--webhook`, `--description` | `workflow.NewEngine(dir, baseURL).Create(name, template, webhook)` |
+| `flow create` | `--webhook`, `--description`, `--source` | `workflow.NewEngine(dir, baseURL).Create(name, source, description, webhook)` |
 | `flow list` | none | `workflow.NewEngine(dir, baseURL).List()` |
 | `flow run` | (positional `<name>`) | `workflow.NewEngine(dir, baseURL).Run(name, nil)` |
 | `config show` | none | `config.Load()` → print, mask auth keys with `config.MaskKey` |

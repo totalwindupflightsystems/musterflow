@@ -1071,6 +1071,9 @@ func TestFlowCommand_CreateStructure(t *testing.T) {
 	if createCmd.Flags().Lookup("description") == nil {
 		t.Error("expected --description flag on flow create")
 	}
+	if createCmd.Flags().Lookup("source") == nil {
+		t.Error("expected --source flag on flow create")
+	}
 }
 
 func TestConnectCommand_SubcommandStructure(t *testing.T) {

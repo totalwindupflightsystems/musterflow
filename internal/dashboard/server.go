@@ -356,12 +356,13 @@ func (s *Server) handleFlows(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleFlowCreate handles POST /api/flows to create a new flow.
-// Body: {"name": "...", "source": "...", "webhook": bool}
+// Body: {"name": "...", "source": "...", "description": "...", "webhook": bool}
 func (s *Server) handleFlowCreate(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name    string `json:"name"`
-		Source  string `json:"source"`
-		Webhook bool   `json:"webhook"`
+		Name        string `json:"name"`
+		Source      string `json:"source"`
+		Description string `json:"description"`
+		Webhook     bool   `json:"webhook"`
 	}
 	if r.Body == nil || r.ContentLength == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing request body"})
@@ -377,7 +378,7 @@ func (s *Server) handleFlowCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	engine := workflow.NewEngine(s.flowsDir, fmt.Sprintf("http://localhost%s", s.addr))
-	flow, err := engine.Create(body.Name, body.Source, body.Webhook)
+	flow, err := engine.Create(body.Name, body.Source, body.Description, body.Webhook)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -386,6 +387,7 @@ func (s *Server) handleFlowCreate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"name":        flow.Name,
 		"source":      flow.Source,
+		"description": flow.Description,
 		"webhook":     flow.Webhook,
 		"webhook_url": flow.WebhookURL,
 		"flows_dir":   s.flowsDir,

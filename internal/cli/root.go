@@ -314,6 +314,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 	var (
 		webhook     bool
 		description string
+		source      string
 	)
 
 	createCmd := &cobra.Command{
@@ -321,18 +322,25 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		Short: "Create a new workflow",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			flowSource := source
+			if flowSource == "" {
+				flowSource = "# Write your Starlark workflow here\n"
+			}
 			if dashboardBaseURL != "" {
-				return flowCreateViaDashboard(args[0], webhook)
+				return flowCreateViaDashboard(args[0], flowSource, description, webhook)
 			}
 			engine := workflow.NewEngine(
 				filepath.Join(registry.DataDir(), "flows"),
 				"http://localhost:9876",
 			)
-			flow, err := engine.Create(args[0], "# Write your Starlark workflow here\n", webhook)
+			flow, err := engine.Create(args[0], flowSource, description, webhook)
 			if err != nil {
 				return err
 			}
 			fmt.Printf("✓ Created flow %q\n", flow.Name)
+			if flow.Description != "" {
+				fmt.Printf("  Description: %s\n", flow.Description)
+			}
 			if webhook {
 				fmt.Printf("  Webhook URL: %s\n", flow.WebhookURL)
 			}
@@ -342,6 +350,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 	}
 	createCmd.Flags().BoolVar(&webhook, "webhook", false, "Create a webhook trigger for this flow")
 	createCmd.Flags().StringVar(&description, "description", "", "Flow description")
+	createCmd.Flags().StringVar(&source, "source", "", "Starlark source code for the flow")
 	cmd.AddCommand(createCmd)
 
 	cmd.AddCommand(&cobra.Command{
@@ -367,6 +376,9 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 			fmt.Println("Workflows:")
 			for _, f := range flows {
 				fmt.Printf("  %s", f.Name)
+				if f.Description != "" {
+					fmt.Printf("  - %s", f.Description)
+				}
 				if f.WebhookURL != "" {
 					fmt.Printf("  webhook: %s", f.WebhookURL)
 				}

@@ -310,8 +310,9 @@ func flowListViaDashboard() error {
 
 	var result struct {
 		Flows []struct {
-			Name       string `json:"name"`
-			WebhookURL string `json:"webhook_url"`
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			WebhookURL  string `json:"webhook_url"`
 		} `json:"flows"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -327,6 +328,9 @@ func flowListViaDashboard() error {
 	fmt.Println("Workflows:")
 	for _, f := range result.Flows {
 		fmt.Printf("  %s", f.Name)
+		if f.Description != "" {
+			fmt.Printf("  - %s", f.Description)
+		}
 		if f.WebhookURL != "" {
 			fmt.Printf("  webhook: %s", f.WebhookURL)
 		}
@@ -336,11 +340,15 @@ func flowListViaDashboard() error {
 }
 
 // flowCreateViaDashboard creates a workflow via the dashboard HTTP API.
-func flowCreateViaDashboard(name string, webhook bool) error {
+func flowCreateViaDashboard(name, source, description string, webhook bool) error {
+	if source == "" {
+		source = "# Write your Starlark workflow here\n"
+	}
 	payload := map[string]interface{}{
-		"name":    name,
-		"source":  "# Write your Starlark workflow here\n",
-		"webhook": webhook,
+		"name":        name,
+		"source":      source,
+		"description": description,
+		"webhook":     webhook,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -354,10 +362,10 @@ func flowCreateViaDashboard(name string, webhook bool) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
-		Name       string `json:"name"`
-		WebhookURL string `json:"webhook_url"`
-		FlowsDir   string `json:"flows_dir"`
-		Error      string `json:"error"`
+		Name        string `json:"name"`
+		WebhookURL  string `json:"webhook_url"`
+		FlowsDir    string `json:"flows_dir"`
+		Error       string `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)

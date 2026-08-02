@@ -1,9 +1,18 @@
 // Package workflow provides the workflow engine for MusterFlow.
 // Workflows are Starlark scripts that chain API calls, with webhook trigger support.
+//
+// Flow metadata (description, webhook flag) is persisted in a sidecar JSON file
+// named <name>.star.json next to the <name>.star source file. The .star file
+// holds only Starlark source so user edits and Run() are unaffected. List()
+// reads the sidecar to populate Description and Webhook on each Flow and only
+// synthesizes a WebhookURL when the persisted webhook flag is true. Flows
+// created before sidecars existed (no .star.json) default to Webhook=false and
+// no WebhookURL — they are still runnable but no longer advertise a webhook.
 package workflow
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,9 +26,17 @@ import (
 type Flow struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Source      string `json:"source"`  // Starlark source code
-	Webhook     bool   `json:"webhook"` // has webhook trigger
+	Source      string `json:"source"`            // Starlark source code
+	Webhook     bool   `json:"webhook"`           // has webhook trigger
 	WebhookURL  string `json:"webhook_url,omitempty"`
+}
+
+// flowMeta is the persisted metadata sidecar for a flow. It is stored as
+// <name>.star.json next to the <name>.star source file and read by List() to
+// reconstruct Description and Webhook on each Flow.
+type flowMeta struct {
+	Description string `json:"description,omitempty"`
+	Webhook     bool   `json:"webhook"`
 }
 
 // Engine manages workflow storage and execution.
@@ -35,7 +52,9 @@ func NewEngine(dir, baseURL string) *Engine {
 
 // Create writes a new flow file and returns the flow.
 // If webhook is true, a webhook trigger is created at /hooks/<name>.
-func (e *Engine) Create(name, source string, webhook bool) (*Flow, error) {
+// The description and webhook flag are persisted in a <name>.star.json sidecar
+// so List() can reconstruct them.
+func (e *Engine) Create(name, source, description string, webhook bool) (*Flow, error) {
 	if err := os.MkdirAll(e.dir, 0755); err != nil {
 		return nil, fmt.Errorf("create flows dir: %w", err)
 	}
@@ -45,17 +64,52 @@ func (e *Engine) Create(name, source string, webhook bool) (*Flow, error) {
 		return nil, fmt.Errorf("write flow: %w", err)
 	}
 
+	if err := e.writeMeta(name, flowMeta{Description: description, Webhook: webhook}); err != nil {
+		return nil, err
+	}
+
 	flow := &Flow{
-		Name:       name,
-		Source:     source,
-		Webhook:    webhook,
-		WebhookURL: "",
+		Name:        name,
+		Description: description,
+		Source:      source,
+		Webhook:     webhook,
+		WebhookURL:  "",
 	}
 	if webhook {
 		flow.WebhookURL = fmt.Sprintf("%s/hooks/%s", e.baseURL, name)
 	}
 
 	return flow, nil
+}
+
+// writeMeta writes the metadata sidecar for a flow. It overwrites any
+// existing sidecar, mirroring how Create overwrites the .star file.
+func (e *Engine) writeMeta(name string, meta flowMeta) error {
+	metaPath := filepath.Join(e.dir, name+".star.json")
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("marshal flow meta: %w", err)
+	}
+	if err := os.WriteFile(metaPath, data, 0644); err != nil {
+		return fmt.Errorf("write flow meta: %w", err)
+	}
+	return nil
+}
+
+// readMeta reads the metadata sidecar for a flow. A missing sidecar is not an
+// error: it returns a zero flowMeta, which means description="" and
+// webhook=false. This covers flows created before sidecars existed.
+func (e *Engine) readMeta(name string) flowMeta {
+	metaPath := filepath.Join(e.dir, name+".star.json")
+	data, err := os.ReadFile(metaPath)
+	if err != nil {
+		return flowMeta{}
+	}
+	var meta flowMeta
+	if err := json.Unmarshal(data, &meta); err != nil {
+		return flowMeta{}
+	}
+	return meta
 }
 
 // List returns all flows in the flows directory.
@@ -79,11 +133,17 @@ func (e *Engine) List() ([]Flow, error) {
 			continue
 		}
 		name := entry.Name()[:len(entry.Name())-5] // strip .star
-		flows = append(flows, Flow{
-			Name:       name,
-			Source:     string(data),
-			WebhookURL: fmt.Sprintf("%s/hooks/%s", e.baseURL, name),
-		})
+		meta := e.readMeta(name)
+		f := Flow{
+			Name:        name,
+			Description: meta.Description,
+			Source:      string(data),
+			Webhook:     meta.Webhook,
+		}
+		if meta.Webhook {
+			f.WebhookURL = fmt.Sprintf("%s/hooks/%s", e.baseURL, name)
+		}
+		flows = append(flows, f)
 	}
 	if flows == nil {
 		flows = []Flow{}
