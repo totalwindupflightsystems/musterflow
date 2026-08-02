@@ -362,10 +362,10 @@ func flowCreateViaDashboard(name, source, description string, webhook bool) erro
 	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
-		Name        string `json:"name"`
-		WebhookURL  string `json:"webhook_url"`
-		FlowsDir    string `json:"flows_dir"`
-		Error       string `json:"error"`
+		Name       string `json:"name"`
+		WebhookURL string `json:"webhook_url"`
+		FlowsDir   string `json:"flows_dir"`
+		Error      string `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)

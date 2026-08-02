@@ -26,8 +26,8 @@ import (
 type Flow struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
-	Source      string `json:"source"`            // Starlark source code
-	Webhook     bool   `json:"webhook"`           // has webhook trigger
+	Source      string `json:"source"`  // Starlark source code
+	Webhook     bool   `json:"webhook"` // has webhook trigger
 	WebhookURL  string `json:"webhook_url,omitempty"`
 }
 
