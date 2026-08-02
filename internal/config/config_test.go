@@ -115,29 +115,39 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 func TestFindPort_Available(t *testing.T) {
-	port, err := FindPort(19876)
+	// Find a free base port dynamically — hardcoded ports (19876) collide
+	// with sibling processes (hivemind sitrep server on 127.0.0.1:19876).
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	base := ln.Addr().(*net.TCPAddr).Port
+	_ = ln.Close()
+
+	port, err := FindPort(base)
 	if err != nil {
 		t.Fatalf("FindPort: %v", err)
 	}
-	if port != 19876 {
-		t.Errorf("expected 19876, got %d", port)
+	if port != base {
+		t.Errorf("expected %d, got %d", base, port)
 	}
 }
 
 func TestFindPort_Occupied(t *testing.T) {
-	// Occupy 19877
-	ln, err := net.Listen("tcp", ":19877")
+	// Occupy a dynamically-chosen port
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Skipf("cannot bind for test: %v", err)
 	}
 	defer func() { _ = ln.Close() }()
+	base := ln.Addr().(*net.TCPAddr).Port
 
-	port, err := FindPort(19877)
+	port, err := FindPort(base)
 	if err != nil {
 		t.Fatalf("FindPort: %v", err)
 	}
-	if port != 19878 {
-		t.Errorf("expected next port 19878, got %d", port)
+	if port != base+1 {
+		t.Errorf("expected next port %d, got %d", base+1, port)
 	}
 }
 
