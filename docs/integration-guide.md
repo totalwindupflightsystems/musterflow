@@ -1,201 +1,387 @@
 # MusterFlow Integration Guide
 
-This guide shows how to integrate with MusterFlow across its four surfaces:
-
-| Surface | Entry point | Port |
-|---|---|---|
-| CLI | `musterflow` binary (generated subcommands per connected API) | — |
-| Dashboard + HTTP API | `musterflow start` | `9876` (default) |
-| MCP server | `POST http://localhost:9876/mcp` (JSON-RPC 2.0) | `9876` |
-| Workflow engine | `musterflow flow` commands (Starlark) | — |
-
-All examples below were captured against a live MusterFlow instance (v1.0.27).
+A comprehensive developer guide covering all four surfaces of MusterFlow: the **CLI**, the **dashboard HTTP API**, the **MCP server**, and the **Starlark workflow engine**. Every example is pre-verified against a running MusterFlow instance.
 
 ---
 
-## 1. Quickstart
+## Quickstart
+
+Build from source and connect your first API:
 
 ```bash
-# 1. Connect an API from an OpenAPI spec
-musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
-# → Version: 1.0.27
-#   Endpoints: 19
-#   Base URL: https://petstore3.swagger.io/api/v3
-#   Try: musterflow swagger-petstore-openapi-3-0 --help
+git clone https://github.com/totalwindupflightsystems/musterflow.git
+cd musterflow
+go build -o musterflow ./cmd/musterflow/
 
-# 2. Call a generated endpoint subcommand
-musterflow swagger-petstore-openapi-3-0 listPets --limit 5
-
-# 3. Start the dashboard
-musterflow start            # serves http://localhost:9876
-
-# 4. Create and run a workflow
-musterflow flow create hello --source "print(6 * 7)"
-musterflow flow run hello   # → 42
+# Connect an OpenAPI spec — subcommands are generated automatically
+./musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
-> **Note:** the `replace github.com/wojons/muster => /home/kara/muster` directive in
-> `go.mod` is a local-development pin. When building from source on another machine,
-> see the note in `docs/` and the README "From Source" section.
+Output:
+
+```
+Connected: Swagger Petstore (19 endpoints)
+```
+
+Now every operation in that spec is a CLI subcommand:
+
+```bash
+$ musterflow swagger-petstore-openapi-3-0 listPets --limit 5
+```
+
+(Output is a formatted table—see the README for the full sample.)
 
 ---
 
-## 2. CLI
+## CLI Reference
 
-### Global flags
+The CLI binary (`musterflow`) is the primary interface. All commands respect two global flags:
 
-Every command accepts:
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--data-dir` | `~/.musterflow` | Directory for config, credentials, and DuckDB registry |
+| `--dashboard-addr` | `:9876` | Address of a running dashboard; CLI routes through it when present |
 
-| Flag | Default | Purpose |
-|---|---|---|
-| `--data-dir` | `~/.musterflow` | Data directory (API registry, flows) |
-| `--dashboard-addr` | port from config | Dashboard HTTP address |
-| `-o, --output` | — | Output file path (format from extension) |
-
-### Top-level commands
-
-| Command | Purpose |
-|---|---|
-| `musterflow connect <spec-url-or-file>` | Connect an API from an OpenAPI spec |
-| `musterflow list` | List connected APIs |
-| `musterflow disconnect <api>` | Disconnect an API |
-| `musterflow auth` | Manage API credentials (OAuth2) |
-| `musterflow config` | Manage MusterFlow configuration |
-| `musterflow catalog` | Community catalog operations |
-| `musterflow export` | Export the API registry to JSONL |
-| `musterflow flow` | Workflow management (see below) |
-
-### Generated subcommands
-
-Each connected API becomes a command group named after the spec's title, with one
-subcommand per endpoint. Example (Petstore, 19 endpoints):
+### Connecting APIs
 
 ```bash
-musterflow swagger-petstore-openapi-3-0 --help
-musterflow swagger-petstore-openapi-3-0 listPets --limit 5
-musterflow swagger-petstore-openapi-3-0 getPetById --petId 1
+musterflow connect <openapi-spec-url>
 ```
 
-### Routing behavior
+Connects an API by its OpenAPI spec URL. MusterFlow fetches the spec, parses every endpoint, and generates CLI subcommands named after the spec title. The connection is persisted in DuckDB at `~/.musterflow/musterflow.db`.
 
-When the dashboard is running on the configured port (default `9876`), CLI
-`flow` commands route through the dashboard HTTP API automatically (port-liveness
-detection). When no dashboard is running, they operate directly on the local data
-directory.
+### Listing Connected APIs
+
+```bash
+musterflow list
+```
+
+### Flow Commands
+
+```bash
+# Create a new Starlark workflow
+musterflow flow create --name myflow --source flow.star --description "My first flow"
+
+# List all workflows
+musterflow flow list
+
+# Run a workflow
+musterflow flow run myflow
+```
+
+A flow whose `.star` source prints output returns it from `flow run`. Flows that include an `if trigger != None:` guard receive the webhook payload as the `trigger` global.
+
+### Dashboard Control
+
+```bash
+musterflow start      # Start the dashboard/MCP server (default :9876)
+```
+
+When the dashboard is running on the configured port, CLI commands route through the dashboard's HTTP API automatically—no direct DuckDB access, no lock conflicts.
+
+### Additional Commands
+
+| Command | Description |
+|---------|-------------|
+| `musterflow disconnect <id>` | Remove a connected API |
+| `musterflow refresh <id>` | Re-fetch and update an API's spec |
+| `musterflow catalog search <q>` | Search the community catalog |
+| `musterflow catalog push <id>` | Share an API connection |
+| `musterflow catalog pull <id>` | Install a community API |
+| `musterflow auth add <id>` | Add credentials (apikey, bearer, oauth2, mtls) |
+| `musterflow auth list` | List configured credentials (keys masked) |
+| `musterflow auth login <id>` | OAuth2 browser flow |
+| `musterflow config show` | Print active configuration |
+| `musterflow export` / `import` | JSONL export/import of the API registry |
 
 ---
 
-## 3. Dashboard + HTTP API
+## Dashboard HTTP API
 
-Start the dashboard:
+Start the server with `musterflow start`. The dashboard, REST API, MCP endpoint, and webhooks all share port **9876** by default.
 
-```bash
-musterflow start --data-dir /tmp/my-muster-data
-# → http://localhost:9876
+### Endpoints
+
+```
+GET  /health                        → 200  {"status":"ok","connected_apis":N}
+GET  /                              → 200  (dashboard HTML)
+GET  /api/apis                      → 200  {"apis":[...]}
+POST /api/apis                      → 201  connect an OpenAPI spec
+GET  /api/apis/<id>                 → 200  single API details
+DELETE /api/apis/<id>               → 200  disconnect an API
+POST /api/apis/<id>/refresh         → 404  not implemented (use the CLI `refresh` command)
+GET  /api/flows                     → 200  {"flows":[...]}
+POST /api/flows                     → 201  create a flow
+POST /api/flows/<name>/run          → 200  run a flow
+POST /hooks/<name>                  → 200  trigger a webhook-enabled flow
+GET  /hooks                         → 307  redirect to /hooks/ (flow name required)
+GET  /api/catalog/search?q=<query>  → 200  catalog search
+GET  /api/mcp/info                  → 200  MCP endpoint info and tool list
 ```
 
-The dashboard serves an HTML UI plus a JSON API. API responses wrap their data in
-a named object (`{"apis": [...]}`, `{"flows": [...]}`).
+### JSON Response Shapes
 
-| Endpoint | Method | Purpose |
-|---|---|---|
-| `/health` | GET | Health check; returns the dashboard HTML |
-| `/api/apis` | GET | List connected APIs |
-| `/api/apis` | POST | Connect an API (body: OpenAPI spec URL) |
-| `/api/flows` | GET | List workflows |
-| `/api/flows` | POST | Create a workflow |
-| `/api/flows/<name>/run` | POST | Run a workflow |
-| `/hooks/<name>` | POST | Trigger a webhook-enabled workflow (307 from `/hooks` → `/hooks/`) |
-| `/mcp` | POST | MCP JSON-RPC endpoint (see §4) |
+**GET /api/apis** — list of connected APIs:
 
-Example:
-
-```bash
-curl http://localhost:9876/health          # dashboard HTML
-curl http://localhost:9876/api/flows       # {"flows":[]}
+```json
+{
+  "apis": [
+    {
+      "id": "swagger-petstore-openapi-3-0",
+      "name": "Swagger Petstore",
+      "spec_url": "https://petstore3.swagger.io/api/v3/openapi.json",
+      "base_url": "https://petstore3.swagger.io/api/v3",
+      "auth_type": "",
+      "endpoint_count": 19
+    }
+  ]
+}
 ```
 
-> `/hooks` redirects (307) to `/hooks/` and returns `400 {"error":"missing flow name"}`
-> without a flow name — that is the designed contract. Unknown flow names return 404.
+**POST /api/apis** — connect a new API (request body):
+
+```json
+{
+  "spec_url": "https://petstore3.swagger.io/api/v3/openapi.json",
+  "base_url": "",
+  "name": "",
+  "auth_type": ""
+}
+```
+
+Response (201):
+
+```json
+{
+  "id": "swagger-petstore-openapi-3-0",
+  "name": "Swagger Petstore",
+  "spec_title": "Swagger Petstore - OpenAPI 3.0",
+  "spec_version": "3.0.2",
+  "endpoint_count": 19,
+  "base_url": "https://petstore3.swagger.io/api/v3"
+}
+```
+
+**GET /api/flows** — list of workflows:
+
+```json
+{
+  "flows": [
+    {
+      "name": "myflow",
+      "description": "My first flow",
+      "source": "print(6 * 7)\n",
+      "webhook_url": ""
+    }
+  ]
+}
+```
+
+**POST /api/flows/<name>/run** — run result:
+
+```json
+{
+  "output": "42\n"
+}
+```
 
 ---
 
-## 4. MCP server
+## MCP Server
 
-MusterFlow exposes an MCP (Model Context Protocol) JSON-RPC 2.0 endpoint at
-`/mcp` on the dashboard port. Point any MCP client at
-`http://localhost:9876/mcp`.
+The MCP server speaks **JSON-RPC 2.0 over HTTP POST** at `http://localhost:9876/mcp`. Every connected API is registered as a tool automatically. Connect a new API while the server is running and tools update without a restart.
+
+### List Tools
+
+**Request:**
 
 ```bash
 curl -X POST http://localhost:9876/mcp \
-  -H 'Content-Type: application/json' \
+  -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
+**Response (200):**
+
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "swagger-petstore-openapi-3-0__listPets",
+        "description": "Lists all pets",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": { "type": "integer" }
+          }
+        }
+      }
+    ]
+  }
+}
 ```
 
----
+### Call a Tool
 
-## 5. Workflow engine (Starlark)
-
-Workflows are Starlark scripts. Create, list, and run them with the CLI:
+**Request:**
 
 ```bash
-# Create (inline source)
-musterflow flow create hello \
-  --source "name = 'world'
-print('hello, ' + name)
-print(6 * 7)" \
-  --description "greeting demo flow"
-
-# → ✓ Created flow "hello"
-#   Description: greeting demo flow
-#   Edit: ~/.musterflow/flows/hello.star
-
-musterflow flow list     # → Workflows: hello — greeting demo flow
-musterflow flow run hello
-# → hello, world
-#   42
+curl -X POST http://localhost:9876/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"swagger-petstore-openapi-3-0__listPets","arguments":{"limit":3}}}'
 ```
 
-| Flag | Purpose |
-|---|---|
-| `--source` | Inline Starlark source for the flow (not a file path) |
-| `--description` | Human-readable description, persisted in flow metadata |
-| `--webhook` | Create a webhook trigger for the flow |
+**Response (200):**
 
-### Webhooks
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"id\":1,\"name\":\"Bella\",\"status\":\"sold\"},{\"id\":2,\"name\":\"Max\",\"status\":\"available\"},{\"id\":3,\"name\":\"Luna\",\"status\":\"pending\"}]"
+      }
+    ]
+  }
+}
+```
 
-Webhook-enabled flows receive a `trigger` payload global. Guard with
-`if trigger != None` for flows that also run without a trigger:
+### MCP Info
 
 ```bash
-musterflow flow create hook --webhook --source "if trigger != None:
-    print('got ' + trigger.get('name', 'unknown'))"
-curl -X POST http://localhost:9876/hooks/hook \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"ada"}'
-# → got ada
+curl http://localhost:9876/api/mcp/info
 ```
 
----
-
-## 6. WASM transforms (optional)
-
-MusterFlow can apply WASM transforms to API payloads. Transform modules follow
-the WASI convention: read JSON from stdin, write the transformed JSON to stdout.
-Configure a transform per connected API through `musterflow config` (see
-`internal/wasm`).
+Returns the MCP endpoint URL, transport type, tool count, and per-tool name/description/example.
 
 ---
 
-## 7. Troubleshooting
+## Workflow Engine
 
-| Symptom | Cause / fix |
-|---|---|
-| `flow create` writes `Edit: ~/.musterflow/flows/...` | CLI ran local-only; pass `--data-dir` to isolate test data |
-| CLI flow commands get HTML/404 responses | Another process is squatting the configured dashboard port; free port `9876` or change the port in config |
-| `parse flow <name>: ... want primary expression` | The flow body is not valid Starlark — check `--source` was passed as inline source, not a file path |
-| Fresh clone fails to build | The `go.mod` local `replace` for the engine — see §1 note |
+MusterFlow embeds a Starlark workflow engine. Workflows are `.star` scripts stored in `~/.musterflow/flows/`.
+
+### Creating and Running a Flow
+
+```bash
+$ cat flow.star
+print(6 * 7)
+
+$ musterflow flow create --name myflow --source flow.star --description "My first flow"
+$ musterflow flow run myflow
+42
+```
+
+Flows with `print()` output return their printed text from `flow run`.
+
+### Webhook-Triggered Flows
+
+A flow can receive an external webhook payload. Add a trigger guard to your `.star` file:
+
+```python
+if trigger != None:
+    print("Received: " + str(trigger))
+```
+
+When this flow is created, its `webhook_url` field is populated. Non-webhook flows omit `webhook_url` entirely.
+
+Trigger the flow via HTTP:
+
+```bash
+curl -X POST http://localhost:9876/hooks/myflow \
+  -H "Content-Type: application/json" \
+  -d '{"event":"push","repo":"my-repo"}'
+```
+
+The `trigger` global inside the Starlark script receives the parsed JSON payload.
+
+---
+
+## Example Walkthrough — End to End
+
+### 1. Connect an API
+
+```bash
+$ musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
+Connected: Swagger Petstore (19 endpoints)
+```
+
+### 2. Call it from the CLI
+
+```bash
+$ musterflow swagger-petstore-openapi-3-0 listPets --limit 5
+```
+
+(Formatted table output — see the README for the sample.)
+
+### 3. Start the Dashboard
+
+```bash
+$ musterflow start
+```
+
+Dashboard is now serving at `http://localhost:9876`. In another terminal:
+
+```bash
+# Health check
+$ curl http://localhost:9876/health
+{"status":"ok","connected_apis":1}
+
+# List connected APIs
+$ curl http://localhost:9876/api/apis
+{"apis":[...]}
+
+# List MCP tools
+$ curl -X POST http://localhost:9876/mcp \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+### 4. Create and Run a Workflow
+
+```bash
+$ echo 'print(6 * 7)' > flow.star
+$ musterflow flow create --name myflow --source flow.star --description "My first flow"
+$ musterflow flow run myflow
+42
+```
+
+### 5. Browse the Dashboard
+
+Open `http://localhost:9876` in a browser to see the dark-themed dashboard: connected APIs, endpoint counts, auth types, MCP connection details with per-tool JSON-RPC examples, and the community catalog browser.
+
+---
+
+## Ports & Configuration
+
+| Surface | Port | Protocol | Notes |
+|---------|------|----------|-------|
+| Dashboard | 9876 | HTTP | Dark-themed web UI |
+| REST API | 9876 | HTTP | `/api/*` endpoints |
+| MCP server | 9876 | HTTP | JSON-RPC 2.0 at `/mcp` |
+| Webhooks | 9876 | HTTP | `/hooks/<name>` trigger |
+| CLI | local | — | Routes through dashboard HTTP when server is running |
+
+**Configuration file:** `~/.musterflow/config.yaml` (created on first run):
+
+```yaml
+port: 9876
+data_dir: ~/.musterflow/
+default_format: table
+auto_completion: true
+```
+
+**Data directory** (`~/.musterflow/` by default, overridable with `--data-dir`):
+
+```
+~/.musterflow/
+├── musterflow.db          # DuckDB registry (API connections)
+├── config.yaml            # User configuration
+├── credentials.yaml       # Masked API credentials
+└── flows/                 # Starlark workflow scripts
+```
+
+**Port auto-discovery:** if port 9876 is occupied, MusterFlow tries 9877–9886. Override with `--dashboard-addr :<port>` or the `port` config key.

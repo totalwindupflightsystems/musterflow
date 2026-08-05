@@ -37,9 +37,9 @@ cd musterflow
 go build -o musterflow ./cmd/musterflow/
 ```
 
-## Documentation
+## Integration Guide
 
-- [Integration Guide](docs/integration-guide.md) — CLI, dashboard HTTP API, MCP server, and Starlark workflow engine with runnable examples
+See [docs/integration-guide.md](docs/integration-guide.md) for the full integration guide (CLI, dashboard, MCP, workflow engine).
 
 ## Quick Start
 
