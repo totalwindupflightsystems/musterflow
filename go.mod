@@ -7,7 +7,7 @@ require (
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/parquet-go/parquet-go v0.30.1
 	github.com/spf13/cobra v1.10.2
-	github.com/wojons/muster v0.1.0
+	github.com/wojons/muster v0.0.0
 	go.starlark.net v0.0.0-20240123142251-f86470692795
 	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -57,3 +57,5 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/wojons/muster => /home/kara/muster
