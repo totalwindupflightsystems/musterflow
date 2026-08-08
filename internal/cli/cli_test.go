@@ -1780,6 +1780,209 @@ func TestFlowCommand_ListEmpty(t *testing.T) {
 	}
 }
 
+// --- GAP-004: flow run --payload flag ---
+
+func TestFlowCommand_RunPayload_PrintsValue(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Create a flow that prints the trigger value.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "ac4flow", "--source", `print(trigger["x"])`})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("flow create: %v", err)
+	}
+
+	// Run with --payload and verify output contains 1.
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "ac4flow", "--payload", `{"x":1}`})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow run --payload: %v", err)
+		}
+	})
+	if !strings.Contains(output, "1") {
+		t.Errorf("expected '1' in run output, got: %s", output)
+	}
+}
+
+func TestFlowCommand_RunNoPayload_TriggerNone(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Create a flow that guards trigger != None inside a function.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "noflow", "--source", "def check():\n    if trigger != None:\n        print(trigger)\ncheck()\n"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("flow create: %v", err)
+	}
+
+	// Run without --payload — trigger is None, guard skips print.
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "noflow"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow run (no payload): %v", err)
+		}
+	})
+	if strings.Contains(output, "trigger") {
+		t.Errorf("expected no trigger output when --payload omitted, got: %s", output)
+	}
+}
+
+func TestFlowCommand_RunPayload_InvalidJSON(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Create a flow so the run gets past the "read flow" step.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "badjson", "--source", "print('ok')"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("flow create: %v", err)
+	}
+
+	// Run with invalid JSON — should error.
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "badjson", "--payload", "{not json}"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for invalid --payload JSON")
+	}
+	if !strings.Contains(err.Error(), "parse --payload") {
+		t.Errorf("expected 'parse --payload' in error, got: %s", err.Error())
+	}
+}
+
+func TestFlowCommand_RunPayloadFlagExists(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	runCmd, _, err := root.Find([]string{"flow", "run"})
+	if err != nil {
+		t.Fatalf("find flow run: %v", err)
+	}
+	if runCmd.Flags().Lookup("payload") == nil {
+		t.Error("expected --payload flag on flow run")
+	}
+}
+
+// --- GAP-005: flow create --name alias ---
+
+func TestFlowCommand_CreateNameAlias(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Create using --name flag.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "--name", "myflow", "--source", "print(42)"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow create --name: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Created flow") {
+		t.Errorf("expected 'Created flow' in output, got: %s", output)
+	}
+
+	// Verify with flow list.
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "list"})
+	output = captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("flow list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "myflow") {
+		t.Errorf("expected 'myflow' in list output, got: %s", output)
+	}
+}
+
+func TestFlowCommand_CreatePositionalRegression(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Create using positional arg (backward compat).
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "posflow", "--source", "print(42)"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow create positional: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Created flow") {
+		t.Errorf("expected 'Created flow' in output, got: %s", output)
+	}
+
+	// Verify with flow list.
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "list"})
+	output = captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("flow list: %v", err)
+		}
+	})
+	if !strings.Contains(output, "posflow") {
+		t.Errorf("expected 'posflow' in list output, got: %s", output)
+	}
+}
+
+func TestFlowCommand_CreateNoNameErrors(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Create with neither positional nor --name.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "--source", "print(42)"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error when no flow name provided")
+	}
+	if !strings.Contains(err.Error(), "flow name required") {
+		t.Errorf("expected 'flow name required' in error, got: %s", err.Error())
+	}
+}
+
+func TestFlowCommand_CreateNameFlagExists(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	createCmd, _, err := root.Find([]string{"flow", "create"})
+	if err != nil {
+		t.Fatalf("find flow create: %v", err)
+	}
+	if createCmd.Flags().Lookup("name") == nil {
+		t.Error("expected --name flag on flow create")
+	}
+}
+
 // --- Catalog command execution tests ---
 
 func TestCatalogCommand_SearchExec(t *testing.T) {

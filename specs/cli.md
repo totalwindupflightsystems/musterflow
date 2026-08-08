@@ -337,9 +337,9 @@ type Config struct {
 | `catalog search` | (positional `<query>`) | `catalog.NewClient().Search(query)` or `catalogSearchViaDashboard(query)` |
 | `catalog push` | (positional `<api-id>`) | `registry.Get(id)` → `catalog.ConnectionToCatalogEntry(conn)` → print JSON |
 | `catalog pull` | (positional `<api-id>`) | `catalog.NewClient().FetchEntry(id)` → `app.Connect(ctx, registry, ...)` |
-| `flow create` | `--webhook`, `--description`, `--source` | `workflow.NewEngine(dir, baseURL).Create(name, source, description, webhook)` |
+| `flow create` | `--webhook`, `--description`, `--source`, `--name` | `workflow.NewEngine(dir, baseURL).Create(name, source, description, webhook)` |
 | `flow list` | none | `workflow.NewEngine(dir, baseURL).List()` |
-| `flow run` | (positional `<name>`) | `workflow.NewEngine(dir, baseURL).Run(name, nil)` |
+| `flow run` | `--payload` (positional `<name>`) | `workflow.NewEngine(dir, baseURL).Run(name, payload)` |
 | `config show` | none | `config.Load()` → print, mask auth keys with `config.MaskKey` |
 | `config set` | (positional `<key> <value>`) | `config.Load()` → update → `config.Save(cfg)` |
 | `auth add` | `--type`, `--key`, `--cert`, `--key-path` | `auth.NewManager(cfg).Add(apiID, cred)` |

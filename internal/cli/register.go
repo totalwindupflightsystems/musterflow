@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
@@ -392,8 +393,20 @@ func flowCreateViaDashboard(name, source, description string, webhook bool) erro
 
 // flowRunViaDashboard runs a workflow via the dashboard HTTP API and prints
 // the raw output (no extra newline) to match the local engine.Run contract.
-func flowRunViaDashboard(name string) error {
-	resp, err := http.Post(dashboardBaseURL+"/api/flows/"+name+"/run", "application/json", nil)
+// When payload is nil, the request is sent with no body (preserving the
+// existing nil-trigger behavior). When non-nil, the payload is wrapped as
+// {"trigger": {...}} to match the dashboard server's expected body schema.
+func flowRunViaDashboard(name string, payload map[string]interface{}) error {
+	var bodyReader io.Reader
+	if payload != nil {
+		wrapped := map[string]interface{}{"trigger": payload}
+		body, err := json.Marshal(wrapped)
+		if err != nil {
+			return fmt.Errorf("marshal flow run payload: %w", err)
+		}
+		bodyReader = bytes.NewReader(body)
+	}
+	resp, err := http.Post(dashboardBaseURL+"/api/flows/"+name+"/run", "application/json", bodyReader)
 	if err != nil {
 		return fmt.Errorf("dashboard flow run request: %w", err)
 	}

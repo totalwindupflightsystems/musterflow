@@ -10,6 +10,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
@@ -315,25 +316,37 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		webhook     bool
 		description string
 		source      string
+		name        string
+		payload     string
 	)
 
 	createCmd := &cobra.Command{
 		Use:   "create <name>",
 		Short: "Create a new workflow",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			flowName := name
+			if flowName != "" {
+				if len(args) == 1 && args[0] != flowName {
+					return fmt.Errorf("conflicting flow names: positional %q vs --name %q", args[0], flowName)
+				}
+			} else if len(args) == 1 {
+				flowName = args[0]
+			} else {
+				return fmt.Errorf("flow name required (positional or --name)")
+			}
 			flowSource := source
 			if flowSource == "" {
 				flowSource = "# Write your Starlark workflow here\n"
 			}
 			if dashboardBaseURL != "" {
-				return flowCreateViaDashboard(args[0], flowSource, description, webhook)
+				return flowCreateViaDashboard(flowName, flowSource, description, webhook)
 			}
 			engine := workflow.NewEngine(
 				filepath.Join(registry.DataDir(), "flows"),
 				"http://localhost:9876",
 			)
-			flow, err := engine.Create(args[0], flowSource, description, webhook)
+			flow, err := engine.Create(flowName, flowSource, description, webhook)
 			if err != nil {
 				return err
 			}
@@ -351,6 +364,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 	createCmd.Flags().BoolVar(&webhook, "webhook", false, "Create a webhook trigger for this flow")
 	createCmd.Flags().StringVar(&description, "description", "", "Flow description")
 	createCmd.Flags().StringVar(&source, "source", "", "Starlark source code for the flow")
+	createCmd.Flags().StringVar(&name, "name", "", "Flow name (alternative to positional argument)")
 	cmd.AddCommand(createCmd)
 
 	cmd.AddCommand(&cobra.Command{
@@ -388,26 +402,34 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		},
 	})
 
-	cmd.AddCommand(&cobra.Command{
+	runCmd := &cobra.Command{
 		Use:   "run <name>",
 		Short: "Run a workflow",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var triggerPayload map[string]interface{}
+			if payload != "" {
+				if err := json.Unmarshal([]byte(payload), &triggerPayload); err != nil {
+					return fmt.Errorf("parse --payload: %w", err)
+				}
+			}
 			if dashboardBaseURL != "" {
-				return flowRunViaDashboard(args[0])
+				return flowRunViaDashboard(args[0], triggerPayload)
 			}
 			engine := workflow.NewEngine(
 				filepath.Join(registry.DataDir(), "flows"),
 				"http://localhost:9876",
 			)
-			output, err := engine.Run(args[0], nil)
+			output, err := engine.Run(args[0], triggerPayload)
 			if err != nil {
 				return err
 			}
 			fmt.Print(output)
 			return nil
 		},
-	})
+	}
+	runCmd.Flags().StringVar(&payload, "payload", "", "JSON trigger payload for the flow")
+	cmd.AddCommand(runCmd)
 
 	return cmd
 }
