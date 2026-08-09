@@ -31,6 +31,8 @@ No catalog entries found.
 
 ### From Source
 
+> **Dependency prerequisite:** the build requires the `github.com/wojons/muster` engine, currently pinned via a `replace` directive in `go.mod` to a local checkout. The engine repo is **private** right now, so a fresh clone must check it out locally and point the `replace` at it — see `AGENTS.md` (Build & Test) for the local dev setup. This note disappears once the engine is published and the replace is dropped.
+
 ```bash
 git clone https://github.com/totalwindupflightsystems/musterflow.git
 cd musterflow
