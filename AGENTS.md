@@ -11,6 +11,8 @@ MusterFlow turns any OpenAPI spec into a CLI, an MCP tool, and a workflow engine
 
 ## Build & Test
 
+> **Dependency prerequisite:** the build requires the `github.com/wojons/muster` engine, pinned via a `replace` directive in `go.mod` to a local checkout (`/home/kara/muster`). The engine repo is **private** right now, so a fresh clone on another machine must check it out locally and point the `replace` at it before building. This note disappears once the engine is published and the replace is dropped.
+
 ```bash
 # Build
 go build -o musterflow ./cmd/musterflow/

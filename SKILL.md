@@ -42,8 +42,7 @@ This project is managed by the coding-hermes autonomous pipeline.
 - **Foreman:** musterflow-foreman (cron-driven autonomous coding)
 - **Quality gates:** GitReins Tier 1 (secrets, lint, build, test) + Tier 2 (LLM evaluation)
 - **Agent skills:** coding-hermes, coding-hermes-cron, hilo-usage, gitreins
-- **Task board:** `.coding-hermes/tasks.md`
-- **25 features complete** — see `.coding-hermes/tasks.md` for full list
+- **Task board:** `.coding-hermes/board/tasks.jsonl`
 
 ## Architecture
 
