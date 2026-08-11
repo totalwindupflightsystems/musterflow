@@ -42,8 +42,23 @@ func Defaults() Config {
 // Load reads config from ~/.musterflow/config.yaml.
 // Returns defaults if file doesn't exist. Returns an error only for parse failures.
 func Load() (Config, error) {
+	return loadFrom(defaultDataDir())
+}
+
+// LoadWithDataDir reads config from <dir>/config.yaml, using dir as the data
+// directory. Returns defaults if file doesn't exist. Returns an error only for
+// parse failures. The returned Config has DataDir set to dir.
+func LoadWithDataDir(dir string) (Config, error) {
+	if dir == "" {
+		return Load()
+	}
+	return loadFrom(dir)
+}
+
+func loadFrom(dir string) (Config, error) {
 	cfg := Defaults()
-	path := configPath()
+	cfg.DataDir = dir
+	path := configPathFor(dir)
 
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -56,17 +71,31 @@ func Load() (Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		// Invalid YAML — warn and fall back to defaults
 		fmt.Fprintf(os.Stderr, "Warning: invalid config at %s: %v — using defaults\n", path, err)
-		return Defaults(), nil
+		d := Defaults()
+		d.DataDir = dir
+		return d, nil
 	}
 
 	return cfg, nil
 }
 
-// Save writes the config to ~/.musterflow/config.yaml.
-// Creates the directory if needed.
+// Save writes the config to the config file in cfg.DataDir if non-empty,
+// otherwise to ~/.musterflow/config.yaml. Creates the directory if needed.
 func Save(cfg Config) error {
-	path := configPath()
-	dir := filepath.Dir(path)
+	dir := cfg.DataDir
+	if dir == "" {
+		dir = defaultDataDir()
+	}
+	return SaveWithDataDir(cfg, dir)
+}
+
+// SaveWithDataDir writes the config to <dir>/config.yaml.
+// Creates the directory if needed.
+func SaveWithDataDir(cfg Config, dir string) error {
+	if dir == "" {
+		dir = defaultDataDir()
+	}
+	path := configPathFor(dir)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("create config dir: %w", err)
 	}
@@ -79,9 +108,14 @@ func Save(cfg Config) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-// ConfigPath returns the path to the config file.
+// ConfigPath returns the path to the config file in the default data directory.
 func ConfigPath() string {
-	return configPath()
+	return configPathFor(defaultDataDir())
+}
+
+// ConfigPathFor returns the path to the config file for the given data directory.
+func ConfigPathFor(dir string) string {
+	return configPathFor(dir)
 }
 
 // FindPort finds an available port starting from the configured port.
@@ -107,8 +141,7 @@ func MaskKey(key string) string {
 	return key[:4] + "****" + key[len(key)-4:]
 }
 
-func configPath() string {
-	dir := defaultDataDir()
+func configPathFor(dir string) string {
 	return filepath.Join(dir, "config.yaml")
 }
 

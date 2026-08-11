@@ -114,7 +114,7 @@ func TestCredentialTypeFromString(t *testing.T) {
 }
 
 func TestManager_Add(t *testing.T) {
-	cfg, _ := tempConfig(t)
+	cfg, dir := tempConfig(t)
 	mgr := NewManager(cfg)
 
 	err := mgr.Add("test-api", Credential{Type: CredentialAPIKey, Key: "sk-test-key"})
@@ -122,8 +122,8 @@ func TestManager_Add(t *testing.T) {
 		t.Fatalf("Add failed: %v", err)
 	}
 
-	// Verify it was persisted
-	reloaded, err := config.Load()
+	// Verify it was persisted — load from the same data dir
+	reloaded, err := config.LoadWithDataDir(dir)
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}

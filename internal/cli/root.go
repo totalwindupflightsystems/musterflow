@@ -32,6 +32,33 @@ func SetAuthManager(m *auth.Manager) {
 	authMgr = m
 }
 
+// flagDataDir holds the --data-dir persistent flag value, set by main via
+// SetDataDir before ExecuteContext runs. When non-empty, config load/save
+// operations in CLI handlers honor this directory instead of ~/.musterflow.
+var flagDataDir string
+
+// SetDataDir sets the global data directory override for CLI handlers.
+// Called by main after parsing the --data-dir flag.
+func SetDataDir(dir string) {
+	flagDataDir = dir
+}
+
+// loadConfig loads the config, honoring the --data-dir flag if set.
+func loadConfig() (config.Config, error) {
+	if flagDataDir != "" {
+		return config.LoadWithDataDir(flagDataDir)
+	}
+	return config.Load()
+}
+
+// configPath returns the config file path, honoring the --data-dir flag if set.
+func configPath() string {
+	if flagDataDir != "" {
+		return config.ConfigPathFor(flagDataDir)
+	}
+	return config.ConfigPath()
+}
+
 // dashboardBaseURL is set by main when the dashboard is detected as running.
 // When non-empty, CLI write operations (connect/disconnect) route through the
 // dashboard HTTP API instead of opening the DB directly.
@@ -471,7 +498,7 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 		Use:   "show",
 		Short: "Show current configuration",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load()
+			cfg, err := loadConfig()
 			if err != nil {
 				return err
 			}
@@ -484,7 +511,7 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 			fmt.Printf("Data directory:    %s\n", cfg.DataDir)
 			fmt.Printf("Default format:    %s\n", cfg.DefaultFormat)
 			fmt.Printf("Auto-completion:   %v\n", cfg.AutoCompletion)
-			fmt.Printf("Config file:       %s\n", config.ConfigPath())
+			fmt.Printf("Config file:       %s\n", configPath())
 			if len(cfg.Auth) > 0 {
 				fmt.Println("\nAuth:")
 				for id, auth := range cfg.Auth {
@@ -500,7 +527,7 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 		Short: "Set a configuration value",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load()
+			cfg, err := loadConfig()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
@@ -539,7 +566,7 @@ func newAuthCommand(registry *app.Registry) *cobra.Command {
 		Short: "Add credentials for an API",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load()
+			cfg, err := loadConfig()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
@@ -564,7 +591,7 @@ func newAuthCommand(registry *app.Registry) *cobra.Command {
 		Use:   "list",
 		Short: "List configured credentials (keys masked)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load()
+			cfg, err := loadConfig()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
@@ -592,7 +619,7 @@ func newAuthCommand(registry *app.Registry) *cobra.Command {
 		Short: "Remove credentials for an API",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load()
+			cfg, err := loadConfig()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
@@ -610,7 +637,7 @@ func newAuthCommand(registry *app.Registry) *cobra.Command {
 		Short: "Get the credential value for an API (prints raw key)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load()
+			cfg, err := loadConfig()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}
@@ -698,7 +725,7 @@ are required for the OAuth2 flow.`,
 			}
 
 			// Store credential via auth manager
-			cfg2, err := config.Load()
+			cfg2, err := loadConfig()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
 			}

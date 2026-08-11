@@ -54,11 +54,15 @@ func run() error {
 
 	// Parse persistent flags BEFORE building the registry so --data-dir
 	// takes effect (cobra parses flags during ExecuteContext, which runs
-	// after the registry is constructed). See BUG-004.
+	// after the registry is constructed). See BUG-004 / DF-003.
 	flagDataDir = parseDataDirFlag(os.Args[1:])
 
-	// CLI flags override config
+	// Load config — honor --data-dir for config file location.
 	if flagDataDir != "" {
+		cfg, err = config.LoadWithDataDir(flagDataDir)
+		if err != nil {
+			return fmt.Errorf("load config: %w", err)
+		}
 		cfg.DataDir = flagDataDir
 	}
 
@@ -86,6 +90,8 @@ func run() error {
 	// Set up auth manager for auto-injecting credentials into API commands
 	authMgr := auth.NewManager(cfg)
 	cli.SetAuthManager(authMgr)
+	// Propagate --data-dir to CLI handlers for dir-aware config load/save
+	cli.SetDataDir(flagDataDir)
 
 	rootCmd := cli.NewRootCommand(registry)
 	rootCmd.Version = Version

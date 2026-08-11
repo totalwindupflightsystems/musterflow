@@ -2710,6 +2710,108 @@ func TestFetchAPIsFromDashboard_HTTPError(t *testing.T) {
 	}
 }
 
+// --- DF-003: --data-dir honored for config/auth ---
+
+// TestAuthAdd_DataDir_WritesToTempDir verifies that `auth add <id> --type apikey
+// --key X --data-dir <tmp>` writes the credential to <tmp>/config.yaml and does
+// NOT touch the real home config. It uses a sandboxed HOME to prove no writes
+// leak outside the --data-dir.
+func TestAuthAdd_DataDir_WritesToTempDir(t *testing.T) {
+	// Sandbox HOME so the real ~/.musterflow is never touched.
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	dataDir := t.TempDir()
+
+	// Set the cli package flagDataDir
+	SetDataDir(dataDir)
+	defer SetDataDir("")
+
+	// Reset auth flags for this test
+	typeFlag = "apikey"
+	keyFlag = "sk-df003-test1234567890"
+	certFlag = ""
+	keyPathFlag = ""
+
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"auth", "add", "df003-api", "--type", "apikey", "--key", "sk-df003-test1234567890"})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("auth add: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "Added") {
+		t.Errorf("expected 'Added' in output, got: %s", output)
+	}
+
+	// Verify config.yaml exists in dataDir
+	cfgPath := filepath.Join(dataDir, "config.yaml")
+	if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
+		t.Fatalf("expected config at %s", cfgPath)
+	}
+
+	// Verify the credential was written
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if !strings.Contains(string(data), "df003-api") {
+		t.Errorf("expected 'df003-api' in config file, got: %s", string(data))
+	}
+	if !strings.Contains(string(data), "sk-df003-test1234567890") {
+		t.Errorf("expected key in config file, got: %s", string(data))
+	}
+
+	// Verify NO config was written to sandboxed home
+	homeCfg := filepath.Join(homeDir, ".musterflow", "config.yaml")
+	if _, err := os.Stat(homeCfg); !os.IsNotExist(err) {
+		t.Fatalf("home config should NOT exist, but found %s", homeCfg)
+	}
+}
+
+// TestConfigShow_DataDir_PrintsTempPath verifies that `config show --data-dir <tmp>`
+// prints the temp directory and temp config path.
+func TestConfigShow_DataDir_PrintsTempPath(t *testing.T) {
+	dataDir := t.TempDir()
+
+	// Write a config into the data dir so it's not just defaults
+	cfg := config.Config{
+		Port:           5555,
+		DataDir:        dataDir,
+		DefaultFormat:  "json",
+		AutoCompletion: false,
+		Auth:           make(map[string]config.AuthConfig),
+	}
+	if err := config.SaveWithDataDir(cfg, dataDir); err != nil {
+		t.Fatalf("SaveWithDataDir: %v", err)
+	}
+
+	SetDataDir(dataDir)
+	defer SetDataDir("")
+
+	r := app.NewRegistry(t.TempDir())
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"config", "show"})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("config show: %v", err)
+		}
+	})
+
+	expectedPath := filepath.Join(dataDir, "config.yaml")
+
+	if !strings.Contains(output, "Data directory:    "+dataDir) {
+		t.Errorf("expected 'Data directory: %s' in output, got: %s", dataDir, output)
+	}
+	if !strings.Contains(output, "Config file:       "+expectedPath) {
+		t.Errorf("expected 'Config file: %s' in output, got: %s", expectedPath, output)
+	}
+}
+
 // --- PERF-046: Benchmarks for hot paths ---
 
 func BenchmarkNewRootCommand(b *testing.B) {

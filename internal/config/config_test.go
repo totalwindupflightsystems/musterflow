@@ -180,3 +180,96 @@ func TestConfigPath(t *testing.T) {
 		t.Error("expected non-empty config path")
 	}
 }
+
+func TestLoadWithDataDir_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cfg, err := LoadWithDataDir(tmpDir)
+	if err != nil {
+		t.Fatalf("LoadWithDataDir on missing file should not error: %v", err)
+	}
+	if cfg.Port != 9876 {
+		t.Errorf("expected default port 9876, got %d", cfg.Port)
+	}
+	if cfg.DataDir != tmpDir {
+		t.Errorf("expected DataDir=%s, got %q", tmpDir, cfg.DataDir)
+	}
+}
+
+func TestSaveAndLoadWithDataDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cfg := Config{
+		Port:           7777,
+		DataDir:        tmpDir,
+		DefaultFormat:  "jsonl",
+		AutoCompletion: false,
+		Auth: map[string]AuthConfig{
+			"testapi": {Type: "apikey", Key: "sk-test1234567890"},
+		},
+	}
+
+	if err := SaveWithDataDir(cfg, tmpDir); err != nil {
+		t.Fatalf("SaveWithDataDir: %v", err)
+	}
+
+	// Verify the file landed in <tmp>/config.yaml
+	path := filepath.Join(tmpDir, "config.yaml")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Fatalf("expected config file at %s", path)
+	}
+
+	// Verify ConfigPathFor matches
+	if got := ConfigPathFor(tmpDir); got != path {
+		t.Errorf("ConfigPathFor(%q) = %q, want %q", tmpDir, got, path)
+	}
+
+	// Load it back
+	loaded, err := LoadWithDataDir(tmpDir)
+	if err != nil {
+		t.Fatalf("LoadWithDataDir: %v", err)
+	}
+	if loaded.Port != 7777 {
+		t.Errorf("expected port 7777, got %d", loaded.Port)
+	}
+	if loaded.DefaultFormat != "jsonl" {
+		t.Errorf("expected jsonl format, got %q", loaded.DefaultFormat)
+	}
+	if loaded.Auth["testapi"].Type != "apikey" {
+		t.Errorf("expected auth type apikey, got %q", loaded.Auth["testapi"].Type)
+	}
+	if loaded.Auth["testapi"].Key != "sk-test1234567890" {
+		t.Errorf("expected auth key sk-test1234567890, got %q", loaded.Auth["testapi"].Key)
+	}
+}
+
+func TestSave_HonorsDataDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cfg := Config{
+		Port:           6666,
+		DataDir:        tmpDir,
+		DefaultFormat:  "json",
+		AutoCompletion: true,
+		Auth:           make(map[string]AuthConfig),
+	}
+
+	// Save() should write to cfg.DataDir (tmpDir), not home
+	if err := Save(cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	path := filepath.Join(tmpDir, "config.yaml")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Fatalf("expected Save() to write to %s", path)
+	}
+
+	// Load back with LoadWithDataDir to confirm
+	loaded, err := LoadWithDataDir(tmpDir)
+	if err != nil {
+		t.Fatalf("LoadWithDataDir: %v", err)
+	}
+	if loaded.Port != 6666 {
+		t.Errorf("expected port 6666, got %d", loaded.Port)
+	}
+}
