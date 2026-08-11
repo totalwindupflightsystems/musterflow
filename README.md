@@ -10,18 +10,16 @@ Connect an OpenAPI spec → get an instant CLI with subcommands for every endpoi
 
 ```
 $ musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
-Connected: Swagger Petstore (19 endpoints)
+✓ Connected: swagger-petstore-openapi-3-0
+  ID: 715e581e0d464caa
+  Version: 1.0.27
+  Endpoints: 19
 
-$ musterflow swagger-petstore-openapi-3-0 listPets --limit 5
-┌────┬───────────────┬────────┐
-│ ID │ NAME          │ STATUS │
-├────┼───────────────┼────────┤
-│ 1  │ Bella         │ sold   │
-│ 2  │ Max           │ avail  │
-│ 3  │ Luna          │ pending│
-│ 4  │ Charlie       │ avail  │
-│ 5  │ Lucy          │ sold   │
-└────┴───────────────┴────────┘
+$ musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available
+id      name        status
+87205   pet-87205   available
+82037   pet-82037   available
+66423   pet-66423   available
 
 $ musterflow catalog search github
 No catalog entries found.
@@ -50,7 +48,7 @@ See [docs/integration-guide.md](docs/integration-guide.md) for the full integrat
 musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
 
 # 2. Call it from the CLI — subcommands generated automatically
-musterflow swagger-petstore-openapi-3-0 listPets --status available
+musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available
 
 # 3. Start the dashboard and MCP server
 musterflow start
