@@ -3,6 +3,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,11 +29,54 @@ type apiCommandState struct {
 var apiCommands = make(map[string]*apiCommandState)
 var apiCommandsMu sync.Mutex
 
+// loadAPISubcommands registers a cobra subcommand for every connected API.
+// When dashboardBaseURL is set (the dashboard process is running and holds
+// the DuckDB write lock, so registry.List() is empty) the connection list is
+// fetched from GET <dashboardBaseURL>/api/apis instead.  The fetched
+// APIConnection values are identical to what registry.List() returns — they
+// round-trip through the same JSON tags — so createAPISubcommand and the
+// lazy-load flow (ensureAPILoaded) work unchanged.  If the fetch fails
+// (dashboard died between detection and command build) the function logs a
+// warning to stderr and falls back to registry.List(); if the registry is also
+// empty, no API commands are registered (matching the pre-existing behavior).
 func loadAPISubcommands(root *cobra.Command, registry *app.Registry) {
-	for _, conn := range registry.List() {
+	conns := registry.List()
+	if dashboardBaseURL != "" {
+		fetched, err := fetchAPIsFromDashboard()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not fetch APIs from dashboard (%s): %v; falling back to local registry\n", dashboardBaseURL, err)
+		} else {
+			conns = fetched
+		}
+	}
+	for _, conn := range conns {
 		apiCmd := createAPISubcommand(conn)
 		root.AddCommand(apiCmd)
 	}
+}
+
+// fetchAPIsFromDashboard fetches the connected API list from the running
+// dashboard's GET /api/apis endpoint.  The response body is an object with an
+// "apis" key whose value is a JSON array of APIConnection — mirroring the
+// pattern used by listViaDashboard (register.go).
+func fetchAPIsFromDashboard() ([]*app.APIConnection, error) {
+	resp, err := http.Get(dashboardBaseURL + "/api/apis")
+	if err != nil {
+		return nil, fmt.Errorf("dashboard apis request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+	}
+
+	var result struct {
+		APIs []*app.APIConnection `json:"apis"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode dashboard response: %w", err)
+	}
+	return result.APIs, nil
 }
 
 // loadSpecData fetches a spec from a URL or reads it from a local file path.

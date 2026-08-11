@@ -2435,6 +2435,13 @@ func TestBuildRequest_WithGlobalAuth(t *testing.T) {
 
 func TestMCPCommand_ViaDashboard(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// loadAPISubcommands probes /api/apis when dashboardBaseURL is set;
+		// return an empty list so no API subcommands are registered.
+		if r.URL.Path == "/api/apis" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"apis":[]}`))
+			return
+		}
 		if r.URL.Path != "/api/mcp/info" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 			http.NotFound(w, r)
@@ -2482,6 +2489,13 @@ func TestMCPCommand_ViaDashboard(t *testing.T) {
 
 func TestMCPCommand_ViaDashboard_NoTools(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// loadAPISubcommands probes /api/apis when dashboardBaseURL is set;
+		// return an empty list so no API subcommands are registered.
+		if r.URL.Path == "/api/apis" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"apis":[]}`))
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"endpoint": "http://localhost:9876/mcp",
@@ -2510,6 +2524,189 @@ func TestMCPCommand_ViaDashboard_NoTools(t *testing.T) {
 
 	if !strings.Contains(output, "No APIs connected") {
 		t.Errorf("expected 'No APIs connected' message, got: %s", output)
+	}
+}
+
+// --- DF-001: API subcommands while dashboard runs ---
+
+// TestLoadAPISubcommands_RegistryPath verifies that when the dashboard is NOT
+// running (dashboardBaseURL empty) API subcommands are built from
+// registry.List() — the pre-existing behavior must be unchanged.
+func TestLoadAPISubcommands_RegistryPath(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	_ = r.Add(&app.APIConnection{
+		ID:            "reg-1",
+		Name:          "registry-api",
+		SpecURL:       "https://example.com/spec.json",
+		BaseURL:       "https://api.example.com",
+		EndpointCount: 3,
+	})
+
+	// dashboardBaseURL must be empty for this test.
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	root := NewRootCommand(r)
+
+	found := false
+	for _, cmd := range root.Commands() {
+		if cmd.Name() == "registry-api" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected 'registry-api' subcommand from registry path")
+	}
+}
+
+// TestLoadAPISubcommands_DashboardPath verifies that when dashboardBaseURL is
+// set (dashboard running, registry empty) API subcommands are fetched from
+// GET <dashboardBaseURL>/api/apis and registered against the empty registry.
+func TestLoadAPISubcommands_DashboardPath(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/apis" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"apis": [
+				{
+					"id": "dash-1",
+					"name": "dashboard-api",
+					"spec_url": "https://example.com/dash-spec.json",
+					"base_url": "https://api.example.com",
+					"version": "1.0",
+					"description": "API from dashboard",
+					"auth_type": "none",
+					"endpoint_count": 7
+				}
+			]
+		}`))
+	}))
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	// Registry is intentionally NOT loaded — simulates the dashboard-holds-lock
+	// scenario where registry.List() returns nil.
+	r := app.NewRegistry(t.TempDir())
+
+	root := NewRootCommand(r)
+
+	found := false
+	for _, cmd := range root.Commands() {
+		if cmd.Name() == "dashboard-api" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected 'dashboard-api' subcommand fetched from dashboard")
+	}
+}
+
+// TestLoadAPISubcommands_DashboardFetchFailure verifies that a fetch failure
+// (dashboard died between detection and command build) does NOT crash the CLI.
+// The function logs a warning and falls back to registry.List().
+func TestLoadAPISubcommands_DashboardFetchFailure(t *testing.T) {
+	// Point dashboardBaseURL at a closed port — http.Get will fail.
+	SetDashboardURL("http://127.0.0.1:1")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	_ = r.Add(&app.APIConnection{
+		ID:            "fallback-1",
+		Name:          "fallback-api",
+		SpecURL:       "https://example.com/spec.json",
+		BaseURL:       "https://api.example.com",
+		EndpointCount: 2,
+	})
+
+	// Redirect stderr to suppress the warning noise; we just verify it
+	// doesn't crash and the fallback command appears.
+	oldStderr := os.Stderr
+	r2, w2, _ := os.Pipe()
+	os.Stderr = w2
+	defer func() {
+		os.Stderr = oldStderr
+		_ = w2.Close()
+		_, _ = io.Copy(io.Discard, r2)
+	}()
+
+	root := NewRootCommand(r)
+
+	found := false
+	for _, cmd := range root.Commands() {
+		if cmd.Name() == "fallback-api" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected 'fallback-api' subcommand from registry fallback after dashboard fetch failure")
+	}
+}
+
+// TestFetchAPIsFromDashboard_Decodes verifies fetchAPIsFromDashboard correctly
+// decodes the {"apis": [...]} response shape returned by the dashboard.
+func TestFetchAPIsFromDashboard_Decodes(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"apis": [
+				{"id":"a1","name":"api-one","spec_url":"https://e.com/1.json","base_url":"https://a.com","auth_type":"none","endpoint_count":3},
+				{"id":"a2","name":"api-two","spec_url":"https://e.com/2.json","base_url":"https://b.com","auth_type":"bearer","endpoint_count":5}
+			]
+		}`))
+	}))
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	conns, err := fetchAPIsFromDashboard()
+	if err != nil {
+		t.Fatalf("fetchAPIsFromDashboard: %v", err)
+	}
+	if len(conns) != 2 {
+		t.Fatalf("expected 2 connections, got %d", len(conns))
+	}
+	if conns[0].ID != "a1" || conns[0].Name != "api-one" || conns[0].AuthType != "none" {
+		t.Errorf("conn[0] = %+v", conns[0])
+	}
+	if conns[1].ID != "a2" || conns[1].Name != "api-two" || conns[1].AuthType != "bearer" {
+		t.Errorf("conn[1] = %+v", conns[1])
+	}
+}
+
+// TestFetchAPIsFromDashboard_HTTPError verifies non-200 responses return an
+// error (graceful — no crash).
+func TestFetchAPIsFromDashboard_HTTPError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	_, err := fetchAPIsFromDashboard()
+	if err == nil {
+		t.Error("expected error for HTTP 500 from dashboard")
 	}
 }
 
