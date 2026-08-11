@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
@@ -470,5 +471,85 @@ func mcpViaDashboard() error {
 		fmt.Printf("  [%s] %s\n", t.Name, t.Description)
 	}
 	fmt.Println("\nConnect an MCP client to " + result.Endpoint + " to use these tools.")
+	return nil
+}
+
+// exportViaDashboard routes export through the dashboard HTTP API.
+// It GETs /api/export (JSONL), writes the response body to the local file,
+// and prints the count of exported APIs.
+func exportViaDashboard(path string) error {
+	resp, err := http.Get(dashboardBaseURL + "/api/export")
+	if err != nil {
+		return fmt.Errorf("dashboard export request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errBody)
+		msg := errBody.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("export via dashboard: %s", msg)
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("create output file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	n, err := io.Copy(f, resp.Body)
+	if err != nil {
+		return fmt.Errorf("write export file: %w", err)
+	}
+
+	// Count lines (one JSON object per line) to report the API count.
+	count := 0
+	if n > 0 {
+		data, err := os.ReadFile(path)
+		if err == nil {
+			count = bytes.Count(data, []byte("\n"))
+		}
+	}
+
+	fmt.Printf("✓ Exported %d APIs to %s\n", count, path)
+	return nil
+}
+
+// importViaDashboard routes import through the dashboard HTTP API.
+// It reads the local JSONL file and POSTs its content to /api/import.
+func importViaDashboard(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read import file: %w", err)
+	}
+
+	resp, err := http.Post(dashboardBaseURL+"/api/import", "application/x-ndjson", bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("dashboard import request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Imported int    `json:"imported"`
+		Error    string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode dashboard response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		msg := result.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("import via dashboard: %s", msg)
+	}
+
+	fmt.Printf("✓ Imported %d APIs from %s\n", result.Imported, path)
 	return nil
 }

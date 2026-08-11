@@ -2903,3 +2903,135 @@ func BenchmarkNewRootCommand(b *testing.B) {
 		_ = NewRootCommand(r)
 	}
 }
+
+// --- DF-006: Export/Import via dashboard tests ---
+
+func TestExportCommand_ViaDashboard(t *testing.T) {
+	// Mock dashboard server that returns JSONL for /api/export
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/apis" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"apis":[]}`))
+			return
+		}
+		if r.URL.Path != "/api/export" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		_, _ = w.Write([]byte(`{"id":"dash-1","name":"dash-api","spec_url":"https://example.com/spec.json","base_url":"https://api.example.com","version":"","description":"","auth_type":"none","endpoint_count":3,"added_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"}` + "\n"))
+	}))
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load — store stays nil, but dashboard routing bypasses it
+	outPath := filepath.Join(t.TempDir(), "dash-export.jsonl")
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"export", "--output", outPath})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("export via dashboard: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "Exported") {
+		t.Errorf("expected 'Exported' in output, got: %s", output)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read export file: %v", err)
+	}
+	if !strings.Contains(string(data), "dash-1") {
+		t.Errorf("expected 'dash-1' in export file, got: %s", string(data))
+	}
+}
+
+func TestImportCommand_ViaDashboard(t *testing.T) {
+	// Create a JSONL file to import
+	jsonlContent := `{"id":"imp-dash","name":"imported-dash-api","spec_url":"https://example.com/spec.json","base_url":"https://api.example.com","version":"","description":"","auth_type":"none","endpoint_count":2,"added_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"}` + "\n"
+	jsonlPath := filepath.Join(t.TempDir(), "import-source.jsonl")
+	if err := os.WriteFile(jsonlPath, []byte(jsonlContent), 0644); err != nil {
+		t.Fatalf("write import file: %v", err)
+	}
+
+	// Mock dashboard server that accepts POST /api/import
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/apis" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"apis":[]}`))
+			return
+		}
+		if r.URL.Path != "/api/import" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"imported":1}`))
+	}))
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load — store stays nil, but dashboard routing bypasses it
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import", jsonlPath})
+
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("import via dashboard: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "Imported") {
+		t.Errorf("expected 'Imported' in output, got: %s", output)
+	}
+	if !strings.Contains(output, "1") {
+		t.Errorf("expected count '1' in output, got: %s", output)
+	}
+}
+
+func TestExportCommand_NilStore_ActionableError(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load — store stays nil, dashboardBaseURL is empty
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"export", filepath.Join(t.TempDir(), "out.jsonl")})
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for export with nil store and no dashboard")
+	}
+	if !strings.Contains(err.Error(), "dashboard") {
+		t.Errorf("expected actionable error mentioning dashboard, got: %s", err.Error())
+	}
+}
+
+func TestImportCommand_NilStore_ActionableError(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	// Do NOT Load — store stays nil, dashboardBaseURL is empty
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	jsonlFile := filepath.Join(t.TempDir(), "dummy.jsonl")
+	_ = os.WriteFile(jsonlFile, []byte(`{"id":"test","name":"test-api"}`), 0644)
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import", jsonlFile})
+
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for import with nil store and no dashboard")
+	}
+	if !strings.Contains(err.Error(), "dashboard") {
+		t.Errorf("expected actionable error mentioning dashboard, got: %s", err.Error())
+	}
+}

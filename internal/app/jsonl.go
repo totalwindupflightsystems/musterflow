@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -38,7 +39,15 @@ func ImportJSONL(store *Store, path string) (int, error) {
 	}
 	defer func() { _ = f.Close() }()
 
-	dec := json.NewDecoder(f)
+	return ImportJSONLReader(store, f)
+}
+
+// ImportJSONLReader reads JSONL content from an io.Reader and imports all
+// connections into the store. Existing connections with the same ID are
+// replaced. Used by the dashboard import endpoint to import from the HTTP
+// request body without writing a temp file.
+func ImportJSONLReader(store *Store, r io.Reader) (int, error) {
+	dec := json.NewDecoder(r)
 	count := 0
 	for dec.More() {
 		var conn APIConnection

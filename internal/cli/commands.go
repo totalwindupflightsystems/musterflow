@@ -58,9 +58,14 @@ func newExportCommand(registry *app.Registry) *cobra.Command {
 					path = filepath.Join(registry.DataDir(), "registry.jsonl")
 				}
 			}
+			// If the dashboard is running, route through its HTTP API to
+			// avoid DuckDB lock conflicts (the dashboard holds the write lock).
+			if dashboardBaseURL != "" {
+				return exportViaDashboard(path)
+			}
 			store := registry.Store()
 			if store == nil {
-				return fmt.Errorf("registry not loaded")
+				return fmt.Errorf("registry not loaded (the dashboard may be running — export/import route through the dashboard; if the dashboard is NOT running this is a bug)")
 			}
 			if err := app.ExportJSONL(store, path); err != nil {
 				return err
@@ -81,9 +86,14 @@ func newImportCommand(registry *app.Registry) *cobra.Command {
 		Long:  "Import API connections from a JSONL file into the registry.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// If the dashboard is running, route through its HTTP API to
+			// avoid DuckDB lock conflicts (the dashboard holds the write lock).
+			if dashboardBaseURL != "" {
+				return importViaDashboard(args[0])
+			}
 			store := registry.Store()
 			if store == nil {
-				return fmt.Errorf("registry not loaded")
+				return fmt.Errorf("registry not loaded (the dashboard may be running — export/import route through the dashboard; if the dashboard is NOT running this is a bug)")
 			}
 			n, err := app.ImportJSONL(store, args[0])
 			if err != nil {

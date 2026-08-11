@@ -53,6 +53,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/flows/", s.handleFlowRun)
 	s.mux.HandleFunc("/api/catalog/search", s.handleCatalogSearch)
 	s.mux.HandleFunc("/api/mcp/info", s.handleMCPInfo)
+	s.mux.HandleFunc("/api/export", s.handleExport)
+	s.mux.HandleFunc("/api/import", s.handleImport)
 	s.mux.HandleFunc("/mcp", s.handleMCP)
 	s.mux.HandleFunc("/hooks/", s.handleWebhook)
 	s.mux.HandleFunc("/", serveIndex)
@@ -266,6 +268,61 @@ func (s *Server) handleMCPInfo(w http.ResponseWriter, r *http.Request) {
 		"tool_count": len(toolInfos),
 		"tools":      toolInfos,
 	})
+}
+
+// handleExport handles GET /api/export — streams all API connections as
+// JSONL (one JSON object per line, Content-Type application/x-ndjson).
+func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		store := s.registry.Store()
+		if store == nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "registry not loaded"})
+			return
+		}
+		conns, err := store.List()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		w.WriteHeader(http.StatusOK)
+		enc := json.NewEncoder(w)
+		for _, conn := range conns {
+			if err := enc.Encode(conn); err != nil {
+				return // client may have disconnected
+			}
+		}
+	default:
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+	}
+}
+
+// handleImport handles POST /api/import — reads JSONL from the request body
+// and imports all connections into the store. Existing connections with the
+// same ID are replaced. Responds with {"imported": N}.
+func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		store := s.registry.Store()
+		if store == nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "registry not loaded"})
+			return
+		}
+		if r.Body == nil || r.ContentLength == 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing request body"})
+			return
+		}
+		n, err := app.ImportJSONLReader(store, r.Body)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"imported": n})
+	default:
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+	}
 }
 
 // buildToolExample generates a copy-pasteable JSON-RPC tools/call example.

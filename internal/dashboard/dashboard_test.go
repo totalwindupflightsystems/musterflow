@@ -848,3 +848,216 @@ func TestServer_FlowsList_MethodNotAllowed(t *testing.T) {
 		t.Errorf("expected 405, got %d", rec.Code)
 	}
 }
+
+// --- Export/Import API tests ---
+
+func TestServer_Export_Empty(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := NewServer(r, nil, nil, ":0")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/export", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "application/x-ndjson") {
+		t.Errorf("expected application/x-ndjson, got %q", ct)
+	}
+
+	body := strings.TrimSpace(rec.Body.String())
+	if body != "" {
+		t.Errorf("expected empty body for empty registry, got %q", body)
+	}
+}
+
+func TestServer_Export_WithData(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	_ = r.Add(&app.APIConnection{
+		ID:            "exp-1",
+		Name:          "exported-api",
+		SpecURL:       "https://example.com/spec.json",
+		BaseURL:       "https://api.example.com",
+		AuthType:      "none",
+		EndpointCount: 5,
+	})
+
+	s := NewServer(r, nil, nil, ":0")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/export", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	lines := strings.Split(strings.TrimSpace(rec.Body.String()), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected 1 line, got %d: %s", len(lines), rec.Body.String())
+	}
+
+	var conn app.APIConnection
+	if err := json.Unmarshal([]byte(lines[0]), &conn); err != nil {
+		t.Fatalf("unmarshal JSONL line: %v", err)
+	}
+	if conn.ID != "exp-1" {
+		t.Errorf("expected ID 'exp-1', got %q", conn.ID)
+	}
+	if conn.Name != "exported-api" {
+		t.Errorf("expected Name 'exported-api', got %q", conn.Name)
+	}
+}
+
+func TestServer_Export_MethodNotAllowed(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := NewServer(r, nil, nil, ":0")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/export", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", rec.Code)
+	}
+}
+
+func TestServer_Import_Success(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := NewServer(r, nil, nil, ":0")
+
+	// JSONL body with one connection
+	jsonlBody := `{"id":"imp-1","name":"imported-api","spec_url":"https://example.com/spec.json","base_url":"https://api.example.com","version":"","description":"","auth_type":"none","endpoint_count":3,"added_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"}`
+
+	req := httptest.NewRequest(http.MethodPost, "/api/import", strings.NewReader(jsonlBody))
+	req.Header.Set("Content-Type", "application/x-ndjson")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if result["imported"].(float64) != 1 {
+		t.Errorf("expected imported=1, got %v", result["imported"])
+	}
+
+	// Verify the connection was actually added
+	conn, err := r.Get("imp-1")
+	if err != nil {
+		t.Fatalf("Get imp-1: %v", err)
+	}
+	if conn.Name != "imported-api" {
+		t.Errorf("expected name 'imported-api', got %q", conn.Name)
+	}
+}
+
+func TestServer_Import_EmptyBody(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := NewServer(r, nil, nil, ":0")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/import", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for empty body, got %d", rec.Code)
+	}
+}
+
+func TestServer_Import_MethodNotAllowed(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	s := NewServer(r, nil, nil, ":0")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/import", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", rec.Code)
+	}
+}
+
+func TestServer_ExportThenImport_RoundTrip(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	_ = r.Add(&app.APIConnection{
+		ID:            "rt-1",
+		Name:          "roundtrip-api",
+		SpecURL:       "https://example.com/spec.json",
+		BaseURL:       "https://api.example.com",
+		AuthType:      "bearer",
+		EndpointCount: 7,
+	})
+
+	s := NewServer(r, nil, nil, ":0")
+
+	// Export
+	req := httptest.NewRequest(http.MethodGet, "/api/export", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("export: expected 200, got %d", rec.Code)
+	}
+	exportedJSONL := rec.Body.String()
+
+	// Import into a fresh registry
+	r2 := app.NewRegistry(t.TempDir())
+	if err := r2.Load(); err != nil {
+		t.Fatalf("Load r2: %v", err)
+	}
+	defer func() { _ = r2.Close() }()
+	s2 := NewServer(r2, nil, nil, ":0")
+
+	req2 := httptest.NewRequest(http.MethodPost, "/api/import", strings.NewReader(exportedJSONL))
+	req2.Header.Set("Content-Type", "application/x-ndjson")
+	rec2 := httptest.NewRecorder()
+	s2.Handler().ServeHTTP(rec2, req2)
+
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("import: expected 200, got %d: %s", rec2.Code, rec2.Body.String())
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(rec2.Body).Decode(&result); err != nil {
+		t.Fatalf("decode import response: %v", err)
+	}
+	if result["imported"].(float64) != 1 {
+		t.Errorf("expected imported=1, got %v", result["imported"])
+	}
+
+	conn, err := r2.Get("rt-1")
+	if err != nil {
+		t.Fatalf("Get rt-1 from r2: %v", err)
+	}
+	if conn.Name != "roundtrip-api" {
+		t.Errorf("expected name 'roundtrip-api', got %q", conn.Name)
+	}
+}
