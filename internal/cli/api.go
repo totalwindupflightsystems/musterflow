@@ -231,7 +231,6 @@ func loadAPICommands(parent *cobra.Command, conn *app.APIConnection) error {
 		parent.AddCommand(cmd)
 	}
 
-	fmt.Fprintf(os.Stderr, "  ✓ Generated %d commands for %s\n", len(commands), conn.Name)
 	return nil
 }
 

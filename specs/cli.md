@@ -33,7 +33,7 @@ func NewRootCommand(registry *app.Registry) *cobra.Command
 - Persistent flags (set by `main.go`, not by `NewRootCommand`):
   - `--dashboard-addr string` — Dashboard HTTP address (default: port from config)
   - `--data-dir string` — Data directory (default: `~/.musterflow`)
-  - `--output, -o string` — Output file path (format auto-detected from extension). Set via `root.PersistentFlags().StringVarP(&outputFlag, "output", "o", "", ...)`.
+  - `--output-file string` — Output file path (format auto-detected from extension). Set via `root.PersistentFlags().StringVar(&outputFlag, "output-file", "", ...)`.
 - Default `RunE` (set by `main.go`): `cmd.Help()` — root with no args prints help.
 
 ### 2.2 Subcommand Registration
@@ -212,7 +212,7 @@ var apiCommands = make(map[string]*apiCommandState)
 var apiCommandsMu sync.Mutex
 var authMgr *auth.Manager              // set by SetAuthManager
 var dashboardBaseURL string            // set by SetDashboardURL
-var outputFlag string                   // set by root.PersistentFlags --output
+var outputFlag string                   // set by root.PersistentFlags --output-file
 ```
 
 ### 3.3 Referenced Types (from other packages — documented for interface completeness)

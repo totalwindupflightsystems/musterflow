@@ -113,7 +113,7 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newRefreshCommand(registry))
 	root.AddCommand(newTransformCommand())
 
-	root.PersistentFlags().StringVarP(&outputFlag, "output", "o", "", "Output file path (format auto-detected from extension)")
+	root.PersistentFlags().StringVar(&outputFlag, "output-file", "", "Output file path (format auto-detected from extension)")
 
 	loadAPISubcommands(root, registry)
 

@@ -2812,6 +2812,84 @@ func TestConfigShow_DataDir_PrintsTempPath(t *testing.T) {
 	}
 }
 
+// --- DF-005: CLI output hygiene tests ---
+
+// captureStderr runs fn and returns everything written to os.Stderr.
+func captureStderr(fn func()) string {
+	old := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	fn()
+
+	_ = w.Close()
+	os.Stderr = old
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	return buf.String()
+}
+
+// TestRootCommand_OutputFileFlag verifies the root persistent --output-file
+// flag exists and has NO shorthand (the old -o was removed to avoid collision
+// with leaf -o format shorthand).
+func TestRootCommand_OutputFileFlag(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	root := NewRootCommand(r)
+
+	flag := root.PersistentFlags().Lookup("output-file")
+	if flag == nil {
+		t.Fatal("expected --output-file persistent flag on root")
+	}
+	if flag.Shorthand != "" {
+		t.Errorf("expected --output-file to have NO shorthand, got %q", flag.Shorthand)
+	}
+	// The old --output should NOT exist as a persistent flag on root
+	oldFlag := root.PersistentFlags().Lookup("output")
+	if oldFlag != nil {
+		t.Error("did not expect --output persistent flag on root (renamed to --output-file)")
+	}
+}
+
+// TestLoadAPICommands_NoStderrNoise verifies that loadAPICommands does NOT
+// print the "✓ Generated N commands" line to stderr (DF-005 defect (a)).
+func TestLoadAPICommands_NoStderrNoise(t *testing.T) {
+	// Minimal OpenAPI 3.0 spec
+	specJSON := `{"openapi":"3.0.3","info":{"title":"Test","version":"1.0"},"servers":[{"url":"http://localhost:9999"}],"paths":{"/items":{"get":{"operationId":"listItems","summary":"List items","responses":{"200":{"description":"OK"}}}}}}`
+
+	tmpDir := t.TempDir()
+	specPath := filepath.Join(tmpDir, "test-spec.json")
+	if err := os.WriteFile(specPath, []byte(specJSON), 0644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
+
+	conn := &app.APIConnection{
+		ID:      "test-api",
+		Name:    "test-api",
+		SpecURL: specPath,
+		BaseURL: "http://localhost:9999",
+	}
+
+	parent := &cobra.Command{Use: "parent"}
+
+	stderr := captureStderr(func() {
+		err := loadAPICommands(parent, conn)
+		if err != nil {
+			t.Logf("loadAPICommands error (expected for unreachable server): %v", err)
+		}
+	})
+
+	if strings.Contains(stderr, "Generated") {
+		t.Errorf("stderr should NOT contain 'Generated' noise, got: %q", stderr)
+	}
+	if strings.Contains(stderr, "✓") {
+		t.Errorf("stderr should NOT contain checkmark noise, got: %q", stderr)
+	}
+}
+
 // --- PERF-046: Benchmarks for hot paths ---
 
 func BenchmarkNewRootCommand(b *testing.B) {
