@@ -26,7 +26,7 @@ Connected: Swagger Petstore (19 endpoints)
 Now every operation in that spec is a CLI subcommand:
 
 ```bash
-$ musterflow swagger-petstore-openapi-3-0 listPets --limit 5
+$ musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available
 ```
 
 (Output is a formatted table—see the README for the full sample.)
@@ -59,8 +59,8 @@ musterflow list
 ### Flow Commands
 
 ```bash
-# Create a new Starlark workflow
-musterflow flow create --name myflow --source flow.star --description "My first flow"
+# Create a new Starlark workflow (--source takes inline Starlark source text, not a file path)
+musterflow flow create --name myflow --source 'print(6 * 7)' --description "My first flow"
 
 # List all workflows
 musterflow flow list
@@ -69,7 +69,7 @@ musterflow flow list
 musterflow flow run myflow
 ```
 
-A flow whose `.star` source prints output returns it from `flow run`. Flows that include an `if trigger != None:` guard receive the webhook payload as the `trigger` global.
+A flow whose `.star` source prints output returns it from `flow run`. Webhook-triggered flows are created with the `--webhook` flag; the webhook payload is available inside the Starlark script as the `trigger` global (a top-level `if trigger != None:` guard does not compile — `trigger` must be used inside a function body).
 
 ### Dashboard Control
 
@@ -103,13 +103,13 @@ Start the server with `musterflow start`. The dashboard, REST API, MCP endpoint,
 ### Endpoints
 
 ```
-GET  /health                        → 200  {"status":"ok","connected_apis":N}
+GET  /api/health                   → 200  {"status":"ok","connected_apis":N}
 GET  /                              → 200  (dashboard HTML)
 GET  /api/apis                      → 200  {"apis":[...]}
 POST /api/apis                      → 201  connect an OpenAPI spec
 GET  /api/apis/<id>                 → 200  single API details
 DELETE /api/apis/<id>               → 200  disconnect an API
-POST /api/apis/<id>/refresh         → 404  not implemented (use the CLI `refresh` command)
+POST /api/apis/<id>/refresh         → 200  refresh an API's spec (returns version/endpoint diff)
 GET  /api/flows                     → 200  {"flows":[...]}
 POST /api/flows                     → 201  create a flow
 POST /api/flows/<name>/run          → 200  run a flow
@@ -170,8 +170,14 @@ Response (201):
     {
       "name": "myflow",
       "description": "My first flow",
-      "source": "print(6 * 7)\n",
-      "webhook_url": ""
+      "source": "print(6 * 7)",
+      "webhook": false
+    },
+    {
+      "name": "webhookflow",
+      "source": "print(42)",
+      "webhook": true,
+      "webhook_url": "http://localhost:9876/hooks/webhookflow"
     }
   ]
 }
@@ -181,7 +187,7 @@ Response (201):
 
 ```json
 {
-  "output": "42\n"
+  "result": "42"
 }
 ```
 
@@ -210,12 +216,12 @@ curl -X POST http://localhost:9876/mcp \
   "result": {
     "tools": [
       {
-        "name": "swagger-petstore-openapi-3-0__listPets",
-        "description": "Lists all pets",
+        "name": "findPetsByStatus",
+        "description": "Multiple status values can be provided with comma separated strings.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "limit": { "type": "integer" }
+            "status": { "type": "string" }
           }
         }
       }
@@ -224,6 +230,8 @@ curl -X POST http://localhost:9876/mcp \
 }
 ```
 
+> **Note:** MCP tool names are bare OpenAPI `operationId`s (e.g. `findPetsByStatus`, `loginUser`, `getUserByName`) with no API-name prefix. Because the MCP server registers every connected API's operations in a flat namespace, operationIds that collide across different APIs will overwrite each other — connect APIs with unique operationIds or be aware of the collision risk.
+
 ### Call a Tool
 
 **Request:**
@@ -231,7 +239,7 @@ curl -X POST http://localhost:9876/mcp \
 ```bash
 curl -X POST http://localhost:9876/mcp \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"swagger-petstore-openapi-3-0__listPets","arguments":{"limit":3}}}'
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"findPetsByStatus","arguments":{"status":"available"}}}'
 ```
 
 **Response (200):**
@@ -244,7 +252,7 @@ curl -X POST http://localhost:9876/mcp \
     "content": [
       {
         "type": "text",
-        "text": "[{\"id\":1,\"name\":\"Bella\",\"status\":\"sold\"},{\"id\":2,\"name\":\"Max\",\"status\":\"available\"},{\"id\":3,\"name\":\"Luna\",\"status\":\"pending\"}]"
+        "text": "[{\"id\":1,\"name\":\"Bella\",\"status\":\"available\"},{\"id\":2,\"name\":\"Max\",\"status\":\"available\"},{\"id\":3,\"name\":\"Luna\",\"status\":\"available\"}]"
       }
     ]
   }
@@ -268,31 +276,29 @@ MusterFlow embeds a Starlark workflow engine. Workflows are `.star` scripts stor
 ### Creating and Running a Flow
 
 ```bash
-$ cat flow.star
-print(6 * 7)
-
-$ musterflow flow create --name myflow --source flow.star --description "My first flow"
+$ musterflow flow create --name myflow --source 'print(6 * 7)' --description "My first flow"
 $ musterflow flow run myflow
 42
 ```
 
-Flows with `print()` output return their printed text from `flow run`.
+The CLI `flow run` prints the Starlark script's output to stdout. The dashboard API (`POST /api/flows/<name>/run`) returns the same output wrapped in a JSON object: `{"result": "42"}`.
 
 ### Webhook-Triggered Flows
 
-A flow can receive an external webhook payload. Add a trigger guard to your `.star` file:
+A flow can receive an external webhook payload. Create it with the `--webhook` flag:
 
-```python
-if trigger != None:
-    print("Received: " + str(trigger))
+```bash
+$ musterflow flow create --name webhookflow --source 'print(42); print("trigger=" + ("none" if trigger == None else "set"))' --webhook
 ```
 
-When this flow is created, its `webhook_url` field is populated. Non-webhook flows omit `webhook_url` entirely.
+The `trigger` global inside the Starlark script receives the parsed JSON payload. A top-level `if trigger != None:` guard does not compile in the Starlark engine ("if statement not within a function") — use `trigger` directly inside a function body or in a conditional expression as shown above.
+
+When this flow is created, its `webhook_url` field is populated (e.g. `http://localhost:9876/hooks/webhookflow`). Non-webhook flows omit `webhook_url` entirely.
 
 Trigger the flow via HTTP:
 
 ```bash
-curl -X POST http://localhost:9876/hooks/myflow \
+curl -X POST http://localhost:9876/hooks/webhookflow \
   -H "Content-Type: application/json" \
   -d '{"event":"push","repo":"my-repo"}'
 ```
@@ -313,7 +319,7 @@ Connected: Swagger Petstore (19 endpoints)
 ### 2. Call it from the CLI
 
 ```bash
-$ musterflow swagger-petstore-openapi-3-0 listPets --limit 5
+$ musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available
 ```
 
 (Formatted table output — see the README for the sample.)
@@ -328,8 +334,8 @@ Dashboard is now serving at `http://localhost:9876`. In another terminal:
 
 ```bash
 # Health check
-$ curl http://localhost:9876/health
-{"status":"ok","connected_apis":1}
+$ curl http://localhost:9876/api/health
+{"connected_apis":1,"status":"ok"}
 
 # List connected APIs
 $ curl http://localhost:9876/api/apis
@@ -343,8 +349,7 @@ $ curl -X POST http://localhost:9876/mcp \
 ### 4. Create and Run a Workflow
 
 ```bash
-$ echo 'print(6 * 7)' > flow.star
-$ musterflow flow create --name myflow --source flow.star --description "My first flow"
+$ musterflow flow create --name myflow --source 'print(6 * 7)' --description "My first flow"
 $ musterflow flow run myflow
 42
 ```
