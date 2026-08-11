@@ -449,6 +449,7 @@ func mcpViaDashboard() error {
 		Endpoint  string `json:"endpoint"`
 		Transport string `json:"transport"`
 		ToolCount int    `json:"tool_count"`
+		APICount  int    `json:"api_count"`
 		Tools     []struct {
 			Name        string `json:"name"`
 			Description string `json:"description"`
@@ -466,7 +467,13 @@ func mcpViaDashboard() error {
 		fmt.Println("No APIs connected. Connect APIs to expose them as MCP tools.")
 		return nil
 	}
-	fmt.Printf("Exposed MCP tools from %d APIs:\n\n", result.ToolCount)
+	// DF-009: print the real API count (api_count) not the tool count.
+	// Fall back to tool count if api_count is absent (older dashboard).
+	apiCount := result.APICount
+	if apiCount == 0 {
+		apiCount = result.ToolCount
+	}
+	fmt.Printf("Exposed MCP tools from %d APIs (%d tools):\n\n", apiCount, result.ToolCount)
 	for _, t := range result.Tools {
 		fmt.Printf("  [%s] %s\n", t.Name, t.Description)
 	}

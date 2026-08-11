@@ -470,6 +470,12 @@ func TestServer_MCPInfo_NoRegistry(t *testing.T) {
 	if body["tool_count"].(float64) != 0 {
 		t.Errorf("expected tool_count=0 when no registry, got %v", body["tool_count"])
 	}
+	// DF-009: api_count must be present even when toolRegistry is nil.
+	if body["api_count"] == nil {
+		t.Errorf("expected api_count field present, got nil")
+	} else if body["api_count"].(float64) != 0 {
+		t.Errorf("expected api_count=0 when no registry, got %v", body["api_count"])
+	}
 	if body["endpoint"] != "http://localhost:9876/mcp" {
 		t.Errorf("expected endpoint http://localhost:9876/mcp, got %v", body["endpoint"])
 	}
@@ -506,6 +512,12 @@ func TestServer_MCPInfo_WithTools(t *testing.T) {
 	}
 	if body["transport"] != "HTTP JSON-RPC 2.0" {
 		t.Errorf("expected transport 'HTTP JSON-RPC 2.0', got %v", body["transport"])
+	}
+	// DF-009: api_count must reflect the number of connected APIs.
+	if body["api_count"] == nil {
+		t.Errorf("expected api_count field present, got nil")
+	} else if body["api_count"].(float64) != 1 {
+		t.Errorf("expected api_count=1 (one API connection added), got %v", body["api_count"])
 	}
 }
 

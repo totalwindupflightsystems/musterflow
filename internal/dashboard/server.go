@@ -242,10 +242,15 @@ func (s *Server) handleMCPInfo(w http.ResponseWriter, r *http.Request) {
 	endpoint := fmt.Sprintf("http://localhost%s/mcp", s.addr)
 
 	if s.toolRegistry == nil {
+		apiCount := 0
+		if s.registry != nil {
+			apiCount = len(s.registry.List())
+		}
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"endpoint":   endpoint,
 			"transport":  "HTTP JSON-RPC 2.0",
 			"tool_count": 0,
+			"api_count":  apiCount,
 			"tools":      []mcpToolInfo{},
 		})
 		return
@@ -262,10 +267,15 @@ func (s *Server) handleMCPInfo(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	apiCount := 0
+	if s.registry != nil {
+		apiCount = len(s.registry.List())
+	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"endpoint":   endpoint,
 		"transport":  "HTTP JSON-RPC 2.0",
 		"tool_count": len(toolInfos),
+		"api_count":  apiCount,
 		"tools":      toolInfos,
 	})
 }

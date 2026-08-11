@@ -712,7 +712,9 @@ func TestLoadSpecData_HTTP(t *testing.T) {
 }
 
 func TestLoadSpecData_HTTPError(t *testing.T) {
-	_, err := loadSpecData("http://127.0.0.1:19999/nonexistent")
+	// Use port 1 — guaranteed to be closed (requires root privileges to bind).
+	// Port 19999 can be squatted by an unrelated process, making the suite flaky.
+	_, err := loadSpecData("http://127.0.0.1:1/nonexistent")
 	if err == nil {
 		t.Error("expected error for unreachable HTTP URL")
 	}
@@ -2452,6 +2454,7 @@ func TestMCPCommand_ViaDashboard(t *testing.T) {
 			"endpoint": "http://localhost:9876/mcp",
 			"transport": "HTTP JSON-RPC 2.0",
 			"tool_count": 2,
+			"api_count": 2,
 			"tools": [
 				{"name": "github_list_repos", "description": "List GitHub repos", "example": "{}"},
 				{"name": "slack_send", "description": "Send a Slack message", "example": "{}"}
@@ -2485,6 +2488,10 @@ func TestMCPCommand_ViaDashboard(t *testing.T) {
 	if !strings.Contains(output, "github_list_repos") {
 		t.Errorf("expected tool name from dashboard, got: %s", output)
 	}
+	// DF-009: the dashboard path should print the real API count, not the tool count.
+	if !strings.Contains(output, "Exposed MCP tools from 2 APIs (2 tools)") {
+		t.Errorf("expected 'Exposed MCP tools from 2 APIs (2 tools)' in output, got: %s", output)
+	}
 }
 
 func TestMCPCommand_ViaDashboard_NoTools(t *testing.T) {
@@ -2501,6 +2508,7 @@ func TestMCPCommand_ViaDashboard_NoTools(t *testing.T) {
 			"endpoint": "http://localhost:9876/mcp",
 			"transport": "HTTP JSON-RPC 2.0",
 			"tool_count": 0,
+			"api_count": 0,
 			"tools": []
 		}`))
 	}))
