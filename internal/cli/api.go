@@ -116,11 +116,18 @@ func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 				return e
 			}
 			if target == nil || target == cmd {
-				return cmd.Help()
+				// Unknown subcommand under an API parent — return an
+				// error so the process exits non-zero (DF-007).
+				return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
 			}
 			// Re-execute through cobra's pipeline starting at the target.
 			// target is NOT our API command (which has DisableFlagParsing),
 			// so this won't recurse — target handles its own flag parsing.
+			// Silence usage/errors on the target so it doesn't double-print
+			// (the root already has SilenceUsage/SilenceErrors; the error
+			// propagates back through this RunE to root's ExecuteContext).
+			target.SilenceUsage = true
+			target.SilenceErrors = true
 			target.SetArgs(remaining)
 			return target.Execute()
 		},

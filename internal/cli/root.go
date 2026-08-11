@@ -96,6 +96,14 @@ Connect:    musterflow connect https://api.github.com
 List:       musterflow list
 Use:        musterflow gh issues list --state open
 Workflow:   musterflow flow create`,
+
+		// SilenceUsage and SilenceErrors prevent cobra from printing
+		// the error and usage itself. The error is instead returned from
+		// ExecuteContext and printed exactly once by main.go. Without
+		// these, cobra prints "Error: ..." + usage, then main() prints
+		// "Error: ..." again — doubling the error output. See DF-007.
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 
 	root.AddCommand(newStartCommand(registry))

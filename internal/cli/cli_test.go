@@ -1625,14 +1625,14 @@ func TestConfigCommand_SetInvalidKey(t *testing.T) {
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"config", "set", "bogus", "value"})
 
-	var stderr bytes.Buffer
-	root.SetErr(&stderr)
-
-	_ = root.Execute() // expected to error
-
-	output := stderr.String()
-	if !strings.Contains(output, "unknown config key") {
-		t.Errorf("expected 'unknown config key' in stderr, got: %q", output)
+	// With SilenceErrors=true, the error is returned from Execute,
+	// not printed to stderr by cobra.
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for unknown config key, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown config key") {
+		t.Errorf("expected 'unknown config key' in error, got: %q", err.Error())
 	}
 }
 
