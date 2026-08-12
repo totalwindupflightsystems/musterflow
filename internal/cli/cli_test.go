@@ -93,6 +93,15 @@ func TestRootCommand_Use(t *testing.T) {
 	if root.Use != "musterflow" {
 		t.Errorf("expected Use 'musterflow', got %q", root.Use)
 	}
+	// DF-012: root.Long must not contain the dead 'gh issues' example
+	// (gh is not a real command; the github spec generates 'github-v3-rest-api').
+	if strings.Contains(root.Long, "gh issues") {
+		t.Errorf("root.Long should not contain dead 'gh issues' example, got: %s", root.Long)
+	}
+	// DF-012: root.Long should contain a real invokable example.
+	if !strings.Contains(root.Long, "pet find-pets-by-status") {
+		t.Errorf("root.Long should contain real 'pet find-pets-by-status' example, got: %s", root.Long)
+	}
 }
 
 func TestListCommand_Empty(t *testing.T) {

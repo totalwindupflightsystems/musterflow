@@ -94,7 +94,7 @@ func NewRootCommand(registry *app.Registry) *cobra.Command {
 
 Connect:    musterflow connect https://api.github.com
 List:       musterflow list
-Use:        musterflow gh issues list --state open
+Use:        musterflow pet find-pets-by-status --status available
 Workflow:   musterflow flow create`,
 
 		// SilenceUsage and SilenceErrors prevent cobra from printing
