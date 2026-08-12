@@ -737,8 +737,11 @@ func TestCreateAPISubcommand(t *testing.T) {
 	if !strings.Contains(cmd.Short, "test-api") {
 		t.Errorf("expected Short to contain 'test-api', got %q", cmd.Short)
 	}
-	if cmd.DisableFlagParsing != true {
-		t.Error("expected DisableFlagParsing=true for API subcommands")
+	if cmd.DisableFlagParsing {
+		t.Error("expected DisableFlagParsing=false for API subcommands (DF-011)")
+	}
+	if cmd.FParseErrWhitelist.UnknownFlags {
+		t.Error("expected FParseErrWhitelist.UnknownFlags=false (normal flag parsing, DF-011)")
 	}
 	if cmd.RunE == nil {
 		t.Error("expected RunE to be set")
@@ -748,6 +751,144 @@ func TestCreateAPISubcommand(t *testing.T) {
 	// Verify ValidArgsFunction is set for dynamic completion (AC-009.2)
 	if cmd.ValidArgsFunction == nil {
 		t.Error("expected ValidArgsFunction to be set for dynamic API subcommand completion")
+	}
+}
+
+// --- DF-011: root persistent flags on generated API group commands ---
+
+// df011TestSpec is a minimal OpenAPI 3.0 spec used by DF-011 tests so that
+// ensureAPILoaded can successfully parse the spec from a local file path.
+const df011TestSpec = `{"openapi":"3.0.3","info":{"title":"Test","version":"1.0"},"servers":[{"url":"http://localhost:9999"}],"paths":{}}`
+
+// df011Setup creates a registry with a single connected API backed by a local
+// spec file, and returns a root command with the same persistent flags that
+// main.go registers (--data-dir, --dashboard-addr).
+func df011Setup(t *testing.T) *cobra.Command {
+	t.Helper()
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+
+	tmpDir := t.TempDir()
+	specPath := filepath.Join(tmpDir, "test-spec.json")
+	if err := os.WriteFile(specPath, []byte(df011TestSpec), 0644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
+
+	conn := &app.APIConnection{
+		ID:            "df011-test-id",
+		Name:          "test-api",
+		Description:   "A test API",
+		SpecURL:       specPath,
+		BaseURL:       "http://localhost:9999",
+		EndpointCount: 5,
+	}
+	_ = r.Add(conn)
+
+	root := NewRootCommand(r)
+	// Register the same persistent flags that main.go adds.
+	root.PersistentFlags().String("data-dir", "", "Data directory")
+	root.PersistentFlags().String("dashboard-addr", "", "Dashboard address")
+	return root
+}
+
+// TestCreateAPISubcommand_ParsesRootPersistentFlags verifies that a group
+// command built by createAPISubcommand accepts root persistent flags
+// (--data-dir, --help) without error.  Before DF-011, DisableFlagParsing:true
+// caused every flag to be rejected as "unknown command".
+func TestCreateAPISubcommand_ParsesRootPersistentFlags(t *testing.T) {
+	root := df011Setup(t)
+
+	// Execute with --data-dir before the group name + --help.
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"--data-dir", "/tmp/test-df011", "test-api", "--help"})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("expected no error with --data-dir + --help on group, got: %v", err)
+	}
+	output := buf.String()
+	if !strings.Contains(output, "test-api") {
+		t.Errorf("expected help output to contain 'test-api', got: %s", output)
+	}
+}
+
+// TestCreateAPISubcommand_HelpFlagAlone verifies that `musterflow <api> --help`
+// exits 0 and shows the group help (was broken: exit 1 "unknown command --help").
+func TestCreateAPISubcommand_HelpFlagAlone(t *testing.T) {
+	root := df011Setup(t)
+
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"test-api", "--help"})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("expected no error with --help on group, got: %v", err)
+	}
+	if !strings.Contains(buf.String(), "test-api") {
+		t.Errorf("expected help output to contain 'test-api', got: %s", buf.String())
+	}
+}
+
+// TestCreateAPISubcommand_DataDirEqualsForm verifies the --data-dir=path form
+// is accepted on a group command.
+func TestCreateAPISubcommand_DataDirEqualsForm(t *testing.T) {
+	root := df011Setup(t)
+
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"test-api", "--data-dir=/tmp/test-df011-eq", "--help"})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("expected no error with --data-dir=path + --help, got: %v", err)
+	}
+	if !strings.Contains(buf.String(), "test-api") {
+		t.Errorf("expected help output to contain 'test-api', got: %s", buf.String())
+	}
+}
+
+// TestCreateAPISubcommand_UnknownFlagReturnsError verifies that unknown flags
+// on a group command produce a non-zero exit with a concise error (DF-007
+// preserved).  UnknownFlags whitelist passes the flag into args, and RunE's
+// Find path returns "unknown command".
+func TestCreateAPISubcommand_UnknownFlagReturnsError(t *testing.T) {
+	root := df011Setup(t)
+
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"test-api", "--bogus"})
+
+	err := root.Execute()
+	if err == nil {
+		t.Error("expected error for unknown flag --bogus on group command")
+	}
+}
+
+// TestCreateAPISubcommand_BareGroupShowsHelp verifies that running a bare
+// group command (no args) shows help and exits 0.
+func TestCreateAPISubcommand_BareGroupShowsHelp(t *testing.T) {
+	root := df011Setup(t)
+
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs([]string{"test-api"})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("expected no error for bare group, got: %v", err)
+	}
+	if !strings.Contains(buf.String(), "test-api") {
+		t.Errorf("expected help output to contain 'test-api', got: %s", buf.String())
 	}
 }
 

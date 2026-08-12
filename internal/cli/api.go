@@ -96,10 +96,18 @@ func loadSpecData(specURL string) ([]byte, error) {
 // for the given API connection.
 func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                conn.Name,
-		Short:              fmt.Sprintf("Commands for %s API", conn.Name),
-		Long:               conn.Description,
-		DisableFlagParsing: true,
+		Use:   conn.Name,
+		Short: fmt.Sprintf("Commands for %s API", conn.Name),
+		Long:  conn.Description,
+		// Normal flag parsing (replaces the old DisableFlagParsing: true).
+		// Root persistent flags (--data-dir, --dashboard-addr, --output-file)
+		// and --help are inherited via cobra's persistent-flag mechanism and
+		// parsed correctly on the group.  Unknown flags cause a parse error
+		// (exit non-zero, DF-007 preserved).  Leaf-specific flags appear
+		// after the first positional arg (resource/op); SetInterspersed(false)
+		// makes pflag stop parsing at the first non-flag arg so leaf flags
+		// flow into RunE → Find → target re-execution intact (DF-001/DF-002
+		// preserved).  See DF-011.
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			return ensureAPILoaded(cmd, conn)
 		},
@@ -121,7 +129,7 @@ func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 				return fmt.Errorf("unknown command %q for %q", args[0], cmd.CommandPath())
 			}
 			// Re-execute through cobra's pipeline starting at the target.
-			// target is NOT our API command (which has DisableFlagParsing),
+			// target is NOT our API command (which has normal flag parsing),
 			// so this won't recurse — target handles its own flag parsing.
 			// Silence usage/errors on the target so it doesn't double-print
 			// (the root already has SilenceUsage/SilenceErrors; the error
@@ -132,6 +140,13 @@ func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 			return target.Execute()
 		},
 	}
+	// Disable interspersed parsing so pflag stops at the first positional
+	// arg (resource/op).  This preserves leaf-specific flags that appear
+	// after the positional args — they flow into RunE → Find → target
+	// re-execution intact (DF-001/DF-002).  Without this, pflag would try
+	// to parse leaf flags (--limit, --tags, etc.) on the group command and
+	// fail with "unknown flag".  See DF-011.
+	cmd.Flags().SetInterspersed(false)
 	// Override help so lazy-loaded subcommands appear in --help output.
 	// cobra resolves the command tree before PersistentPreRunE fires, so we
 	// trigger the lazy load from the help func too.
