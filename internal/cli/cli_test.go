@@ -99,7 +99,7 @@ func TestRootCommand_Use(t *testing.T) {
 		t.Errorf("root.Long should not contain dead 'gh issues' example, got: %s", root.Long)
 	}
 	// DF-012: root.Long should contain a real invokable example.
-	if !strings.Contains(root.Long, "pet find-pets-by-status") {
+	if !strings.Contains(root.Long, "swagger-petstore-openapi-3-0 pet find-pets-by-status --status available") {
 		t.Errorf("root.Long should contain real 'pet find-pets-by-status' example, got: %s", root.Long)
 	}
 }
