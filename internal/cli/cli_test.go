@@ -2887,13 +2887,13 @@ func TestAuthAdd_DataDir_WritesToTempDir(t *testing.T) {
 
 	// Reset auth flags for this test
 	typeFlag = "apikey"
-	keyFlag = "sk-df003-test1234567890"
+	keyFlag = "sk-df003-test<redacted>"
 	certFlag = ""
 	keyPathFlag = ""
 
 	r := app.NewRegistry(t.TempDir())
 	root := NewRootCommand(r)
-	root.SetArgs([]string{"auth", "add", "df003-api", "--type", "apikey", "--key", "sk-df003-test1234567890"})
+	root.SetArgs([]string{"auth", "add", "df003-api", "--type", "apikey", "--key", "sk-df003-test<redacted>"})
 
 	output := captureStdout(func() {
 		if err := root.Execute(); err != nil {
@@ -2919,7 +2919,7 @@ func TestAuthAdd_DataDir_WritesToTempDir(t *testing.T) {
 	if !strings.Contains(string(data), "df003-api") {
 		t.Errorf("expected 'df003-api' in config file, got: %s", string(data))
 	}
-	if !strings.Contains(string(data), "sk-df003-test1234567890") {
+	if !strings.Contains(string(data), "sk-df003-test<redacted>") {
 		t.Errorf("expected key in config file, got: %s", string(data))
 	}
 
