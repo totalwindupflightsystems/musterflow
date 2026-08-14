@@ -35,6 +35,21 @@ func connectViaDashboard(specURL, baseURL, nameInput, authType string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	// Check status BEFORE decoding so a non-JSON response (e.g. a foreign
+	// server squatting on the port) gives a clean error instead of
+	// "json: cannot unmarshal number into Go value of type struct". DF-013.
+	if resp.StatusCode != http.StatusCreated {
+		var errResult struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		msg := errResult.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("connect via dashboard: %s", msg)
+	}
+
 	var result struct {
 		ID            string `json:"id"`
 		Name          string `json:"name"`
@@ -46,13 +61,6 @@ func connectViaDashboard(specURL, baseURL, nameInput, authType string) error {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)
-	}
-	if resp.StatusCode != http.StatusCreated {
-		msg := result.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("connect via dashboard: %s", msg)
 	}
 
 	fmt.Printf("✓ Connected: %s\n", result.SpecTitle)
@@ -176,6 +184,19 @@ func refreshViaDashboard(apiID string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	// Check status before decoding. DF-013.
+	if resp.StatusCode != http.StatusOK {
+		var errResult struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		msg := errResult.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("refresh via dashboard: %s", msg)
+	}
+
 	var result struct {
 		Name           string `json:"name"`
 		OldVersion     string `json:"old_version"`
@@ -187,14 +208,6 @@ func refreshViaDashboard(apiID string) error {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		msg := result.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("refresh via dashboard: %s", msg)
 	}
 
 	fmt.Printf("✓ Refreshed %s\n", result.Name)
@@ -274,6 +287,19 @@ func pullViaDashboard(apiID string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	// Check status before decoding. DF-013.
+	if resp.StatusCode != http.StatusCreated {
+		var errResult struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		msg := errResult.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("pull via dashboard: %s", msg)
+	}
+
 	var result struct {
 		ID            string `json:"id"`
 		Name          string `json:"name"`
@@ -283,13 +309,6 @@ func pullViaDashboard(apiID string) error {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)
-	}
-	if resp.StatusCode != http.StatusCreated {
-		msg := result.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("pull via dashboard: %s", msg)
 	}
 
 	fmt.Printf("✓ Pulled and connected: %s\n", result.SpecTitle)
@@ -363,6 +382,19 @@ func flowCreateViaDashboard(name, source, description string, webhook bool) erro
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	// Check status before decoding. DF-013.
+	if resp.StatusCode != http.StatusCreated {
+		var errResult struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		msg := errResult.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("create flow via dashboard: %s", msg)
+	}
+
 	var result struct {
 		Name       string `json:"name"`
 		WebhookURL string `json:"webhook_url"`
@@ -371,13 +403,6 @@ func flowCreateViaDashboard(name, source, description string, webhook bool) erro
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)
-	}
-	if resp.StatusCode != http.StatusCreated {
-		msg := result.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("create flow via dashboard: %s", msg)
 	}
 
 	fmt.Printf("✓ Created flow %q\n", result.Name)
@@ -413,19 +438,25 @@ func flowRunViaDashboard(name string, payload map[string]interface{}) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	// Check status before decoding. DF-013.
+	if resp.StatusCode != http.StatusOK {
+		var errResult struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		msg := errResult.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("run flow via dashboard: %s", msg)
+	}
+
 	var result struct {
 		Result string `json:"result"`
 		Error  string `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		msg := result.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("run flow via dashboard: %s", msg)
 	}
 
 	fmt.Print(result.Result)
@@ -541,20 +572,25 @@ func importViaDashboard(path string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	// Check status before decoding. DF-013.
+	if resp.StatusCode != http.StatusOK {
+		var errResult struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		msg := errResult.Error
+		if msg == "" {
+			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
+		}
+		return fmt.Errorf("import via dashboard: %s", msg)
+	}
+
 	var result struct {
 		Imported int    `json:"imported"`
 		Error    string `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		msg := result.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("import via dashboard: %s", msg)
 	}
 
 	fmt.Printf("✓ Imported %d APIs from %s\n", result.Imported, path)

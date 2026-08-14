@@ -4,8 +4,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,6 +36,7 @@ var (
 	// CLI flag overrides
 	flagDashboardAddr string
 	flagDataDir       string
+	flagNoDashboard   bool
 )
 
 func main() {
@@ -53,9 +54,11 @@ func run() error {
 	}
 
 	// Parse persistent flags BEFORE building the registry so --data-dir
-	// takes effect (cobra parses flags during ExecuteContext, which runs
-	// after the registry is constructed). See BUG-004 / DF-003.
+	// and --no-dashboard take effect (cobra parses flags during
+	// ExecuteContext, which runs after the registry is constructed).
+	// See BUG-004 / DF-003 / DF-013.
 	flagDataDir = parseDataDirFlag(os.Args[1:])
+	flagNoDashboard = parseNoDashboardFlag(os.Args[1:])
 
 	// Load config — honor --data-dir for config file location.
 	if flagDataDir != "" {
@@ -66,9 +69,21 @@ func run() error {
 		cfg.DataDir = flagDataDir
 	}
 
-	// Detect if the dashboard is already running on the configured port.
+	// Detect if the dashboard is already running.
+	// Honor --dashboard-addr if provided (parsed from raw args before cobra
+	// runs). Otherwise use the configured port.
 	dashAddr := fmt.Sprintf("127.0.0.1:%d", cfg.Port)
-	dashRunning := isPortInUse(dashAddr)
+	flagDashboardAddr = parseDashboardAddrFlag(os.Args[1:])
+	if flagDashboardAddr != "" {
+		dashAddr = flagDashboardAddr
+	}
+
+	// --no-dashboard forces the local registry path, skipping dashboard
+	// detection entirely.
+	dashRunning := false
+	if !flagNoDashboard {
+		dashRunning = isMusterflowDashboard(dashAddr)
+	}
 
 	// Load registry
 	registry := app.NewRegistry(cfg.DataDir)
@@ -99,6 +114,7 @@ func run() error {
 	// Add CLI flags
 	rootCmd.PersistentFlags().StringVar(&flagDashboardAddr, "dashboard-addr", "", "Dashboard HTTP address (default: port from config)")
 	rootCmd.PersistentFlags().StringVar(&flagDataDir, "data-dir", "", "Data directory (default: ~/.musterflow)")
+	rootCmd.PersistentFlags().BoolVar(&flagNoDashboard, "no-dashboard", false, "Force local registry mode (skip dashboard detection)")
 
 	// Override the start command to use config
 	startCmd := findSubcommand(rootCmd, "start")
@@ -159,10 +175,16 @@ func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
 }
 
 func startServer(registry *app.Registry, cfg config.Config) error {
-	// Resolve port: CLI flag > config file > default with auto-discovery
+	// Resolve port: CLI flag > config file > default with auto-discovery.
+	// The --dashboard-addr flag may be in "host:port" or ":port" form.
 	port := cfg.Port
 	if flagDashboardAddr != "" {
-		_, _ = fmt.Sscanf(flagDashboardAddr, ":%d", &port)
+		// Extract the port from either "host:port" or ":port" form.
+		// fmt.Sscanf does not support %*[^:] suppression, so use
+		// strings.LastIndex to find the final colon.
+		if idx := strings.LastIndex(flagDashboardAddr, ":"); idx >= 0 {
+			_, _ = fmt.Sscanf(flagDashboardAddr[idx+1:], "%d", &port)
+		}
 	}
 
 	port, err := config.FindPort(port)
@@ -234,14 +256,51 @@ func isTerminal() bool {
 	return term.IsTerminal(int(os.Stdin.Fd()))
 }
 
-// isPortInUse returns true if something is listening on the given TCP address.
-func isPortInUse(addr string) bool {
-	conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
+// isMusterflowDashboard verifies that a musterflow dashboard is actually
+// listening on the given address by performing an HTTP GET to /api/health
+// and checking that the response is JSON with a "status" field equal to
+// "ok". A bare TCP listener (e.g. a foreign process squatting on the port)
+// will fail this check and be treated as "no dashboard running".
+//
+// This replaces the old isPortInUse check which treated ANY TCP listener as
+// the dashboard — a foreign process on :9876 (such as a dagger engine) would
+// cause musterflow connect/list to fail with JSON decode errors. See DF-013.
+func isMusterflowDashboard(addr string) bool {
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get("http://" + addr + "/api/health")
 	if err != nil {
 		return false
 	}
-	_ = conn.Close()
-	return true
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return false
+	}
+
+	var health struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
+		return false
+	}
+	return health.Status == "ok"
+}
+
+// parseDashboardAddrFlag extracts the --dashboard-addr value from raw CLI
+// args. Cobra only parses persistent flags during ExecuteContext, which runs
+// after the registry is constructed — so the flag must be read manually here
+// for dashboard detection to honor it. Supports both
+// "--dashboard-addr <value>" and "--dashboard-addr=<value>" forms.
+func parseDashboardAddrFlag(args []string) string {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--dashboard-addr" && i+1 < len(args) {
+			return args[i+1]
+		}
+		if strings.HasPrefix(args[i], "--dashboard-addr=") {
+			return strings.TrimPrefix(args[i], "--dashboard-addr=")
+		}
+	}
+	return ""
 }
 
 // parseDataDirFlag extracts the --data-dir value from raw CLI args.
@@ -259,4 +318,21 @@ func parseDataDirFlag(args []string) string {
 		}
 	}
 	return ""
+}
+
+// parseNoDashboardFlag detects the --no-dashboard flag from raw CLI args.
+// Returns true if the flag is present (in either "--no-dashboard" or
+// "--no-dashboard=true" form). Used to force local registry mode before
+// cobra parses flags. See DF-013.
+func parseNoDashboardFlag(args []string) bool {
+	for _, a := range args {
+		if a == "--no-dashboard" {
+			return true
+		}
+		if strings.HasPrefix(a, "--no-dashboard=") {
+			v := strings.TrimPrefix(a, "--no-dashboard=")
+			return v == "true" || v == "1"
+		}
+	}
+	return false
 }
