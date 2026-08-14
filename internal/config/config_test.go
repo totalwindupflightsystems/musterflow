@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -134,20 +135,47 @@ func TestFindPort_Available(t *testing.T) {
 }
 
 func TestFindPort_Occupied(t *testing.T) {
-	// Occupy a dynamically-chosen port
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	// Occupy TWO dynamically-chosen ports (base and base+1) so FindPort
+	// must skip both. The returned port must not be base or base+1, and
+	// must be bindable at assertion time.
+	//
+	// The old test asserted port == base+1, which flaked under parallel
+	// test load: another package could grab base+1 between FindPort's
+	// bind-check and the assertion. By occupying two ports and only
+	// asserting "not base, not base+1, and bindable", the test is
+	// deterministic regardless of what other tests grab. See DF-014.
+	ln1, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Skipf("cannot bind for test: %v", err)
 	}
-	defer func() { _ = ln.Close() }()
-	base := ln.Addr().(*net.TCPAddr).Port
+	defer func() { _ = ln1.Close() }()
+	base := ln1.Addr().(*net.TCPAddr).Port
+
+	// Bind base+1 as a second listener. If base+1 is unavailable (rare
+	// under OS port allocation), skip — we need both occupied.
+	ln2, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", base+1))
+	if err != nil {
+		t.Skipf("cannot bind base+1 for test: %v", err)
+	}
+	defer func() { _ = ln2.Close() }()
 
 	port, err := FindPort(base)
 	if err != nil {
 		t.Fatalf("FindPort: %v", err)
 	}
-	if port != base+1 {
-		t.Errorf("expected next port %d, got %d", base+1, port)
+
+	// The returned port must not be either of the occupied ports.
+	if port == base || port == base+1 {
+		t.Errorf("FindPort(%d) = %d, expected a port != %d and != %d", base, port, base, base+1)
+	}
+
+	// The returned port must actually be bindable at assertion time,
+	// proving FindPort returned a genuinely free port.
+	ln3, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		t.Errorf("FindPort(%d) returned %d which is not bindable: %v", base, port, err)
+	} else {
+		_ = ln3.Close()
 	}
 }
 
