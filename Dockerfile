@@ -10,12 +10,14 @@
 # The muster engine is a local dependency — provide it via build context.
 # Without it, the replace directive in go.mod will fail.
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26-bookworm AS builder
 
 WORKDIR /app
 
-# go-duckdb is a cgo wrapper around DuckDB's C library — the build needs gcc + musl-dev
-RUN apk add --no-cache gcc musl-dev
+# go-duckdb's prebuilt libduckdb.a is glibc-flavored (fortify symbols
+# __vsnprintf_chk/__memcpy_chk) — it CANNOT link on musl/alpine; use the
+# Debian-based image + gcc/g++ (libstdc++ needed at link time)
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
 
 # Copy muster engine from build context
 COPY --from=muster . ./muster
@@ -35,9 +37,10 @@ RUN go mod edit -replace github.com/wojons/muster=./muster && \
 
 RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
 
-FROM alpine:3.21
+# Runtime must be glibc-based too: the CGO binary links glibc dynamically
+FROM debian:bookworm-slim
 
-RUN apk add --no-cache ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/musterflow /usr/local/bin/musterflow
 
