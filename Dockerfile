@@ -5,7 +5,7 @@
 #   docker build -t musterflow --build-context muster=../muster .
 #
 # CI build:
-#   docker build -t musterflow --build-context muster=/tmp/muster .
+#   docker build -t musterflow --build-context muster=./muster .
 #
 # The muster engine is a local dependency — provide it via build context.
 # Without it, the replace directive in go.mod will fail.
@@ -18,15 +18,19 @@ WORKDIR /app
 RUN apk add --no-cache gcc musl-dev
 
 # Copy muster engine from build context
-COPY --from=muster . /tmp/muster
+COPY --from=muster . ./muster
 
 COPY go.mod go.sum ./
-RUN go mod download
+# Point the replace directive at the in-container engine path BEFORE
+# downloading, so `go mod download` can resolve the module graph
+# (works for both CI: go.mod sed'd to ./muster, and local builds: /home/kara/muster)
+RUN go mod edit -replace github.com/wojons/muster=./muster && \
+    go mod download
 
 COPY . .
 
-# Replace local muster path with build-context path
-RUN go mod edit -replace github.com/wojons/muster=/tmp/muster && \
+# Re-assert the in-container replace: `COPY . .` restores the checkout's go.mod
+RUN go mod edit -replace github.com/wojons/muster=./muster && \
     go mod tidy
 
 RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
