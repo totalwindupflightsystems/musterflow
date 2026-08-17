@@ -29,13 +29,24 @@ No catalog entries found.
 
 ### From Source
 
-> **Dependency prerequisite:** the build requires the `github.com/wojons/muster` engine, currently pinned via a `replace` directive in `go.mod` to a local checkout. The engine repo is **private** right now, so a fresh clone must check it out locally and point the `replace` at it — see `AGENTS.md` (Build & Test) for the local dev setup. This note disappears once the engine is published and the replace is dropped.
+The build depends on the `github.com/wojons/muster` engine, currently private and pinned via a `replace` directive in `go.mod`. On a fresh machine, clone both repos and point the replace at the engine checkout:
 
 ```bash
+# 1. Clone the engine (needs GitHub access to wojons/muster while it is private)
+git clone https://github.com/wojons/muster.git
+
+# 2. Clone musterflow
 git clone https://github.com/totalwindupflightsystems/musterflow.git
 cd musterflow
+
+# 3. Point the go.mod replace directive at the local engine checkout
+go mod edit -replace github.com/wojons/muster=../muster
+
+# 4. Build
 go build -o musterflow ./cmd/musterflow/
 ```
+
+> **Note:** once `wojons/muster` is published, the `replace` directive is dropped and steps 1 and 3 are no longer needed.
 
 ## Integration Guide
 
