@@ -14,19 +14,27 @@ cd musterflow
 go build -o musterflow ./cmd/musterflow/
 
 # Connect an OpenAPI spec — subcommands are generated automatically
-./musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
+./musterflow connect http://127.0.0.1:18099/openapi.yaml
 ```
 
 Output:
 
 ```
-Connected: Swagger Petstore (19 endpoints)
+✓ Connected: pet-store-api
+  ID: 9e147e1a050203c8
+  Version: 1.0.0
+  Endpoints: 5
+  Base URL: http://localhost:8080
+
+Try: musterflow pet-store-api --help
 ```
 
-Now every operation in that spec is a CLI subcommand:
+> **Note:** The ID is generated per connection — yours will differ. The remaining output (name, version, endpoint count, base URL) is deterministic for a given spec.
+
+Now every operation in that spec is a CLI subcommand. The connected API `pet-store-api` generates a `pets` command group with one subcommand per operationId (`list-pets`, `create-pet`, `get-pet`, `update-pet`, `delete-pet`):
 
 ```bash
-$ musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available
+$ musterflow pet-store-api pets list-pets
 ```
 
 (Output is a formatted table—see the README for the full sample.)
@@ -48,7 +56,7 @@ The CLI binary (`musterflow`) is the primary interface. All commands respect two
 musterflow connect <openapi-spec-url>
 ```
 
-Connects an API by its OpenAPI spec URL. MusterFlow fetches the spec, parses every endpoint, and generates CLI subcommands named after the spec title. The connection is persisted in DuckDB at `~/.musterflow/musterflow.db`.
+Connects an API by its OpenAPI spec URL. MusterFlow fetches the spec, parses every endpoint, and generates CLI subcommands named after the slugified spec title. The connection is persisted in DuckDB at `~/.musterflow/musterflow.db`.
 
 ### Listing Connected APIs
 
@@ -103,7 +111,7 @@ Start the server with `musterflow start`. The dashboard, REST API, MCP endpoint,
 ### Endpoints
 
 ```
-GET  /api/health                   → 200  {"status":"ok","connected_apis":N}
+GET  /api/health                   → 200  {"connected_apis":N,"status":"ok"}
 GET  /                              → 200  (dashboard HTML)
 GET  /api/apis                      → 200  {"apis":[...]}
 POST /api/apis                      → 201  connect an OpenAPI spec
@@ -127,22 +135,28 @@ GET  /api/mcp/info                  → 200  MCP endpoint info and tool list
 {
   "apis": [
     {
-      "id": "swagger-petstore-openapi-3-0",
-      "name": "Swagger Petstore",
-      "spec_url": "https://petstore3.swagger.io/api/v3/openapi.json",
-      "base_url": "https://petstore3.swagger.io/api/v3",
-      "auth_type": "",
-      "endpoint_count": 19
+      "id": "9e147e1a050203c8",
+      "name": "pet-store-api",
+      "spec_url": "http://127.0.0.1:18099/openapi.yaml",
+      "base_url": "http://localhost:8080",
+      "version": "1.0.0",
+      "description": "A simple API for managing pets",
+      "auth_type": "none",
+      "added_at": "2026-08-18T19:48:00.549782Z",
+      "updated_at": "2026-08-18T19:48:00.549782Z",
+      "endpoint_count": 5
     }
   ]
 }
 ```
 
+> **Note:** `name` is the API slug (used in CLI subcommands), not the human-readable spec title. `auth_type` is `"none"` for unauthenticated APIs (not an empty string). `added_at` and `updated_at` are RFC 3339 timestamps generated per connection — yours will differ.
+
 **POST /api/apis** — connect a new API (request body):
 
 ```json
 {
-  "spec_url": "https://petstore3.swagger.io/api/v3/openapi.json",
+  "spec_url": "http://127.0.0.1:18099/openapi.yaml",
   "base_url": "",
   "name": "",
   "auth_type": ""
@@ -153,14 +167,16 @@ Response (201):
 
 ```json
 {
-  "id": "swagger-petstore-openapi-3-0",
-  "name": "Swagger Petstore",
-  "spec_title": "Swagger Petstore - OpenAPI 3.0",
-  "spec_version": "3.0.2",
-  "endpoint_count": 19,
-  "base_url": "https://petstore3.swagger.io/api/v3"
+  "id": "9e147e1a050203c8",
+  "name": "pet-store-api",
+  "spec_title": "pet-store-api",
+  "spec_version": "1.0.0",
+  "endpoint_count": 5,
+  "base_url": "http://localhost:8080"
 }
 ```
+
+> **Note:** The `id` is generated per connection — yours will differ. `spec_title` and `name` are both the slugified spec name, not the human-readable title.
 
 **GET /api/flows** — list of workflows:
 
@@ -175,7 +191,7 @@ Response (201):
     },
     {
       "name": "webhookflow",
-      "source": "print(42)",
+      "source": "print(42); print(\"trigger=\" + (\"none\" if trigger == None else \"set\"))",
       "webhook": true,
       "webhook_url": "http://localhost:9876/hooks/webhookflow"
     }
@@ -216,13 +232,39 @@ curl -X POST http://localhost:9876/mcp \
   "result": {
     "tools": [
       {
-        "name": "findPetsByStatus",
-        "description": "Multiple status values can be provided with comma separated strings.",
+        "name": "listPets",
+        "description": "List all pets",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "status": { "type": "string" }
+            "limit": { "type": "integer" },
+            "offset": { "type": "integer" }
           }
+        }
+      },
+      {
+        "name": "createPet",
+        "description": "Create a new pet",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "species": { "type": "string" },
+            "age": { "type": "integer" },
+            "tags": { "type": "array" }
+          },
+          "required": ["name"]
+        }
+      },
+      {
+        "name": "getPet",
+        "description": "Get a specific pet",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "petId": { "type": "string" }
+          },
+          "required": ["petId"]
         }
       }
     ]
@@ -230,7 +272,7 @@ curl -X POST http://localhost:9876/mcp \
 }
 ```
 
-> **Note:** MCP tool names are bare OpenAPI `operationId`s (e.g. `findPetsByStatus`, `loginUser`, `getUserByName`) with no API-name prefix. Because the MCP server registers every connected API's operations in a flat namespace, operationIds that collide across different APIs will overwrite each other — connect APIs with unique operationIds or be aware of the collision risk.
+> **Note:** The full response includes all five tools (`listPets`, `createPet`, `getPet`, `updatePet`, `deletePet`); three are shown above for brevity. MCP tool names are bare OpenAPI `operationId`s (e.g. `listPets`, `createPet`, `getPet`) with no API-name prefix. Because the MCP server registers every connected API's operations in a flat namespace, operationIds that collide across different APIs will overwrite each other — connect APIs with unique operationIds or be aware of the collision risk.
 
 ### Call a Tool
 
@@ -239,10 +281,12 @@ curl -X POST http://localhost:9876/mcp \
 ```bash
 curl -X POST http://localhost:9876/mcp \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"findPetsByStatus","arguments":{"status":"available"}}}'
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"listPets","arguments":{"limit":10}}}'
 ```
 
 **Response (200):**
+
+> The response content depends on the target API's live backend. The shape is always a JSON-RPC 2.0 envelope with a `result.content` array of `{type, text}` objects:
 
 ```json
 {
@@ -252,12 +296,14 @@ curl -X POST http://localhost:9876/mcp \
     "content": [
       {
         "type": "text",
-        "text": "[{\"id\":1,\"name\":\"Bella\",\"status\":\"available\"},{\"id\":2,\"name\":\"Max\",\"status\":\"available\"},{\"id\":3,\"name\":\"Luna\",\"status\":\"available\"}]"
+        "text": "[{\"id\":\"1\",\"name\":\"Bella\",\"species\":\"dog\"},{\"id\":\"2\",\"name\":\"Max\",\"species\":\"cat\"}]"
       }
     ]
   }
 }
 ```
+
+> **Note:** The `text` field contains the target API's raw JSON response, stringified. The actual values depend on the backend serving the connected spec.
 
 ### MCP Info
 
@@ -303,7 +349,13 @@ curl -X POST http://localhost:9876/hooks/webhookflow \
   -d '{"event":"push","repo":"my-repo"}'
 ```
 
-The `trigger` global inside the Starlark script receives the parsed JSON payload.
+Response (200):
+
+```json
+{"result":"42\ntrigger=set"}
+```
+
+The `trigger` global inside the Starlark script receives the parsed JSON payload. The response `result` field contains the script's stdout output.
 
 ---
 
@@ -312,14 +364,22 @@ The `trigger` global inside the Starlark script receives the parsed JSON payload
 ### 1. Connect an API
 
 ```bash
-$ musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
-Connected: Swagger Petstore (19 endpoints)
+$ musterflow connect http://127.0.0.1:18099/openapi.yaml
+✓ Connected: pet-store-api
+  ID: 9e147e1a050203c8
+  Version: 1.0.0
+  Endpoints: 5
+  Base URL: http://localhost:8080
+
+Try: musterflow pet-store-api --help
 ```
+
+> The ID is generated per connection — yours will differ.
 
 ### 2. Call it from the CLI
 
 ```bash
-$ musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available
+$ musterflow pet-store-api pets list-pets
 ```
 
 (Formatted table output — see the README for the sample.)
@@ -339,7 +399,7 @@ $ curl http://localhost:9876/api/health
 
 # List connected APIs
 $ curl http://localhost:9876/api/apis
-{"apis":[...]}
+{"apis":[{"id":"9e147e1a050203c8","name":"pet-store-api","spec_url":"http://127.0.0.1:18099/openapi.yaml","base_url":"http://localhost:8080","version":"1.0.0","description":"A simple API for managing pets","auth_type":"none","added_at":"2026-08-18T19:48:00.549782Z","updated_at":"2026-08-18T19:48:00.549782Z","endpoint_count":5}]}
 
 # List MCP tools
 $ curl -X POST http://localhost:9876/mcp \
