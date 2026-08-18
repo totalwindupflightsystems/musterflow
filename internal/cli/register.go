@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
@@ -418,7 +419,9 @@ func flowCreateViaDashboard(name, source, description string, webhook bool) erro
 }
 
 // flowRunViaDashboard runs a workflow via the dashboard HTTP API and prints
-// the raw output (no extra newline) to match the local engine.Run contract.
+// the raw output with a single trailing newline (matching the local
+// engine.Run contract: if the result already ends with "\n" no extra
+// newline is added, otherwise one is appended).
 // When payload is nil, the request is sent with no body (preserving the
 // existing nil-trigger behavior). When non-nil, the payload is wrapped as
 // {"trigger": {...}} to match the dashboard server's expected body schema.
@@ -460,6 +463,9 @@ func flowRunViaDashboard(name string, payload map[string]interface{}) error {
 	}
 
 	fmt.Print(result.Result)
+	if !strings.HasSuffix(result.Result, "\n") {
+		fmt.Println()
+	}
 	return nil
 }
 

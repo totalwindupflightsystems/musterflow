@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
@@ -460,6 +461,9 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 				return err
 			}
 			fmt.Print(output)
+			if !strings.HasSuffix(output, "\n") {
+				fmt.Println()
+			}
 			return nil
 		},
 	}

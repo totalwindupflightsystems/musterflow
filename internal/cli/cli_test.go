@@ -3193,3 +3193,73 @@ func TestImportCommand_NilStore_ActionableError(t *testing.T) {
 		t.Errorf("expected actionable error mentioning dashboard, got: %s", err.Error())
 	}
 }
+
+// --- GAP-014: flow run output must end with exactly one trailing newline ---
+
+// TestFlowCommand_RunOutputTrailingNewline verifies that flow run output is
+// newline-terminated. A flow source `print(42)` produces "42" (no newline
+// from the engine); the CLI must append exactly one "\n".
+func TestFlowCommand_RunOutputTrailingNewline(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "nlflow", "--source", "print(42)"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("flow create: %v", err)
+	}
+
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "nlflow"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow run: %v", err)
+		}
+	})
+
+	if !strings.HasSuffix(output, "\n") {
+		t.Errorf("expected output to end with newline, got: %q", output)
+	}
+	if strings.HasSuffix(output, "\n\n") {
+		t.Errorf("expected exactly one trailing newline, got double: %q", output)
+	}
+}
+
+// TestFlowCommand_RunOutputAlreadyNewlineTerminated verifies that a flow
+// whose result already ends with "\n" does NOT get a second newline appended.
+func TestFlowCommand_RunOutputAlreadyNewlineTerminated(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Two print statements produce "42\ntrigger=none\n" from the engine.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "nl2flow", "--source", `print(42); print("trigger=" + ("none" if trigger == None else "set"))`})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("flow create: %v", err)
+	}
+
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "nl2flow"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow run: %v", err)
+		}
+	})
+
+	if !strings.HasSuffix(output, "\n") {
+		t.Errorf("expected output to end with newline, got: %q", output)
+	}
+	if strings.HasSuffix(output, "\n\n") {
+		t.Errorf("expected exactly one trailing newline, got double: %q", output)
+	}
+}
