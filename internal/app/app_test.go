@@ -303,6 +303,9 @@ func TestGenerateCommandConfig(t *testing.T) {
 	if cfg.DefaultFormat != "table" {
 		t.Errorf("DefaultFormat = %q", cfg.DefaultFormat)
 	}
+	if cfg.APIName != "test-api" {
+		t.Errorf("APIName = %q, want %q", cfg.APIName, "test-api")
+	}
 }
 
 func TestDeriveName(t *testing.T) {

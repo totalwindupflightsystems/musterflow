@@ -108,6 +108,7 @@ func GenerateCommandConfig(conn *APIConnection) *generator.Config {
 		BaseURL:          conn.BaseURL,
 		DefaultFormat:    "table",
 		SupportedFormats: []string{"table", "json", "yaml"},
+		APIName:          conn.Name,
 	}
 }
 
