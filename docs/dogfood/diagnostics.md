@@ -88,3 +88,89 @@ is, why it behaves the way it does, and the right way to work with it.
   until DF-003 is fixed — it writes to `~/.musterflow/config.yaml` regardless.
 - The dogfood run's own pollution (a test apikey in the real config) was removed;
   the pre-existing `api/sk-test` entry was left untouched.
+
+---
+
+# Round 2 (2026-08-20) — what changed, new internals, new errors
+
+## Status of round-1 architecture notes (read these as UPDATED)
+
+Round 1's "two execution modes" split is **largely fixed**: generated API
+subcommands now survive `musterflow start` (DF-001, fixed via dashboard
+routing of the command tree), `--data-dir` threads through config/auth
+(DF-003), body serialization handles nested objects/arrays (DF-002), export
+routes through the dashboard (DF-006), and unknown commands exit 1 (DF-007).
+The old "right way" workarounds (stop dashboard before CLI calls, never POST
+objects) no longer apply. What remains structurally true:
+
+- CLI in dashboard mode still routes most commands over HTTP to the dashboard;
+  `--no-dashboard` forces local mode; `--dashboard-addr` overrides detection.
+- MCP tool names are bare operationIds (collision risk across APIs stands).
+- Top-level Starlark `if` still doesn't compile; webhook logic goes in functions.
+- `/health` still returns the SPA (real route: `/api/health`).
+
+## How the MCP tool registry actually works (round-2 finding DF-015)
+
+`internal/mcp/tools.go` `ToolRegistry` holds an in-memory `tools []handlers.Tool`
++ `toolConfigs` map. `Refresh()` re-fetches EVERY connected API's spec and
+rebuilds the list — but it is invoked from exactly ONE call site:
+`cmd/musterflow/main.go:206`, at server startup. Nothing else calls it:
+- `POST /api/apis` (connect) writes the connection to DuckDB and returns — no
+  registry refresh.
+- `/api/apis/<id>/refresh` refreshes the spec row, not the tool registry.
+- `musterflow refresh` is a CLI-side spec refresh.
+
+Consequence: tools/list (and `musterflow mcp`) is a snapshot of the APIs that
+existed when the server started. New APIs appear only after a restart. This
+is why the README's "dynamic" claim fails even though /api/apis and the CLI
+command tree DO update live — the tool registry is the one path that isn't
+wired to the connect event.
+
+## New internals learned this run
+
+- **MCP response decoding** (DF-016): the tools/call wrapper decodes the
+  upstream JSON into `map[string]interface{}`; array top-level responses
+  (`findPetsByStatus` returns `[...]`) fail with `cannot unmarshal array into
+  Go value of type map[string]interface {}` → returned as isError. The CLI's
+  own call path decodes into `any` and renders arrays fine.
+- **Query serialization** (DF-017): generated flags for `type: array` query
+  params produce `fmt.Sprintf("%v", slice)` → `?tags=[a b]`. Body arrays were
+  fixed in round 1 (DF-002); query arrays were missed.
+- **Catalog** (DF-018): `internal/catalog/client.go:13` hardcodes
+  `raw.githubusercontent.com/totalwindupflightsystems/musterflow-catalog/main`
+  as the index. That repo 404s (absent or private). Search failures collapse
+  into "No catalog entries found." — there is no error path that distinguishes
+  "empty catalog" from "backend unreachable". `push` prints a PR invitation to
+  the same 404 repo. The dashboard proxies search via `/api/catalog/search`.
+- **Lookups are ID-only**: dashboard routes `/api/apis/<id>`, so `refresh` and
+  `catalog push` accept only connection IDs; names fail with "not found".
+- **No API-call timeout**: the generated-call HTTP client (engine side) has no
+  Timeout; only `internal/cli/oauth.go` configures one. A hung upstream hangs
+  the CLI indefinitely (DF-023).
+- **Leaf flag boilerplate**: every generated leaf gets `-n/--namespace` and
+  `-w/--watch` from the engine generator; both silently no-op (DF-022).
+
+## Errors hit this run and the right way
+
+1. `GET /widgets?tags=[a b]` → 400 — array query flag. Right way: avoid array
+   query flags; use repeated flags only after DF-017 lands, or call via MCP/curl.
+2. MCP `tools/call` on a list endpoint → unmarshal error. Right way: use the
+   CLI for list endpoints until DF-016 lands.
+3. `catalog search github` → "No catalog entries found." — always true today,
+   the backend is absent. Right way: treat catalog as not-yet-available (DF-018).
+4. `catalog pull <x>` prints an error but exits 0 — check output text, not
+   exit code, until DF-019 lands.
+5. `refresh <name>` → "get api: not found". Right way: use the ID shown in
+   `musterflow list` (DF-024).
+6. `-o csv` / `-o parquet` → "unsupported output format". Right way: table,
+   json, yaml only (DF-020).
+
+## What round 2 proved works (don't "fix" these)
+
+- The full happy path end-to-end: connect (URL or file) → generated CLI calls →
+  start → MCP tools/call (object endpoints) → flows (create/run/payload/webhook)
+  → export/import → restart → everything persists. All verified live in one run.
+- Table/json/yaml output render correctly for scalars; error bodies render
+  table-style with exit 1; 302 redirects are followed; 401/404 surface cleanly.
+- `auth add/list/remove` with `--data-dir` is now fully isolated (DF-003 fixed).
+- Fresh `go build` from HEAD succeeds in ~40s (engine replace still machine-local).

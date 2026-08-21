@@ -2,11 +2,12 @@
 name: musterflow-usage
 description: >-
   How to actually use MusterFlow (OpenAPI spec -> CLI + MCP server + Starlark
-  workflows). Real-use knowledge from the 2026-08-10 dogfood run: entry points,
-  the corrected walkthrough, known gotchas (dashboard kills CLI subcommands,
-  nested body fields, --data-dir leak, Starlark top-level if), and the working
-  patterns. Load this before building on or testing musterflow.
-version: 1.0.0
+  workflows). Real-use knowledge from dogfood runs 2026-08-10 (DF-001..014)
+  and 2026-08-20 (DF-015..024): entry points, the corrected walkthrough,
+  known gotchas (MCP tools frozen at start, MCP array responses, query array
+  flags, dead catalog, dead leaf flags) and the working patterns. Load this
+  before building on or testing musterflow.
+version: 2.0.0
 category: software-development
 ---
 
@@ -19,24 +20,26 @@ MusterFlow turns an OpenAPI spec into: (1) a CLI with subcommands per endpoint,
 
 - CLI binary: `cmd/musterflow/main.go` → `musterflow` (build: `go build -o musterflow ./cmd/musterflow/`)
 - Dashboard + API + MCP + webhooks: `musterflow start` → all on `:9876`
-- Board: `.coding-hermes/board/tasks.jsonl` (JSONL v2.1; tasks.md is archived)
+- Board: `.coding-hermes/board/tasks.jsonl` (JSONL v2.1; tasks.md archived; board.db untracked)
 - Foreman: `musterflow-foreman` cron (coding-hermes fleet)
+- Engine: `github.com/wojons/muster` via local `replace` (private; GAP-001)
 
-## The corrected quick start (verified 2026-08-10)
+## The corrected quick start (re-verified 2026-08-20)
 
 ```bash
 # connect (URL or local file), then call
 ./musterflow --data-dir <dir> connect https://petstore3.swagger.io/api/v3/openapi.json
 ./musterflow --data-dir <dir> <api> <group> <op> [flags]   # ops grouped by OpenAPI tag
-# path params are POSITIONAL; query params are kebab-case flags; check --help
-# arrays in bodies: CSV syntax --labels a,b (NOT JSON); objects: --meta '{"a":1}' (BROKEN, see below)
+# path params are POSITIONAL; query SCALAR params are kebab-case flags; check --help
+# array body fields: CSV --labels a,b OR JSON --labels '["a","b"]' (both work since DF-002)
+# array QUERY params: BROKEN (DF-017) — avoid
 
 # dashboard + MCP
 ./musterflow --data-dir <dir> start     # then:
 curl http://127.0.0.1:9876/api/health   # NOTE: /api/health, not /health
 curl -X POST http://127.0.0.1:9876/mcp -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
-# tools/call: {"name":"<operationId>","arguments":{...}} — bare operationIds, no API prefix
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"getPetById","arguments":{"petId":4}}}'
+# tools are bare operationIds; object responses work, ARRAY responses error (DF-016)
 
 # flows (work via CLI AND dashboard API, dashboard up or down)
 ./musterflow flow create greet --source 'def main():
@@ -46,40 +49,49 @@ main()' --webhook
 curl -X POST http://127.0.0.1:9876/hooks/greet -H 'Content-Type: application/json' -d '{"x":1}'
 ```
 
-## Pitfalls (all reproduced live — see docs/dogfood/)
+## Pitfalls (all reproduced live — see docs/dogfood/2026-08-20-integration.md)
 
-1. **Dashboard running ⇒ CLI API subcommands VANISH** (DF-001, P0). Plan CLI API
-   calls before `musterflow start`, or use curl/MCP while it's up. `list`,
-   `flow *`, `connect`, `refresh` still work via dashboard routing.
-2. **Nested object body fields are sent as JSON strings** (DF-002, P1). Don't use
-   the CLI for POSTs with object-typed body fields; array fields want CSV.
-3. **`--data-dir` is ignored by config/auth** (DF-003, P1): `auth add` writes to
-   the REAL `~/.musterflow/config.yaml` even with `--data-dir /tmp/x`. Never test
-   auth with a scratch dir until fixed; clean up `~/.musterflow/config.yaml` after.
-4. **Starlark: no top-level `if`** — the integration guide's webhook example
-   (`if trigger != None:` at top level) does NOT compile. Wrap in a function.
-   Webhook-ness is the `flow create --webhook` flag, not the source text.
-5. **`export`/`import` fail with "registry not loaded" while dashboard runs**
-   (DF-006). Stop the dashboard first.
-6. **`/health` returns HTML** — real health endpoint is `/api/health`.
-7. **`flow run` output contract**: `{"result":"42"}` (not `{"output":...}`).
-8. **Unknown subcommands exit 0** — check exit codes in scripts (DF-007).
-9. **Test fragility**: `TestLoadSpecData_HTTPError` fails if anything listens on
-   port 19999 (DF-009) — unrelated to your change if you see it.
-10. **Help Examples are boilerplate** (`muster ... --namespace production`) —
-    trust `Usage:`/`Flags:`, not `Examples:` (DF-008).
+1. **MCP tools are frozen at server start (DF-015, P1).** Connect new APIs
+   BEFORE `musterflow start`, or restart the dashboard after connecting —
+   otherwise tools/list and `musterflow mcp` never show them (CLI subcommands
+   and /api/apis DO update live; only the MCP tool registry is stale).
+2. **MCP tools/call fails on array-typed responses (DF-016, P1).** List
+   endpoints (petstore `findPetsByStatus`) → `cannot unmarshal array into Go
+   value of type map[string]interface {}`. Use the CLI for list endpoints.
+3. **Array query flags are broken (DF-017, P1):** `--tags a,b` sends
+   `?tags=[a b]` → HTTP 400. Avoid array query params via CLI until fixed.
+4. **Community catalog is dead (DF-018, P1):** backend repo 404s; `catalog
+   search` ALWAYS says "No catalog entries found." (exit 0); `push`/`pull`
+   don't work. `catalog pull` errors also exit 0 (DF-019).
+5. **`refresh`/`catalog push` take the API ID, not the name (DF-024):** the
+   README example `catalog push petstore` fails; use the ID from `list`.
+6. **Only table/json/yaml output exist (DF-020):** README's csv/jsonl/parquet
+   are rejected with "unsupported output format".
+7. **Table cells for objects/arrays render as Go %v** — `map[id:1 name:Dogs]`
+   (DF-021). Use `-o json` for machine-readable output.
+8. **`--namespace`/`--watch` leaf flags are dead no-ops (DF-022)** — ignore them.
+9. **No HTTP timeout on API calls (DF-023):** a hung upstream hangs the CLI.
+10. **Starlark: no top-level `if`** — webhook logic must go inside a function.
+    Webhook-ness is the `flow create --webhook` flag, not the source text.
+11. **`/health` returns HTML** — real health endpoint is `/api/health`.
+12. **`flow run` output**: `{"result":"42"}` via API; CLI prints the value,
+    newline-terminated (GAP-014).
 
 ## Verified working patterns (use these)
 
-- `connect` → `list` → generated calls → `flow create/run` all work with the
-  dashboard stopped; MCP tools/call works with it running; flows + webhooks work
-  in both modes; data survives restarts.
-- MCP tool naming: bare operationId; same name across two APIs collides (last wins).
-- Petstore3 example: `swagger-petstore-openapi-3-0 pet find-pets-by-status --status available`.
+- `connect` → `list` → generated calls → `flow create/run` → dashboard → MCP →
+  export/import all work; data and flows survive restarts.
+- CLI and dashboard COEXIST since DF-001 — no need to stop the dashboard for
+  CLI calls (round-1 pitfall #1 is fixed).
+- `--data-dir` fully isolates config, auth, registry, and flows (DF-003 fixed)
+  — safe to test with scratch dirs.
+- Error paths: unknown commands exit 1 with one line (DF-007); HTTP 401/404
+  surface as `Error: HTTP error: <code>` with exit 1; redirects followed.
+- Petstore3 example: `swagger-petstore-openapi-3-0 pet find-pets-by-status --status available`
+  (works from CLI; not from MCP until DF-016).
 
 ## References
 
-- `docs/dogfood/2026-08-10-integration.md` — full integration report + error table
-- `docs/dogfood/diagnostics.md` — architecture and root causes
-- `docs/integration-guide.md` — upstream doc (some examples are wrong; see DF-004)
-- `specs/cli.md`, `specs/dashboard.md` — command/API specs
+- `docs/dogfood/2026-08-10-integration.md`, `docs/dogfood/2026-08-20-integration.md`
+- `docs/dogfood/diagnostics.md` (architecture + error trail)
+- `specs/cli.md`, `specs/dashboard.md`, `docs/integration-guide.md`
