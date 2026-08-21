@@ -311,8 +311,7 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 			client := catalog.NewClient()
 			entry, _, err := client.FetchEntry(args[0])
 			if err != nil {
-				fmt.Printf("Error pulling from catalog: %v\n", err)
-				return nil
+				return err
 			}
 			if entry == nil {
 				fmt.Printf("Entry %s not found in catalog.\n", args[0])

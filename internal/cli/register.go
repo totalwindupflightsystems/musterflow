@@ -263,8 +263,7 @@ func pullViaDashboard(apiID string) error {
 	client := catalog.NewClient()
 	entry, _, err := client.FetchEntry(apiID)
 	if err != nil {
-		fmt.Printf("Error pulling from catalog: %v\n", err)
-		return nil
+		return err
 	}
 	if entry == nil {
 		fmt.Printf("Entry %s not found in catalog.\n", apiID)
