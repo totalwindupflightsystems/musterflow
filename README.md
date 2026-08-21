@@ -22,7 +22,7 @@ id      name        status
 66423   pet-66423   available
 
 $ musterflow catalog search github
-No catalog entries found.
+Error: catalog backend not available (HTTP 404): repo https://raw.githubusercontent.com/totalwindupflightsystems/musterflow-catalog/main absent or private
 ```
 
 ## Installation
@@ -98,15 +98,18 @@ A dark-themed web dashboard at `http://localhost:9876`:
 - Browse the community catalog with search and quality scoring
 - MCP connection details with per-tool JSON-RPC examples
 
-### 📦 Community Catalog — Share & Discover APIs
+### 📦 Community Catalog — Share & Discover APIs (Experimental)
+
+The community catalog backend (`totalwindupflightsystems/musterflow-catalog` GitHub repo) is **not yet available**. Catalog commands (`search`, `push`, `pull`) are implemented but the backend repo has not been created yet, so `catalog search` will report that the backend is unavailable.
 
 ```bash
-musterflow catalog search github     # Search for APIs
-musterflow catalog push petstore     # Share your API connection
-musterflow catalog pull github       # Install a community API
+# Once the catalog backend is available:
+musterflow catalog search github       # Search for APIs
+musterflow catalog push <api-id>        # Share a connected API (use the ID from `musterflow list`)
+musterflow catalog pull <api-id>       # Install a community API
 ```
 
-Discover and install APIs from the community catalog. Anyone can share their API connections.
+> **Note:** `catalog push` takes an **api-id** (the ID shown by `musterflow list`), not the API name.
 
 ### 🔐 Auth — Per-API Credential Management
 
@@ -165,7 +168,7 @@ internal/completion/          → Shell completion (bash, zsh, fish)
 | `musterflow disconnect <id>` | Remove a connected API |
 | `musterflow refresh <id>` | Re-fetch and update an API's spec |
 | `musterflow start` | Start the dashboard and MCP server |
-| `musterflow catalog search <q>` | Search the community API catalog |
+| `musterflow catalog search <q>` | Search the community API catalog (experimental — backend not yet available) |
 | `musterflow catalog push <id>` | Push an API connection to the catalog |
 | `musterflow catalog pull <id>` | Install an API from the catalog |
 | `musterflow flow create <name>` | Create a Starlark workflow |

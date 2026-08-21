@@ -318,10 +318,12 @@ func TestCatalogCommand(t *testing.T) {
 	root.SetOut(buf)
 	root.SetArgs([]string{"catalog", "search", "test"})
 
-	if err := root.Execute(); err != nil {
-		t.Fatalf("catalog search: %v", err)
+	// The default catalog backend repo is not available (404), so search
+	// should now return a descriptive error instead of silently succeeding.
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error from catalog search with unavailable backend, got nil")
 	}
-	// Catalog search is a stub — should not error
 }
 
 func TestFlowCommand(t *testing.T) {
@@ -1139,14 +1141,11 @@ func TestCatalogCommand_SearchOutput(t *testing.T) {
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"catalog", "search", "github"})
 
-	output := captureStdout(func() {
-		if err := root.Execute(); err != nil {
-			t.Fatalf("catalog search: %v", err)
-		}
-	})
-
-	if output == "" {
-		t.Error("expected non-empty output from catalog search")
+	// The default catalog backend repo is not available (404), so search
+	// returns a descriptive error. The error is printed by cobra/main.
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error from catalog search with unavailable backend, got nil")
 	}
 }
 
@@ -1576,7 +1575,8 @@ func TestCatalogCommand_NilStore(t *testing.T) {
 
 func TestCatalogCommand_SearchNilStore(t *testing.T) {
 	// Search does NOT use the registry — it calls catalog.NewClient().Search().
-	// It should still work even with nil store.
+	// With the default backend unavailable (404), search returns an error.
+	// This test verifies search does not panic even with nil store.
 	r := app.NewRegistry(t.TempDir())
 	// Do NOT Load() — store stays nil
 	root := NewRootCommand(r)
@@ -2146,15 +2146,10 @@ func TestCatalogCommand_SearchExec(t *testing.T) {
 	root := NewRootCommand(r)
 	root.SetArgs([]string{"catalog", "search", "stripe"})
 	output := captureStdout(func() {
-		if err := root.Execute(); err != nil {
-			t.Errorf("catalog search: %v", err)
-		}
+		_ = root.Execute()
 	})
-	// Either finds results or says "No catalog entries" — both valid
-	if !strings.Contains(output, "result") && !strings.Contains(output, "No catalog") && !strings.Contains(output, "no catalog") {
-		t.Logf("catalog search output: %s", strings.TrimSpace(output))
-	}
-	// Must not panic
+	// With the default catalog backend unavailable (404), search returns an
+	// error (printed by cobra). The command must not panic.
 	if strings.Contains(output, "panic") {
 		t.Errorf("panic on catalog search: %s", output)
 	}

@@ -256,8 +256,7 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 			client := catalog.NewClient()
 			results, err := client.Search(args[0])
 			if err != nil {
-				fmt.Printf("Error searching catalog: %v\n", err)
-				return nil
+				return err
 			}
 			if len(results) == 0 {
 				fmt.Println("No catalog entries found.")

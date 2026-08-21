@@ -60,7 +60,7 @@ func (c *Client) Search(query string) ([]CatalogEntry, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil // catalog may not exist yet
+		return nil, fmt.Errorf("catalog backend not available (HTTP %d): repo %s absent or private", resp.StatusCode, c.repoURL)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("catalog returned status %d", resp.StatusCode)

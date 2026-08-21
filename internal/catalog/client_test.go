@@ -160,7 +160,7 @@ func TestSearchInvalidJSON(t *testing.T) {
 	}
 }
 
-func TestSearchNotFoundReturnsNil(t *testing.T) {
+func TestSearchNotFoundReturnsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 	}))
@@ -168,8 +168,8 @@ func TestSearchNotFoundReturnsNil(t *testing.T) {
 
 	client := NewClientWithRepoURL(srv.URL)
 	results, err := client.Search("anything")
-	if err != nil {
-		t.Fatalf("expected nil error for 404, got: %v", err)
+	if err == nil {
+		t.Fatal("expected error for 404, got nil")
 	}
 	if results != nil {
 		t.Errorf("expected nil results for 404, got %v", results)
