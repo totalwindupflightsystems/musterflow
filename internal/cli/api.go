@@ -136,9 +136,19 @@ func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 			// propagates back through this RunE to root's ExecuteContext).
 			target.SilenceUsage = true
 			target.SilenceErrors = true
+			// DF-020: intercept csv/jsonl/parquet output formats and --output-file
+			// before executing the generated leaf. The engine only supports
+			// table/json/yaml natively; extended formats are handled musterflow-side
+			// by forcing JSON from the engine, capturing it, and transforming with
+			// the local writers (formats.go / parquet_stub.go). --output-file is
+			// also handled here so output is written to the specified file.
+			intercepted, err := interceptOutput(target, remaining)
+			if intercepted {
+				return err
+			}
 			target.SetArgs(remaining)
 			return target.Execute()
-		},
+			},
 	}
 	// Disable interspersed parsing so pflag stops at the first positional
 	// arg (resource/op).  This preserves leaf-specific flags that appear
