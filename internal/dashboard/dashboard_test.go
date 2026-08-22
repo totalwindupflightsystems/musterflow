@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
+	"github.com/wojons/muster/pkg/mcp/handlers"
 )
 
 func TestServer_HealthEndpoint(t *testing.T) {
@@ -1071,5 +1073,146 @@ func TestServer_ExportThenImport_RoundTrip(t *testing.T) {
 	}
 	if conn.Name != "roundtrip-api" {
 		t.Errorf("expected name 'roundtrip-api', got %q", conn.Name)
+	}
+}
+
+// --- DF-015: Tool registry refresh after connect/refresh (regression) ---
+//
+// The README headline "Dynamic — connect a new API while the server is
+// running and tools update without restart" was FALSE: toolRegistry.Refresh()
+// was called only at server start. The fix re-triggers Refresh() after
+// POST /api/apis (connect) and POST /api/apis/<id>/refresh.
+//
+// These tests use local file-based OpenAPI specs (no network) and prove the
+// handlers trigger Refresh() by checking that the ToolRegistry's tool list
+// reflects the newly connected/refreshed API.
+
+// df015WriteSpec writes a minimal OpenAPI spec to a temp file and returns the path.
+func df015WriteSpec(t *testing.T, dir, filename, opID, summary string) string {
+	t.Helper()
+	path := dir + "/" + filename
+	spec := fmt.Sprintf(`{
+  "openapi": "3.0.0",
+  "info": { "title": "DF015 Test API", "version": "1.0.0" },
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "%s",
+        "summary": "%s"
+      }
+    }
+  }
+}`, opID, summary)
+	if err := os.WriteFile(path, []byte(spec), 0644); err != nil {
+		t.Fatalf("write spec %s: %v", path, err)
+	}
+	return path
+}
+
+// df015HasTool returns true if a tool with the given name exists in the slice.
+func df015HasTool(tools []handlers.Tool, name string) bool {
+	for _, t := range tools {
+		if t.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// TestServer_APIAdd_TriggersToolRefresh verifies that POST /api/apis (the
+// connect handler) re-triggers toolRegistry.Refresh() so the new API's
+// tools appear immediately without a server restart.
+func TestServer_APIAdd_TriggersToolRefresh(t *testing.T) {
+	specDir := t.TempDir()
+	specPath := df015WriteSpec(t, specDir, "spec.json", "listItems", "List all items")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	tr := mcp.NewToolRegistry(r)
+	s := NewServer(r, nil, tr, ":0")
+
+	// Baseline: no APIs connected, no tools
+	if tools := tr.ListTools(); len(tools) != 0 {
+		t.Fatalf("expected 0 tools before connect, got %d", len(tools))
+	}
+
+	// POST /api/apis — connect the API
+	body := fmt.Sprintf(`{"spec_url":%q,"base_url":"http://example.com","name":"df015-test","auth_type":"none"}`, specPath)
+	req := httptest.NewRequest(http.MethodPost, "/api/apis", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// After connect, the handler should have called tr.Refresh().
+	// The new API's tool must now appear in the registry's tool list.
+	tools := tr.ListTools()
+	if len(tools) == 0 {
+		t.Fatal("expected tools after connect (handler should have called Refresh), got 0")
+	}
+	if !df015HasTool(tools, "listItems") {
+		t.Errorf("expected 'listItems' tool after connect, got: %v", tools)
+	}
+}
+
+// TestServer_APIRefresh_TriggersToolRefresh verifies that POST /api/apis/<id>/refresh
+// re-triggers toolRegistry.Refresh() so the refreshed API's tools remain present.
+func TestServer_APIRefresh_TriggersToolRefresh(t *testing.T) {
+	specDir := t.TempDir()
+	specPath := df015WriteSpec(t, specDir, "spec.json", "listItems", "List all items")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	tr := mcp.NewToolRegistry(r)
+
+	// Connect via app.Connect (bypasses HTTP to set up state)
+	result, err := app.Connect(t.Context(), r, app.ConnectOptions{
+		SpecURL:  specPath,
+		BaseURL:  "http://example.com",
+		Name:     "df015-refresh-test",
+		AuthType: "none",
+	})
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	apiID := result.Connection.ID
+
+	// Populate the tool registry so we have a baseline
+	if err := tr.Refresh(); err != nil {
+		t.Fatalf("initial Refresh: %v", err)
+	}
+	if tools := tr.ListTools(); len(tools) == 0 {
+		t.Fatal("expected tools after initial Refresh, got 0")
+	}
+
+	s := NewServer(r, nil, tr, ":0")
+
+	// POST /api/apis/<id>/refresh
+	refreshURL := fmt.Sprintf("/api/apis/%s/refresh", apiID)
+	req := httptest.NewRequest(http.MethodPost, refreshURL, nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// After refresh, the handler should have called tr.Refresh().
+	// The tool must still be present.
+	tools := tr.ListTools()
+	if len(tools) == 0 {
+		t.Fatal("expected tools after refresh handler (handler should have called Refresh), got 0")
+	}
+	if !df015HasTool(tools, "listItems") {
+		t.Errorf("expected 'listItems' tool after refresh, got: %v", tools)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -140,6 +141,14 @@ func (s *Server) handleAPIAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// DF-015: Re-run toolRegistry.Refresh() so the new API's tools appear
+	// in MCP tools/list without a server restart.
+	if s.toolRegistry != nil {
+		if err := s.toolRegistry.Refresh(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
+		}
+	}
+
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":             result.Connection.ID,
 		"name":           result.Connection.Name,
@@ -191,6 +200,14 @@ func (s *Server) handleRefreshAPI(w http.ResponseWriter, r *http.Request, apiID 
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
+	}
+
+	// DF-015: Re-run toolRegistry.Refresh() so the refreshed API's updated
+	// tools appear in MCP tools/list without a server restart.
+	if s.toolRegistry != nil {
+		if err := s.toolRegistry.Refresh(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
