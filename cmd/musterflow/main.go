@@ -203,9 +203,17 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 
 	// Build tool registry from connected APIs
 	toolRegistry := mcp.NewToolRegistry(registry)
-	if err := toolRegistry.Refresh(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
-	}
+
+	// GAP-016: Retry the boot refresh with exponential backoff so a transient
+	// failure (network down, spec host unreachable) recovers without restart.
+	// Run asynchronously — do NOT block server startup. The retry loop stops
+	// when refresh succeeds (tools appear) or the process shuts down.
+	refreshCtx, refreshCancel := context.WithCancel(context.Background())
+	go func() {
+		_ = mcp.RefreshWithRetry(refreshCtx, toolRegistry.Refresh, mcp.DefaultRefreshBackoff, func(err error) {
+			fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
+		})
+	}()
 
 	catalogClient := catalog.NewClient()
 	dashServer := dashboard.NewServer(registry, catalogClient, toolRegistry, addr)
@@ -241,6 +249,7 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 	cancel()
 
 	fmt.Println("\nShutting down...")
+	refreshCancel()
 	_ = httpServer.Shutdown(ctx)
 	wg.Wait()
 	fmt.Println("Goodbye.")
