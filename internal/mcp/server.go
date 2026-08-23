@@ -10,8 +10,8 @@ import (
 	"github.com/wojons/muster/pkg/mcp/handlers"
 )
 
-// rpcRequest is a JSON-RPC 2.0 request (local type to avoid coupling
-// to muster's stdio server types).
+// rpcRequest is a JSON-RPC 2.0 request (local envelope type for the
+// HTTP transport; independent of the engine's handler types).
 type rpcRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      interface{}     `json:"id,omitempty"`

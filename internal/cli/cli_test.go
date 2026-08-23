@@ -279,6 +279,15 @@ func TestMCPCommand_NoAPIs(t *testing.T) {
 	if !strings.Contains(output, "No APIs connected") {
 		t.Errorf("expected 'No APIs connected' message, got: %s", output)
 	}
+	// DF-026: the mcp command must advertise the real transport (HTTP JSON-RPC
+	// 2.0) and must NOT contain the false "stdio" claim that was previously
+	// printed.
+	if strings.Contains(output, "stdio") {
+		t.Errorf("mcp output must not contain 'stdio', got: %s", output)
+	}
+	if !strings.Contains(output, "HTTP JSON-RPC 2.0") {
+		t.Errorf("mcp output must contain 'HTTP JSON-RPC 2.0', got: %s", output)
+	}
 }
 
 func TestMCPCommand_WithAPIs(t *testing.T) {

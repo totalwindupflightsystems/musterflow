@@ -481,7 +481,7 @@ func newMCPCommand(registry *app.Registry) *cobra.Command {
 				return mcpViaDashboard()
 			}
 			fmt.Println("MCP endpoint: http://localhost:9876/mcp")
-			fmt.Println("Transport: stdio JSON-RPC / HTTP SSE")
+			fmt.Println("Transport: HTTP JSON-RPC 2.0")
 			fmt.Println()
 			conns := registry.List()
 			if len(conns) == 0 {
