@@ -180,6 +180,68 @@ func TestServer_APIByID_Success(t *testing.T) {
 	}
 }
 
+// DF-024: GET /api/apis/<name> resolves by Name (not just ID).
+func TestServer_APIByID_ByName(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	_ = r.Add(&app.APIConnection{
+		ID:            "echo-test-api-2026",
+		Name:          "echo-test-api",
+		SpecURL:       "https://example.com/spec.json",
+		BaseURL:       "https://api.example.com",
+		AuthType:      "none",
+		EndpointCount: 2,
+	})
+
+	s := NewServer(r, nil, nil, ":0")
+
+	// Look up by Name, not by ID.
+	req := httptest.NewRequest(http.MethodGet, "/api/apis/echo-test-api", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 for name lookup, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var conn map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&conn); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if conn["id"] != "echo-test-api-2026" {
+		t.Errorf("expected id 'echo-test-api-2026', got %v", conn["id"])
+	}
+	if conn["name"] != "echo-test-api" {
+		t.Errorf("expected name 'echo-test-api', got %v", conn["name"])
+	}
+}
+
+// DF-024: GET /api/apis/<nonexistent> returns 404 with a helpful error.
+func TestServer_APIByID_NotFound_Message(t *testing.T) {
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	_ = r.Add(&app.APIConnection{ID: "real-id", Name: "real-api", SpecURL: "url", BaseURL: "url"})
+	s := NewServer(r, nil, nil, ":0")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/apis/nonexistent-api", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+
+	var body map[string]string
+	_ = json.NewDecoder(rec.Body).Decode(&body)
+	if !strings.Contains(body["error"], "musterflow list") {
+		t.Errorf("error should mention 'musterflow list', got: %q", body["error"])
+	}
+}
+
 func TestServer_APIByID_MissingID(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
 	if err := r.Load(); err != nil {

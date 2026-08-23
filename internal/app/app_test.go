@@ -49,6 +49,87 @@ func TestRegistry_Add_Get(t *testing.T) {
 	}
 }
 
+func TestRegistry_GetByNameOrID_ByID(t *testing.T) {
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	_ = r.Add(&APIConnection{ID: "echo-test-api-2026", Name: "echo-test-api", SpecURL: "url", BaseURL: "url"})
+
+	got, err := r.GetByNameOrID("echo-test-api-2026")
+	if err != nil {
+		t.Fatalf("GetByNameOrID by ID: %v", err)
+	}
+	if got.ID != "echo-test-api-2026" {
+		t.Errorf("ID = %q, want echo-test-api-2026", got.ID)
+	}
+}
+
+func TestRegistry_GetByNameOrID_ByName(t *testing.T) {
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	_ = r.Add(&APIConnection{ID: "echo-test-api-2026", Name: "echo-test-api", SpecURL: "url", BaseURL: "url"})
+
+	got, err := r.GetByNameOrID("echo-test-api")
+	if err != nil {
+		t.Fatalf("GetByNameOrID by Name: %v", err)
+	}
+	if got.ID != "echo-test-api-2026" {
+		t.Errorf("ID = %q, want echo-test-api-2026", got.ID)
+	}
+	if got.Name != "echo-test-api" {
+		t.Errorf("Name = %q, want echo-test-api", got.Name)
+	}
+}
+
+func TestRegistry_GetByNameOrID_NotFound(t *testing.T) {
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	_ = r.Add(&APIConnection{ID: "real-id", Name: "real-api", SpecURL: "url", BaseURL: "url"})
+
+	_, err := r.GetByNameOrID("nonexistent-api")
+	if err == nil {
+		t.Fatal("expected error for nonexistent name/id")
+	}
+	if !strings.Contains(err.Error(), "musterflow list") {
+		t.Errorf("error should mention 'musterflow list', got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "real-id") {
+		t.Errorf("error should list connected ids, got: %v", err)
+	}
+}
+
+func TestRegistry_GetByNameOrID_IDWinsOverName(t *testing.T) {
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	// A connection whose ID happens to also be another connection's Name.
+	_ = r.Add(&APIConnection{ID: "shared-slug", Name: "first-api", SpecURL: "url", BaseURL: "url"})
+	_ = r.Add(&APIConnection{ID: "second-id", Name: "shared-slug", SpecURL: "url", BaseURL: "url"})
+
+	// Looking up "shared-slug" should resolve by ID first → first-api.
+	got, err := r.GetByNameOrID("shared-slug")
+	if err != nil {
+		t.Fatalf("GetByNameOrID: %v", err)
+	}
+	if got.ID != "shared-slug" {
+		t.Errorf("ID = %q, want shared-slug (ID lookup should win)", got.ID)
+	}
+}
+
 func TestRegistry_List(t *testing.T) {
 	r := NewRegistry(t.TempDir())
 	if err := r.Load(); err != nil {

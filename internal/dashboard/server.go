@@ -177,26 +177,39 @@ func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		conn, err := s.registry.Get(id)
+		conn, err := s.registry.GetByNameOrID(id)
 		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
 		writeJSON(w, http.StatusOK, conn)
 	case http.MethodDelete:
-		if err := s.registry.Remove(id); err != nil {
+		// Resolve name-or-id so delete-by-name also works.
+		conn, err := s.registry.GetByNameOrID(id)
+		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": id})
+		if err := s.registry.Remove(conn.ID); err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": conn.ID})
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 	}
 }
 
-// handleRefreshAPI handles POST /api/apis/<id>/refresh
+// handleRefreshAPI handles POST /api/apis/<id-or-name>/refresh
 func (s *Server) handleRefreshAPI(w http.ResponseWriter, r *http.Request, apiID string) {
-	result, err := app.Refresh(r.Context(), s.registry, apiID)
+	// Resolve name-or-id so refresh-by-name also works.
+	conn, err := s.registry.GetByNameOrID(apiID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+
+	result, err := app.Refresh(r.Context(), s.registry, conn.ID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

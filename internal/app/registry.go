@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -118,6 +119,36 @@ func (r *Registry) Get(id string) (*APIConnection, error) {
 		return nil, fmt.Errorf("registry not loaded")
 	}
 	return r.store.Get(id)
+}
+
+// GetByNameOrID resolves an API connection by exact ID first, then by exact
+// Name match. If the ID lookup succeeds, that wins. If not, the registry is
+// scanned for a connection whose Name equals idOrName. If two connections share
+// a Name, the first List() hit wins. When nothing is found, the error lists
+// the connected ids so the user can pick the right one via 'musterflow list'.
+func (r *Registry) GetByNameOrID(idOrName string) (*APIConnection, error) {
+	if r.store == nil {
+		return nil, fmt.Errorf("registry not loaded")
+	}
+
+	// Try exact ID lookup first.
+	if conn, err := r.Get(idOrName); err == nil {
+		return conn, nil
+	}
+
+	// Fall back to name match via List().
+	conns := r.List()
+	for _, c := range conns {
+		if c.Name == idOrName {
+			return c, nil
+		}
+	}
+
+	ids := make([]string, len(conns))
+	for i, c := range conns {
+		ids[i] = c.ID
+	}
+	return nil, fmt.Errorf("api %q not found (connected: %s — use an id or name from 'musterflow list')", idOrName, strings.Join(ids, ", "))
 }
 
 // List returns all connected APIs.
