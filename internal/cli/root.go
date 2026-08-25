@@ -391,7 +391,13 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 			if webhook {
 				fmt.Printf("  Webhook URL: %s\n", flow.WebhookURL)
 			}
-			fmt.Printf("  Edit: %s/flows/%s.star\n", registry.DataDir(), flow.Name)
+			// DF-028: only print the Edit hint when the .star file actually
+			// exists on disk, so we never tell the user to edit a file that
+			// isn't there.
+			starPath := filepath.Join(registry.DataDir(), "flows", flow.Name+".star")
+			if _, statErr := os.Stat(starPath); statErr == nil {
+				fmt.Printf("  Edit: %s/flows/%s.star\n", registry.DataDir(), flow.Name)
+			}
 			return nil
 		},
 	}

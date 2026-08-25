@@ -20,7 +20,10 @@ import (
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/auth"
+	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/config"
+	"github.com/totalwindupflightsystems/musterflow/internal/dashboard"
+	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
 )
 
 // captureStdout runs fn and returns everything written to os.Stdout.
@@ -3265,5 +3268,93 @@ func TestFlowCommand_RunOutputAlreadyNewlineTerminated(t *testing.T) {
 	}
 	if strings.HasSuffix(output, "\n\n") {
 		t.Errorf("expected exactly one trailing newline, got double: %q", output)
+	}
+}
+
+// --- DF-028: flow create without --source must not print Edit line for a
+// nonexistent file (or the .star file must exist). ---
+
+// TestFlowCommand_CreateWithoutSource_StarFileExists verifies the local code
+// path (no dashboard): after `flow create <name>` with no --source flag, the
+// .star file exists on disk at <data-dir>/flows/<name>.star, and the Edit:
+// hint is printed (because the file exists).
+func TestFlowCommand_CreateWithoutSource_StarFileExists(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	// Ensure no dashboard is detected so the local code path runs.
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "df028-local"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow create: %v", err)
+		}
+	})
+
+	// AC: the .star file must exist on disk.
+	starPath := filepath.Join(home, "flows", "df028-local.star")
+	if _, err := os.Stat(starPath); err != nil {
+		t.Fatalf("expected .star file at %s to exist after flow create: %v", starPath, err)
+	}
+
+	// AC: since the file exists, the Edit: line should be printed.
+	if !strings.Contains(output, "Edit:") {
+		t.Errorf("expected 'Edit:' in output (file exists), got: %s", output)
+	}
+	if !strings.Contains(output, "df028-local.star") {
+		t.Errorf("expected flow name in Edit line, got: %s", output)
+	}
+}
+
+// TestFlowCommand_CreateWithoutSource_DashboardPath_StarFileExists verifies the
+// dashboard code path: when a dashboard is running, `flow create <name>` with
+// no --source routes through the dashboard HTTP API. The dashboard's engine
+// writes the .star file, and the CLI should print the Edit: line because the
+// file exists.
+func TestFlowCommand_CreateWithoutSource_DashboardPath_StarFileExists(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	// Start a real dashboard server backed by the scratch registry.
+	dashServer := dashboard.NewServer(r, catalog.NewClient(), mcp.NewToolRegistry(r), "127.0.0.1:0")
+	ts := httptest.NewServer(dashServer.Handler())
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", "df028-dash"})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow create via dashboard: %v", err)
+		}
+	})
+
+	// AC: the .star file must exist on disk (the dashboard engine writes it).
+	starPath := filepath.Join(home, "flows", "df028-dash.star")
+	if _, err := os.Stat(starPath); err != nil {
+		t.Fatalf("expected .star file at %s to exist after dashboard flow create: %v", starPath, err)
+	}
+
+	// AC: since the file exists, the Edit: line should be printed.
+	if !strings.Contains(output, "Edit:") {
+		t.Errorf("expected 'Edit:' in output (file exists), got: %s", output)
+	}
+	if !strings.Contains(output, "df028-dash.star") {
+		t.Errorf("expected flow name in Edit line, got: %s", output)
 	}
 }

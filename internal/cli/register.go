@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
@@ -413,7 +414,12 @@ func flowCreateViaDashboard(name, source, description string, webhook bool) erro
 	if flowsDir == "" {
 		flowsDir = app.DefaultDataDir()
 	}
-	fmt.Printf("  Edit: %s/%s.star\n", flowsDir, result.Name)
+	// DF-028: only print the Edit hint when the .star file actually exists
+	// on disk, so we never tell the user to edit a file that isn't there.
+	starPath := filepath.Join(flowsDir, result.Name+".star")
+	if _, statErr := os.Stat(starPath); statErr == nil {
+		fmt.Printf("  Edit: %s/%s.star\n", flowsDir, result.Name)
+	}
 	return nil
 }
 
