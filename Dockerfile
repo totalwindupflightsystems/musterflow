@@ -23,16 +23,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -
 COPY --from=muster . ./muster
 
 COPY go.mod go.sum ./
-# Point the replace directive at the in-container engine path BEFORE
-# downloading, so `go mod download` can resolve the module graph
-# (works for both CI: go.mod sed'd to ./muster, and local builds: /home/kara/muster)
-RUN go mod edit -replace github.com/wojons/muster=./muster && \
+# scripts/resolve-engine.sh is THE single engine-resolution mechanism — it
+# re-asserts the replace directive (./muster in-container, /home/kara/muster
+# for local dev) BEFORE downloading, so `go mod download` can resolve the
+# module graph. No manual sed surgery or module-edit commands anywhere.
+COPY scripts/resolve-engine.sh ./scripts/
+RUN bash scripts/resolve-engine.sh && \
     go mod download
 
 COPY . .
 
 # Re-assert the in-container replace: `COPY . .` restores the checkout's go.mod
-RUN go mod edit -replace github.com/wojons/muster=./muster && \
+RUN bash scripts/resolve-engine.sh && \
     go mod tidy
 
 RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
