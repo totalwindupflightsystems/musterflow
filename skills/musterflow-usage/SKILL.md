@@ -22,7 +22,7 @@ MusterFlow turns an OpenAPI spec into: (1) a CLI with subcommands per endpoint,
 - Dashboard + API + MCP + webhooks: `musterflow start` → all on `:9876`
 - Board: `.coding-hermes/board/tasks.jsonl` (JSONL v2.1; tasks.md archived; board.db untracked)
 - Foreman: `musterflow-foreman` cron (coding-hermes fleet)
-- Engine: `github.com/wojons/muster` via local `replace` (private; GAP-001)
+- Engine: `github.com/wojons/muster` (private; GAP-001) — resolve with `bash scripts/resolve-engine.sh` (generates `go.work`; never edits `go.mod`)
 
 ## The corrected quick start (re-verified 2026-08-20)
 

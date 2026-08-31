@@ -29,24 +29,24 @@ Error: catalog backend not available (HTTP 404): repo https://raw.githubusercont
 
 ### From Source
 
-The build depends on the `github.com/wojons/muster` engine, currently private and pinned via a `replace` directive in `go.mod`. On a fresh machine, clone both repos and point the replace at the engine checkout:
+The build depends on the `github.com/wojons/muster` engine, currently private. `scripts/resolve-engine.sh` resolves it by generating a Go workspace (`go.work`) — it never edits `go.mod`. Clone both repos side by side and run the resolver:
 
 ```bash
 # 1. Clone the engine (needs GitHub access to wojons/muster while it is private)
 git clone https://github.com/wojons/muster.git
 
-# 2. Clone musterflow
+# 2. Clone musterflow next to it
 git clone https://github.com/totalwindupflightsystems/musterflow.git
 cd musterflow
 
-# 3. Point the go.mod replace directive at the local engine checkout
-go mod edit -replace github.com/wojons/muster=../muster
+# 3. Resolve the engine (generates go.work; go.mod is untouched)
+bash scripts/resolve-engine.sh
 
 # 4. Build
 go build -o musterflow ./cmd/musterflow/
 ```
 
-> **Note:** once `wojons/muster` is published, the `replace` directive is dropped and steps 1 and 3 are no longer needed.
+> **Note:** the resolver looks for the engine at `$MUSTER_ENGINE_DIR`, then `../muster` (sibling clone), then `./muster` (CI/docker build context). `go.work`/`go.work.sum` are local, gitignored artifacts. Once `wojons/muster` is published, steps 1 and 3 are no longer needed.
 
 ## Integration Guide
 

@@ -6,12 +6,12 @@ MusterFlow turns any OpenAPI spec into a CLI, an MCP tool, and a workflow engine
 
 - **Language:** Go 1.26.5
 - **Module:** `github.com/totalwindupflightsystems/musterflow`
-- **Engine dependency:** `github.com/wojons/muster` (via `replace` directive to `/home/kara/muster`)
+- **Engine dependency:** `github.com/wojons/muster` (private; resolved via a generated Go workspace — see `scripts/resolve-engine.sh`)
 - **CLI binary:** `cmd/musterflow/main.go`
 
 ## Build & Test
 
-> **Dependency prerequisite:** the build requires the `github.com/wojons/muster` engine, pinned via a `replace` directive in `go.mod` to a local checkout (`/home/kara/muster`). The engine repo is **private** right now, so a fresh clone on another machine must check it out locally and point the `replace` at it before building. This note disappears once the engine is published and the replace is dropped.
+> **Dependency prerequisite:** the build requires the `github.com/wojons/muster` engine, resolved via a generated Go workspace. Run `bash scripts/resolve-engine.sh` once after cloning — it generates `go.work` pointing at the engine checkout (`$MUSTER_ENGINE_DIR`, `../muster`, or `./muster`) and never edits `go.mod`. The engine repo is **private** right now, so a fresh clone must have the engine checked out locally first.
 
 ```bash
 # Build
@@ -47,7 +47,7 @@ go test -count=1 ./...
 
 - **CLI-Dashboard routing:** When dashboard is running, CLI commands route through dashboard HTTP API (not direct DB access). Use `internal/cli/root.go` pattern.
 - **Test fixtures:** Tests use real HTTP servers with `httptest.NewServer`. Auth tests use local OAuth2 test servers.
-- **Replace directive:** `go.mod` has `replace github.com/wojons/muster => /home/kara/muster` for local engine development.
+- **Engine resolution:** `scripts/resolve-engine.sh` generates `go.work` pointing at the engine checkout (`$MUSTER_ENGINE_DIR`, `../muster`, or `./muster`) — run it once per checkout; never edit `go.mod` by hand.
 
 ## Foreman
 

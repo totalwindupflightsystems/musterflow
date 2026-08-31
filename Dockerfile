@@ -8,7 +8,8 @@
 #   docker build -t musterflow --build-context muster=./muster .
 #
 # The muster engine is a local dependency — provide it via build context.
-# Without it, the replace directive in go.mod will fail.
+# scripts/resolve-engine.sh generates a Go workspace (go.work) pointing at the
+# engine checkout; go.mod is never edited.
 
 FROM golang:1.26-bookworm AS builder
 
@@ -24,20 +25,18 @@ COPY --from=muster . ./muster
 
 COPY go.mod go.sum ./
 # scripts/resolve-engine.sh is THE single engine-resolution mechanism — it
-# re-asserts the replace directive (./muster in-container, /home/kara/muster
-# for local dev) BEFORE downloading, so `go mod download` can resolve the
-# module graph. No manual sed surgery or module-edit commands anywhere.
+# generates go.work (pointing at ./muster in-container) BEFORE downloading, so
+# the module graph resolves. No sed surgery or module-edit commands anywhere.
 COPY scripts/resolve-engine.sh ./scripts/
 RUN bash scripts/resolve-engine.sh && \
     go mod download
 
 COPY . .
 
-# Re-assert the in-container replace: `COPY . .` restores the checkout's go.mod
+# Re-generate go.work: `COPY . .` may restore a host-side go.work that points
+# at a path which does not exist in-container.
 RUN bash scripts/resolve-engine.sh && \
-    go mod tidy
-
-RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
+    CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
 
 # Runtime must be glibc-based too: the CGO binary links glibc dynamically
 FROM debian:bookworm-slim
