@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -588,6 +589,7 @@ func TestFormatValue(t *testing.T) {
 		{nil, "-"},
 		{"hello", "hello"},
 		{42, "42"},
+		{json.Number("9007199254740993"), "9007199254740993"},
 		{strings.Repeat("x", 100), strings.Repeat("x", 77) + "..."},
 	}
 
@@ -596,6 +598,33 @@ func TestFormatValue(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("formatValue(%v) = %q, want %q", tt.input, got, tt.expected)
 		}
+	}
+}
+
+func TestExecuteAndFormat_Table_LargeInt(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":9007199254740993}`))
+	}))
+	defer ts.Close()
+
+	cmd := &cobra.Command{}
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+
+	builder := request.NewBuilder(ts.URL, "/item", "GET")
+	opts := ExecuteOptions{Format: "table"}
+
+	if err := ExecuteAndFormat(cmd, builder, opts); err != nil {
+		t.Fatalf("ExecuteAndFormat table: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "9007199254740993") {
+		t.Errorf("expected full digits 9007199254740993, got: %s", output)
+	}
+	if strings.Contains(output, "e+") || strings.Contains(output, "E+") {
+		t.Errorf("expected no scientific notation, got: %s", output)
 	}
 }
 

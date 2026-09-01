@@ -101,6 +101,8 @@ func csvValue(v interface{}) string {
 	switch val := v.(type) {
 	case string:
 		return val
+	case json.Number:
+		return string(val)
 	case float64:
 		return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", val), "0"), ".")
 	case bool:

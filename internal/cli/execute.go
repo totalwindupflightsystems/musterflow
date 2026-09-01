@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -153,7 +154,9 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 
 	// Try to parse as JSON
 	var data interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.UseNumber()
+	if err := dec.Decode(&data); err != nil {
 		// Not JSON — print raw
 		_, _ = fmt.Fprintln(out, string(body))
 		if resp.StatusCode >= 400 {
@@ -259,7 +262,15 @@ func formatValue(v interface{}) string {
 	if v == nil {
 		return "-"
 	}
-	s := fmt.Sprintf("%v", v)
+	var s string
+	switch n := v.(type) {
+	case json.Number:
+		s = string(n)
+	case float64:
+		s = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", n), "0"), ".")
+	default:
+		s = fmt.Sprintf("%v", v)
+	}
 	// Truncate long values for table display
 	if len(s) > 80 {
 		return s[:77] + "..."
