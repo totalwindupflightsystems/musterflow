@@ -28,3 +28,5 @@
 - **Foreman:** cooldown 21600s ≥ 14400s → woken via scheduler PUT CooldownS=900 (Enabled=true, not touched otherwise).
 - **Environment notes:** scratch run in `/tmp/dogfood-mf-2026-08-20` (binary, data dirs, echo API on :18082). No pollution of `~/.musterflow` (DF-003 fix verified). Dashboard was stopped/restarted several times during the run; final state: stopped.
 2026-09-01 | PROMISING-BUT-ROUGH | 12s t2fs | friction 7 | 5 findings
+2026-09-04 | PROMISING-BUT-ROUGH | 21s t2fs | friction 8 | 5 findings
+
