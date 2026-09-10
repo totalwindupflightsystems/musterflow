@@ -31,3 +31,15 @@
 2026-09-04 | PROMISING-BUT-ROUGH | 21s t2fs | friction 8 | 5 findings
 
 2026-09-07 | PROMISING-BUT-ROUGH | 6s t2fs | friction 10 | 5 findings
+
+## 2026-09-10 — Verdict: 🟡 PROMISING-BUT-ROUGH (round 4)
+
+- **Promise:** Connect an OpenAPI spec → instant CLI + MCP tool server + Starlark workflow engine.
+- **Reality:** Core product genuinely works now — flagship petstore path verified end-to-end (create→read→find via CLI; tools/call incl. arrays via MCP; webhook→flow→JSON result), all six output formats, export/import, auth masking. Five round-2/3 P1s verified FIXED (DF-015/016/017/020/024). What remains: MCP removal still stale-until-restart (3rd run), workflows still cannot call any API (architectural — interpreter has zero builtins), and the fresh-machine install dead-ends at the private engine with a resolver that exits 0 on failure (first bunker-verified install leg).
+- **Time-to-first-success:** ~3 min on a dev box (build 45s + connect 1.4s); BLOCKED from a truly fresh machine (DF-031).
+- **Top 3 findings:** DF-029 (P1, 3rd run) MCP stale on disconnect; DF-030 (P1) no API-call builtins in flows; DF-031/032 (P1) install wall + exit-0 resolver.
+- **Tasks written:** DF-029..DF-036 (8) in `.coding-hermes/board/tasks.jsonl` + events 375-382.
+- **Artifacts:** `docs/dogfood/2026-09-10-integration.md`, `docs/dogfood/diagnostics.md` (round-4 section), `skills/musterflow-usage/SKILL.md` (v3.0).
+- **Foreman:** cooldown 43200s → woken via scheduler PUT CooldownS=900 (Enabled untouched).
+- **Environment notes:** scratch run in /tmp/dogfood-mf (data, data2, data3 dirs); one accidental connect wrote the real ~/.musterflow registry — reverted same-session (disconnect 715e581e0d464caa), real config/auth untouched (DF-003 fix verified again on the way out). Bunker leg: las-bunker-03 agent c90960ec, cloned from GitHub OK, install blocked at private engine, agent destroyed (no smoke possible — no documented smoke for a non-building install, itself part of DF-031). Test pet 90210 (DogfoodDog) left in the public petstore3 sandbox DB — harmless, upstream demo data.
+

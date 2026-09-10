@@ -174,3 +174,58 @@ wired to the connect event.
   table-style with exit 1; 302 redirects are followed; 401/404 surface cleanly.
 - `auth add/list/remove` with `--data-dir` is now fully isolated (DF-003 fixed).
 - Fresh `go build` from HEAD succeeds in ~40s (engine replace still machine-local).
+
+## Round 4 (2026-09-10): why the remaining gaps exist
+
+**The MCP stale-disconnect (DF-029) is a registry/derivation asymmetry.**
+The tool registry is a snapshot rebuilt only on the ADD path (tools/list
+reflects a new connect immediately — that fix landed), but DELETE removes
+the API from the DuckDB registry without invalidating the snapshot, so
+tools/list serves zombie tools until the process restarts. The robust shape
+is to derive the tool list from the live registry on every tools/list
+request (the registry is tiny); caching only makes sense with explicit
+invalidation on disconnect. Any agent fixing this: do NOT add a
+"refresh registry" CLI verb — the fix belongs server-side on the delete path.
+
+**The workflow engine's missing API calls (DF-030) are structural, not an
+oversight in one function.** `internal/workflow.Run()` constructs
+`dsl.NewInterpreter(nil)`; muster's `pkg/dsl` registers ONLY what you pass
+in that map, so flows get exactly `trigger` (predeclared) and `print`
+(thread hook). There is no HTTP client builtin anywhere in the pipeline.
+"Chain API calls" therefore requires new surface: register builtins
+(e.g. `http_get(url, opts)`, or api-name/operationId dispatchers backed by
+the connection registry) before the program compiles — Starlark resolves
+undefined globals at compile time, which is why the failure is
+`undefined: http_get` at flow COMPILE, not runtime. This is also why flows
+can't break existing behavior when the builtins land: nothing references
+them today.
+
+**The install wall (DF-031/032) is a supply-chain decision, not a doc bug.**
+`resolve-engine.sh` searches `$MUSTER_ENGINE_DIR`, `../muster`, `./muster`
+and — finding nothing — prints an error and returns 0, so every scripted
+consumer (CI, docker, a user's install script) marches into `go build` and
+dies on a missing go.sum entry for the engine. Two independent fixes:
+(a) the script must `exit 1` with one actionable line; (b) the README must
+stop sending fresh users to a private clone — options are publishing the
+engine, vendoring it, or shipping release binaries. Verified on a fresh
+las-bunker-03 agent: public musterflow clone works ( proves the repo is
+self-contained), engine clone fails with `could not read Username`, and a
+bare Debian agent also lacks Go entirely — README never states the Go
+version requirement.
+
+**Routing overrides data-dir (DF-033) by design, silently.** The CLI
+detects a dashboard on the configured port and forwards registry ops to it
+(DF-001's fix). The forwarded request carries no data-dir identity, so a
+user-specified `--data-dir` is simply ignored — success messages come from
+the server's registry. Correct UX: if the explicit flag differs from the
+routed server's dir, refuse or warn; `--no-dashboard` remains the escape
+hatch for guaranteed local semantics.
+
+**Round-4 regression scorecard:** DF-015 (MCP dynamic add) FIXED,
+DF-016 (tools/call arrays) FIXED, DF-017 (array query params) FIXED,
+DF-020 (output formats) FIXED, DF-024 (name-or-id) FIXED. Still open:
+DF-029 (3rd run), flag asymmetry (3rd run, DF-034), catalog 500/404
+divergence (2nd run, DF-035). The pattern across rounds: the foreman fixes
+exactly what is re-filed with live evidence, and persistent findings are
+the ones prior rounds filed without a reproduction recipe. File findings
+with exact commands.
