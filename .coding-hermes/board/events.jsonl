@@ -380,3 +380,4 @@
 {"id": 380, "timestamp": "2026-09-10T10:19:48.000000Z", "event_type": "task_created", "task_id": "DF-034", "actor": "dogfood", "detail": {"id":"DF-034","status":"pending"}}
 {"id": 381, "timestamp": "2026-09-10T10:19:48.000000Z", "event_type": "task_created", "task_id": "DF-035", "actor": "dogfood", "detail": {"id":"DF-035","status":"pending"}}
 {"id": 382, "timestamp": "2026-09-10T10:19:48.000000Z", "event_type": "task_created", "task_id": "DF-036", "actor": "dogfood", "detail": {"id":"DF-036","status":"pending"}}
+{"id": 383, "timestamp": "2026-09-10 10:45:14.000000", "event_type": "tick", "task_id": "CI-004", "actor": "foreman", "detail": "{\"event\": \"tick\", \"ts\": \"2026-09-10T10:45:09.903Z\", \"project\": \"musterflow\", \"task_id\": \"CI-004\", \"action\": \"task\", \"worker\": \"dry-run\", \"guard\": \"not_run\", \"verdict\": null, \"rework\": {\"attempts\": 1, \"reworked\": false}, \"commit\": \"none\"}"}
