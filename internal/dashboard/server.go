@@ -194,6 +194,18 @@ func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
+
+		// DF-029: Re-run toolRegistry.Refresh() so the disconnected API's
+		// tools stop appearing in MCP tools/list without a server restart.
+		// This is synchronous: the re-derivation completes before the DELETE
+		// response is written, so the disconnect is atomic from the client's
+		// point of view.
+		if s.toolRegistry != nil {
+			if err := s.toolRegistry.Refresh(); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
+			}
+		}
+
 		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": conn.ID})
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})

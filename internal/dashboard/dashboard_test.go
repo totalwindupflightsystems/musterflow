@@ -1278,3 +1278,147 @@ func TestServer_APIRefresh_TriggersToolRefresh(t *testing.T) {
 		t.Errorf("expected 'listItems' tool after refresh, got: %v", tools)
 	}
 }
+
+// --- DF-029: MCP tool registry goes stale on disconnect (regression) ---
+//
+// DELETE /api/apis/<id> removed the connection from the app registry but never
+// re-derived the MCP tool registry, so tools/list kept serving the deleted
+// API's tools until the server was restarted — contradicting the README claim
+// that tools update without a restart.
+
+// df029SpecJSON returns a minimal OpenAPI 3.0 document exposing a single GET
+// operation named opID, with its server pointing at baseURL.
+func df029SpecJSON(title, opID, summary, baseURL string) string {
+	return fmt.Sprintf(`{
+  "openapi": "3.0.0",
+  "info": { "title": %q, "version": "1.0.0" },
+  "servers": [ { "url": %q } ],
+  "paths": {
+    "/%s": {
+      "get": {
+        "operationId": %q,
+        "summary": %q,
+        "responses": { "200": { "description": "ok" } }
+      }
+    }
+  }
+}`, title, baseURL, opID, opID, summary)
+}
+
+// df029ListToolNames POSTs tools/list to the server's /mcp endpoint and
+// returns the tool names served in that response.
+func df029ListToolNames(t *testing.T, s *Server) []string {
+	t.Helper()
+
+	body := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("tools/list: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		Result struct {
+			Tools []struct {
+				Name string `json:"name"`
+			} `json:"tools"`
+		} `json:"result"`
+		Error *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode tools/list response: %v (body: %s)", err, rec.Body.String())
+	}
+	if resp.Error != nil {
+		t.Fatalf("tools/list returned JSON-RPC error %d: %s", resp.Error.Code, resp.Error.Message)
+	}
+
+	names := make([]string, 0, len(resp.Result.Tools))
+	for _, tool := range resp.Result.Tools {
+		names = append(names, tool.Name)
+	}
+	return names
+}
+
+// df029HasToolName reports whether names contains want.
+func df029HasToolName(names []string, want string) bool {
+	for _, n := range names {
+		if n == want {
+			return true
+		}
+	}
+	return false
+}
+
+// TestServer_APIByID_Delete_RefreshesMCPTools verifies that DELETE /api/apis/<id>
+// re-derives the MCP tool registry within the same request, so the deleted
+// API's tools disappear from tools/list without a server restart.
+func TestServer_APIByID_Delete_RefreshesMCPTools(t *testing.T) {
+	// Spec server; handlers capture ts so the specs can point at the real URL.
+	var ts *httptest.Server
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api-a.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(df029SpecJSON("API A", "listWidgets", "List all widgets", ts.URL)))
+	})
+	mux.HandleFunc("/api-b.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(df029SpecJSON("API B", "listGadgets", "List all gadgets", ts.URL)))
+	})
+	ts = httptest.NewServer(mux)
+	defer ts.Close()
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := r.Add(&app.APIConnection{ID: "api-a", Name: "api-a", SpecURL: ts.URL + "/api-a.json", BaseURL: ts.URL}); err != nil {
+		t.Fatalf("Add api-a: %v", err)
+	}
+	if err := r.Add(&app.APIConnection{ID: "api-b", Name: "api-b", SpecURL: ts.URL + "/api-b.json", BaseURL: ts.URL}); err != nil {
+		t.Fatalf("Add api-b: %v", err)
+	}
+
+	tr := mcp.NewToolRegistry(r)
+	if err := tr.Refresh(); err != nil {
+		t.Fatalf("initial Refresh: %v", err)
+	}
+
+	s := NewServer(r, nil, tr, ":0")
+	handlerReg := handlers.NewRegistry()
+	handlerReg.Register(handlers.NewListToolsHandler(tr))
+	handlerReg.Register(handlers.NewCallToolHandler(tr))
+	s.SetMCPHandler(mcp.NewHTTPServer(handlerReg))
+
+	// Baseline: both APIs' tools are served.
+	before := df029ListToolNames(t, s)
+	if !df029HasToolName(before, "listWidgets") {
+		t.Fatalf("baseline: expected 'listWidgets' (api-a) in tools/list, got: %v", before)
+	}
+	if !df029HasToolName(before, "listGadgets") {
+		t.Fatalf("baseline: expected 'listGadgets' (api-b) in tools/list, got: %v", before)
+	}
+
+	// Disconnect api-a through the dashboard DELETE path.
+	req := httptest.NewRequest(http.MethodDelete, "/api/apis/api-a", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("DELETE /api/apis/api-a: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Same server, no restart: the deleted API's tools must be gone and the
+	// other API's tools must survive.
+	after := df029ListToolNames(t, s)
+	if df029HasToolName(after, "listWidgets") {
+		t.Errorf("MCP tools/list still serves deleted API api-a's tool 'listWidgets' after DELETE (tool registry went stale): tools = %v", after)
+	}
+	if !df029HasToolName(after, "listGadgets") {
+		t.Errorf("expected api-b's tool 'listGadgets' to remain in tools/list after deleting api-a, got: %v", after)
+	}
+}
