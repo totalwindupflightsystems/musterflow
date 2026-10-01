@@ -229,3 +229,64 @@ divergence (2nd run, DF-035). The pattern across rounds: the foreman fixes
 exactly what is re-filed with live evidence, and persistent findings are
 the ones prior rounds filed without a reproduction recipe. File findings
 with exact commands.
+
+## Round 6 (2026-10-01): the agent-facing surfaces, and how auth was proven broken
+
+**Two P1s live in the same seam: the MCP tool registry and the auth store.**
+
+**MCP collisions (DF-039) are the naming half of DF-029's staleness.** Tools
+are registered under bare operationIds. Round 6 connected a second API
+reusing `listWidgets`/`createWidget`/… and tools/list served both — then
+`tools/call listWidgets` dispatched to the SECOND API's base URL
+(last-connect-wins map insert), silently breaking the first API's tool. The
+CLI tree namespaces by API name (`<api> <group> <op>`); the MCP surface
+doesn't. Fix shape: derive tool names `<api-slug>_<operationId>` (or keep
+short names only when globally unique) AND re-derive the registry on every
+tools/list (which is also DF-029's fix — one change closes both). Until it
+lands: never connect two APIs that share operationIds against one server.
+
+**The auth split-brain (DF-040) is a store mismatch between musterflow and
+the engine, and only a wire test sees it.** musterflow's `auth add` writes
+`config.yaml` (`auth:` map, plaintext). The generated commands' `--auth`
+flag resolves through the engine's `muster/pkg/auth.ResolveStored` → the
+PLATFORM KEYCHAIN (service `muster-cli`), which only the engine's own CLI
+populates. Result: credentials stored by musterflow are never attached to
+any request — a header-echo server received zero auth headers with the
+credential stored under the API name, the API id, with or without `--auth`.
+ musterflow also has an auto-resolve path (`ExecuteOptions.AuthManager` +
+`APIID` in internal/cli/execute.go) but nothing on the live command path
+constructs it — dead code. The engine-side bridge WORKS: `muster auth add
+--name X --type api-key --value Y` (engine binary) then `musterflow <api>
+<op> --auth X` sends `X-API-Key: Y`. So the fix is alignment, not new
+plumbing: point `--auth` resolution at `auth.Manager` first (keychain
+fallback), or make `auth add` write the keychain. Investigation traps worth
+remembering: (1) `auth get`'s "masked-looking" output was the TERMINAL's
+output redaction, not the file — byte-check (`od -c`, length) before
+believing a mask; (2) exit codes are green on every auth path while no
+credential moves — auth must be tested at the wire.
+
+**Storage hygiene (DF-041):** `config.SaveWithDataDir` writes 0644
+(internal/config/config.go:108) — a plaintext credential file that is
+group/world readable. One-line fix (0600), do it with DF-040.
+
+**`--no-dashboard` (DF-042) is not an escape hatch while the server runs:**
+the DuckDB lock error surfaces raw ("Conflicting lock is held … registry
+not loaded"). Detect the dashboard's lock and print one actionable line.
+
+**What round 6 re-verified FIXED at HEAD (do not re-file):** DF-022 (dead
+`--namespace/--watch` flags gone from leaf help), DF-024 (refresh accepts
+name AND id), DF-028 (flow create writes the file), DF-032 (resolver exits
+1 honestly — verified both paths in a scratch clone), DF-015 again (dynamic
+ADD 24→29 tools live), DF-020 again (all six formats; parquet columns now
+typed — read them back with DuckDB, id→DOUBLE). Dynamic completion reflects
+a newly-connected API instantly.
+
+**Install leg was SKIPPED this round (DF-043):** the bunker fleet refuses
+all ssh keys and the local bunker CLI has zero registered servers, so no
+fresh-machine install could be attempted — the leg stays open, not passed.
+
+**Perf (round 6, hyperfine, warm unless noted):** generated API call 19ms
+local / 12ms dashboard-routed; connect 26ms cold-fresh-HOME (bootstrap incl.)
+/~10ms warm; nothing slow enough to file. Cold BINARY build remains the only
+wait a user feels (~40s warm-cache, ~4min cold module cache).
+

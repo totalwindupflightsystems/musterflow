@@ -43,3 +43,17 @@
 - **Foreman:** cooldown 43200s → woken via scheduler PUT CooldownS=900 (Enabled untouched).
 - **Environment notes:** scratch run in /tmp/dogfood-mf (data, data2, data3 dirs); one accidental connect wrote the real ~/.musterflow registry — reverted same-session (disconnect 715e581e0d464caa), real config/auth untouched (DF-003 fix verified again on the way out). Bunker leg: las-bunker-03 agent c90960ec, cloned from GitHub OK, install blocked at private engine, agent destroyed (no smoke possible — no documented smoke for a non-building install, itself part of DF-031). Test pet 90210 (DogfoodDog) left in the public petstore3 sandbox DB — harmless, upstream demo data.
 
+2026-10-01 | PROMISING-BUT-ROUGH | t2fs ~2min dev-box | friction 6 | 5 new rows (DF-039..043) + 3 cross-evidence notes
+
+## 2026-10-01 — Verdict: 🟡 PROMISING-BUT-ROUGH (round 6, lane musterflow-docs)
+
+- **Promise:** Connect an OpenAPI spec → instant CLI + MCP tool server + Starlark workflow engine.
+- **Reality (HEAD 5a842da, no code commits since 09-10):** CLI product solid — quickstart works live (petstore upstream recovered), all six formats incl. TYPED parquet, full MCP initialize→tools/call handshake, dynamic ADD + dynamic completion hold, and four reopened/fixed rows verified at HEAD (DF-022 dead flags gone, DF-024 name-or-id, DF-028 flow template file exists, DF-032 resolver exits 1 honestly). The agent-facing surface leaked the round's value: MCP tools collide across APIs (bare operationIds, last-connect-wins dispatch — new P1 DF-039) and auth is split-brained (auth add→config.yaml vs --auth→system keychain; wire-proven zero credentials ever sent — new P1 DF-040).
+- **Time-to-first-success:** ~2 min on a dev box (build 40s warm + connect 0.6s); fresh machine still BLOCKED at the private engine (DF-031), though the failure is now loud (DF-032 fixed).
+- **Top 3 findings:** DF-039 (P1) MCP tool-name collisions silently reroute tool calls; DF-040 (P1) split-brain auth — musterflow-stored credentials never reach the wire (header-echo proof; engine-store bridge works); DF-029 (P1, 4th run) stale tools after disconnect, now compounded by DF-039's shadowing.
+- **Tasks written:** DF-039..DF-043 (5 rows) + cross-evidence notes on DF-029/030/036 in `.coding-hermes/board/tasks.jsonl`.
+- **Artifacts:** `docs/dogfood/2026-10-01-integration.md`, `docs/dogfood/diagnostics.md` (round-6 section), `skills/musterflow-usage/SKILL.md` (v3.1.0).
+- **Perf:** connect 26ms cold-fresh-HOME / ~10ms warm; generated call 19ms local / 12ms dashboard-routed — nothing slow enough to file.
+- **Foreman:** NOT woken per 2026-09-09 fleet law (21600s pin floor); rows picked up at normal cadence.
+- **Environment notes:** fully isolated scratch HOMEs (/tmp/dogfood-mf-r6/home{,2,3}); real ~/.musterflow untouched. Bunker leg SKIPPED with explicit row (DF-043): all bunker hosts refuse ssh keys, no bunkerd credential obtainable, CLI has zero registered servers. Petstore3 usage read-only. All scratch servers destroyed at run end.
+
