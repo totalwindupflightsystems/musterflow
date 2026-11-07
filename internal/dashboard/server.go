@@ -24,6 +24,8 @@ type Server struct {
 	flowsDir      string
 	mux           *http.ServeMux
 	mcpHandler    http.Handler
+	metrics       *Metrics
+	handler       http.Handler
 }
 
 // NewServer creates a new dashboard server.
@@ -35,9 +37,17 @@ func NewServer(registry *app.Registry, catalogClient *catalog.Client, toolRegist
 		addr:          addr,
 		flowsDir:      filepath.Join(registry.DataDir(), "flows"),
 		mux:           http.NewServeMux(),
+		metrics:       NewMetrics(),
 	}
 	s.registerRoutes()
+	s.handler = s.metrics.Instrument(s.mux)
 	return s
+}
+
+// Metrics returns the collector this server exports on /metrics. It is exposed
+// so an embedding process can reuse or assert on the same counters.
+func (s *Server) Metrics() *Metrics {
+	return s.metrics
 }
 
 // SetMCPHandler sets the HTTP handler for the /mcp JSON-RPC endpoint.
@@ -58,6 +68,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/import", s.handleImport)
 	s.mux.HandleFunc("/mcp", s.handleMCP)
 	s.mux.HandleFunc("/hooks/", s.handleWebhook)
+	s.mux.HandleFunc("/metrics", s.metrics.HandleMetrics)
 	s.mux.HandleFunc("/", serveIndex)
 }
 
@@ -82,12 +93,13 @@ func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 
 // Run starts the HTTP server. Blocks until the server exits.
 func (s *Server) Run() error {
-	return http.ListenAndServe(s.addr, s.mux)
+	return http.ListenAndServe(s.addr, s.handler)
 }
 
-// Handler returns the http.Handler for embedding in another server.
+// Handler returns the http.Handler for embedding in another server. The handler
+// is the instrumented mux, so embedding code exports the same metrics.
 func (s *Server) Handler() http.Handler {
-	return s.mux
+	return s.handler
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
