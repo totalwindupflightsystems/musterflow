@@ -53,21 +53,7 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 	if baseURL == "" && len(result.Document.Servers) > 0 {
 		baseURL = result.Document.Servers[0].URL
 	}
-
-	// Clean up base URL: don't add https:// to path-only URLs like "/api/v3"
-	if baseURL != "" && !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
-		if strings.HasPrefix(baseURL, "/") {
-			// Path-only — keep as-is, or use spec origin
-			if strings.HasPrefix(opts.SpecURL, "http") {
-				parts := strings.SplitN(opts.SpecURL, "/", 4)
-				if len(parts) >= 3 {
-					baseURL = parts[0] + "//" + parts[2] + baseURL
-				}
-			}
-		} else {
-			baseURL = "https://" + baseURL
-		}
-	}
+	baseURL = NormalizeBaseURL(baseURL, opts.SpecURL)
 
 	endpointCount := countEndpoints(result.Document)
 	id := generateID(opts.SpecURL)

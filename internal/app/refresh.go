@@ -37,13 +37,15 @@ func Refresh(ctx context.Context, registry *Registry, id string) (*RefreshResult
 	conn.EndpointCount = countEndpoints(result.Document)
 	conn.UpdatedAt = time.Now()
 
-	// Re-derive base URL if servers changed
-	newBaseURL := ""
+	// Re-derive base URL only from a usable server URL. A path-only ("/api/v3")
+	// or templated ("https://{host}/v1") server value cannot serve as a base
+	// URL, so the existing one is preserved.
+	rawServerURL := ""
 	if len(result.Document.Servers) > 0 {
-		newBaseURL = result.Document.Servers[0].URL
+		rawServerURL = result.Document.Servers[0].URL
 	}
-	if newBaseURL != "" && newBaseURL != conn.BaseURL {
-		// Could change — warn
+	newBaseURL := ResolveRefreshBaseURL(conn.BaseURL, rawServerURL, conn.SpecURL)
+	if newBaseURL != conn.BaseURL {
 		fmt.Printf("  ⚠ Base URL changed: %s → %s\n", conn.BaseURL, newBaseURL)
 		conn.BaseURL = newBaseURL
 	}

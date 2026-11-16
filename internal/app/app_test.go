@@ -729,9 +729,221 @@ func TestRefresh_BaseURLChange(t *testing.T) {
 	}
 }
 
-func TestRefresh_AuthTypePreserved(t *testing.T) {
+// newSpecServer serves a fixed OpenAPI document for refresh tests.
+func newSpecServer(t *testing.T, doc string) *httptest.Server {
+	t.Helper()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(doc))
+	}))
+	t.Cleanup(ts.Close)
+	return ts
+}
+
+// refreshWithServer registers a connection pointing at ts and refreshes it,
+// returning the refreshed connection.
+func refreshWithServer(t *testing.T, ts *httptest.Server, baseURL string) *APIConnection {
+	t.Helper()
+	r := NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+
+	if err := r.Add(&APIConnection{
+		ID:            "refresh-target",
+		Name:          "Refresh Target",
+		SpecURL:       ts.URL + "/openapi.json",
+		BaseURL:       baseURL,
+		Version:       "1.0.0",
+		EndpointCount: 1,
+	}); err != nil {
+		t.Fatalf("Add: %v", err)
+	}
+
+	result, err := Refresh(context.Background(), r, "refresh-target")
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+
+	stored, err := r.Get("refresh-target")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if stored.BaseURL != result.Connection.BaseURL {
+		t.Errorf("stored BaseURL = %q, result BaseURL = %q", stored.BaseURL, result.Connection.BaseURL)
+	}
+	return result.Connection
+}
+
+// AC1: a path-only server value must not clobber a usable base URL (README-1).
+func TestRefresh_PathOnlyServerPreservesBaseURL(t *testing.T) {
+	ts := newSpecServer(t, `{
+		"openapi": "3.0.0",
+		"info": {"title": "Path Only", "version": "1.0.0"},
+		"servers": [{"url": "/api/v3"}],
+		"paths": {"/x": {"get": {"operationId": "getX"}}}
+	}`)
+
+	conn := refreshWithServer(t, ts, "https://custom.example.com")
+	if conn.BaseURL != "https://custom.example.com" {
+		t.Errorf("BaseURL = %q, want https://custom.example.com", conn.BaseURL)
+	}
+	// The generated CLI config is what every command call uses.
+	if got := GenerateCommandConfig(conn).BaseURL; got != "https://custom.example.com" {
+		t.Errorf("generated command BaseURL = %q, want https://custom.example.com", got)
+	}
+}
+
+// AC2: a templated server value must not replace an existing base URL.
+func TestRefresh_TemplatedServerPreservesBaseURL(t *testing.T) {
+	ts := newSpecServer(t, `{
+		"openapi": "3.0.0",
+		"info": {"title": "Templated", "version": "1.0.0"},
+		"servers": [{"url": "https://{host}/v1"}],
+		"paths": {"/x": {"get": {"operationId": "getX"}}}
+	}`)
+
+	conn := refreshWithServer(t, ts, "https://templated.example.com")
+	if conn.BaseURL != "https://templated.example.com" {
+		t.Errorf("BaseURL = %q, want https://templated.example.com", conn.BaseURL)
+	}
+}
+
+// AC4: with no base URL yet, a path-only server is resolved against the spec origin.
+func TestRefresh_PathOnlyServerDerivesBaseURL(t *testing.T) {
+	ts := newSpecServer(t, `{
+		"openapi": "3.0.0",
+		"info": {"title": "Derive", "version": "1.0.0"},
+		"servers": [{"url": "/api/v3"}],
+		"paths": {"/x": {"get": {"operationId": "getX"}}}
+	}`)
+
+	conn := refreshWithServer(t, ts, "")
+	if want := ts.URL + "/api/v3"; conn.BaseURL != want {
+		t.Errorf("BaseURL = %q, want %q", conn.BaseURL, want)
+	}
+}
+
+func TestResolveRefreshBaseURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		cur    string
+		server string
+		spec   string
+		want   string
+	}{
+		{
+			name:   "path-only keeps existing absolute base",
+			cur:    "https://custom.example.com",
+			server: "/api/v3",
+			spec:   "https://api.example.com/openapi.json",
+			want:   "https://custom.example.com",
+		},
+		{
+			name:   "templated keeps existing absolute base",
+			cur:    "https://custom.example.com",
+			server: "https://{host}/v1",
+			spec:   "https://api.example.com/openapi.json",
+			want:   "https://custom.example.com",
+		},
+		{
+			name:   "different absolute server is adopted",
+			cur:    "https://old.example.com",
+			server: "https://new-base.example.com/v1",
+			spec:   "https://api.example.com/openapi.json",
+			want:   "https://new-base.example.com/v1",
+		},
+		{
+			name:   "empty base derives from spec origin",
+			cur:    "",
+			server: "/api/v3",
+			spec:   "https://api.example.com/openapi.json",
+			want:   "https://api.example.com/api/v3",
+		},
+		{
+			name:   "empty base adopts absolute server",
+			cur:    "",
+			server: "https://api.example.com",
+			spec:   "https://api.example.com/openapi.json",
+			want:   "https://api.example.com",
+		},
+		{
+			name:   "no server keeps existing base",
+			cur:    "https://custom.example.com",
+			server: "",
+			spec:   "https://api.example.com/openapi.json",
+			want:   "https://custom.example.com",
+		},
+		{
+			name:   "empty base with file spec stays empty",
+			cur:    "",
+			server: "/api/v3",
+			spec:   "/tmp/openapi.json",
+			want:   "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ResolveRefreshBaseURL(tt.cur, tt.server, tt.spec); got != tt.want {
+				t.Errorf("ResolveRefreshBaseURL(%q, %q, %q) = %q, want %q",
+					tt.cur, tt.server, tt.spec, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestNormalizeBaseURL pins Connect's historical behaviour behind the shared helper.
+func TestNormalizeBaseURL(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		spec string
+		want string
+	}{
+		{name: "empty", raw: "", spec: "https://api.example.com/openapi.json", want: ""},
+		{
+			name: "absolute https unchanged",
+			raw:  "https://api.example.com",
+			spec: "https://api.example.com/openapi.json",
+			want: "https://api.example.com",
+		},
+		{
+			name: "absolute http unchanged",
+			raw:  "http://localhost:8080",
+			spec: "http://localhost:8080/openapi.json",
+			want: "http://localhost:8080",
+		},
+		{
+			name: "path-only resolved against spec origin",
+			raw:  "/api/v3",
+			spec: "https://api.example.com/openapi.json",
+			want: "https://api.example.com/api/v3",
+		},
+		{
+			name: "path-only with file spec unchanged",
+			raw:  "/api/v3",
+			spec: "/tmp/openapi.json",
+			want: "/api/v3",
+		},
+		{
+			name: "bare host gets https",
+			raw:  "api.example.com",
+			spec: "https://api.example.com/openapi.json",
+			want: "https://api.example.com",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeBaseURL(tt.raw, tt.spec); got != tt.want {
+				t.Errorf("NormalizeBaseURL(%q, %q) = %q, want %q", tt.raw, tt.spec, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRefresh_AuthTypePreserved(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{
 			"openapi": "3.0.0",
 			"info": {"title": "Auth Test", "version": "1.0.0"},
