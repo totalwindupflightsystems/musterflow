@@ -57,3 +57,15 @@
 - **Foreman:** NOT woken per 2026-09-09 fleet law (21600s pin floor); rows picked up at normal cadence.
 - **Environment notes:** fully isolated scratch HOMEs (/tmp/dogfood-mf-r6/home{,2,3}); real ~/.musterflow untouched. Bunker leg SKIPPED with explicit row (DF-043): all bunker hosts refuse ssh keys, no bunkerd credential obtainable, CLI has zero registered servers. Petstore3 usage read-only. All scratch servers destroyed at run end.
 
+2026-11-16 | PROMISING-BUT-ROUGH | t2fs 146ms (5-run median, local spec) | friction 5 | 3 rows (DF-044, DF-045, PERF-001) + 2 notes | run musterflow-dogfood-2026-11-16-18-27-37
+
+## 2026-11-16 — Verdict: 🟡 PROMISING-BUT-ROUGH (round 7, HEAD 80119d1)
+
+- **Promise:** Connect an OpenAPI spec → instant CLI + MCP tool server + Starlark workflow engine.
+- **Reality:** Happy paths hold and are fast (connect 93ms, first call 53ms, 40 extra APIs cost +4.6ms startup, MCP array responses now correct, /metrics honest, export/import round-trip 42→42 idempotent, flows + webhook exactly as documented). All the discomfort is in the failure paths: non-idempotent POST retried on 5xx (3 duplicate rows from one command), a stalled peer freezing a call for 90s with SIGINT ignored and no timeout knob, and a lock-conflicted CLI fallback reporting "No APIs connected." with rc=0.
+- **Time-to-first-success:** 146ms median (5/5 rc=0) from a pristine data dir with a local spec; 0.56s against the remote petstore URL.
+- **Top 3 findings:** PERF-001 (P1) 90.4s uninterruptible stall, 3×30s attempts, `config set timeout` does not exist; DF-044 (P1) POST replayed on 5xx → duplicate writes; DF-045 (P1) empty-registry lie + `unknown command` masking a DuckDB lock held by a dashboard on a non-default port.
+- **Tasks written:** DF-044, DF-045, PERF-001 + evidence notes on DF-040 (wire-proof re-verified; `--auth` advises flags that don't exist) and DF-043 (bunker still unrunnable: "no active server", no credential).
+- **Artifacts:** `docs/dogfood/2026-11-16-integration.md`, `docs/dogfood/diagnostics.md` (round-7 section), `skills/musterflow-usage/SKILL.md` (v3.2.0, pitfalls 15-17).
+- **Environment notes:** isolated `--data-dir` + `HOME` in `~/.hermes/cache/scratch/mf-1816`; probe backends = own OpenAPI CRUD API (ThreadingHTTPServer), TCP black hole for stall probes; dashboard on :19876, scratch only. Real `~/.musterflow` untouched. Two harness bugs found and fixed in-flight (single-threaded HTTP probe server; secret redaction on the terminal misread as product masking — resolved by sha256 comparison).
+

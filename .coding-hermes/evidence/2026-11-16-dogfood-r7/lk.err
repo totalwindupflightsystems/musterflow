@@ -1,0 +1,2 @@
+Warning: could not load registry: open store: open duckdb: database/sql/driver: could not connect to database: duckdb error: IO Error: Could not set lock on file "/home/kara/.hermes/cache/scratch/mf-1816/data/musterflow.db": Conflicting lock is held in /home/kara/.hermes/cache/scratch/mf-1816/bin/musterflow (PID 3312052) by user kara. See also https://duckdb.org/docs/connect/concurrency
+Error: unknown command "dogfood-items-api" for "musterflow"

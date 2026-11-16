@@ -3,12 +3,13 @@ name: musterflow-usage
 description: >-
   How to actually use MusterFlow (OpenAPI spec -> CLI + MCP server + Starlark
   workflows). Real-use knowledge from dogfood rounds 2026-08-10 through
-  2026-10-01 (DF-001..043): entry points, the verified walkthrough, the
-  current pitfall list (MCP name collisions + stale disconnects, split-brain
-  auth, no flow API builtins, fresh-install wall, routing/data-dir override)
-  and working patterns.
+  2026-11-16 (DF-001..045, PERF-001): entry points, the verified walkthrough,
+  the current pitfall list (retry duplicates writes, 90 s uninterruptible
+  stall, empty-registry fallback, MCP name collisions + stale disconnects,
+  split-brain auth, no flow API builtins, fresh-install wall, routing/data-dir
+  override) and working patterns.
   Load this before building on or testing musterflow.
-version: 3.1.0
+version: 3.2.0
 category: software-development
 ---
 
@@ -135,6 +136,25 @@ curl -X POST localhost:9876/hooks/hook-flow -H 'Content-Type: application/json' 
 13. **Credential-bearing config.yaml is 0644 plaintext (DF-041, round 6).**
 14. **`--no-dashboard` + running server = raw DuckDB lock error (DF-042,
     round 6)** — stop the server instead.
+15. **Never retry a mutate through the CLI blindly (DF-044, P1, round 7).**
+    The request wrapper retries `5xx` for every method, POST included: a
+    backend that applies the write and then answers 500 gets the write
+    **three times** (measured: one `create-item` → 3 rows, exit 1). Before
+    re-running a failed create/update, LIST the collection and look for the
+    row you thought failed; do not assume the error means "nothing happened".
+    Use PUT (idempotent) for upserts where the spec allows it.
+16. **A stalled peer costs 90 s and Ctrl-C does not stop it (PERF-001, P1,
+    round 7).** 3 attempts × 30 s, SIGINT ignored, no timeout config key.
+    When scripting against an API that may hang, wrap the call in
+    `timeout -k 5 95 musterflow …` — the *outer* kill is the only reliable
+    one, and it must use SIGKILL.
+17. **A dashboard on a non-default port makes the CLI claim an empty registry
+    (DF-045, P1, round 7).** Lock held elsewhere → raw lock warning, then
+    `list` prints `No APIs connected.` with **rc=0** and generated commands
+    become `unknown command "<api>"`. Right way: `musterflow config set port
+    <dashboard-port>` (or `--dashboard-addr host:port` on every call) — then
+    routing works and the warning disappears. Never trust an empty `list`
+    while a dashboard is running elsewhere.
 
 ## Testing pattern for agents
 

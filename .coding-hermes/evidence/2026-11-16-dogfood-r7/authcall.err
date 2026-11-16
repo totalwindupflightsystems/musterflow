@@ -1,0 +1,1 @@
+Error: resolve --auth: credential "aaa2efdec81aaa12" not found: add it first with 'auth add --name aaa2efdec81aaa12 --type <type> --value <secret>'

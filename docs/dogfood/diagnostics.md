@@ -290,3 +290,77 @@ local / 12ms dashboard-routed; connect 26ms cold-fresh-HOME (bootstrap incl.)
 /~10ms warm; nothing slow enough to file. Cold BINARY build remains the only
 wait a user feels (~40s warm-cache, ~4min cold module cache).
 
+## Round 7 — 2026-11-16 (HEAD 80119d1): the failure paths are the product now
+
+Round 7 walked the happy paths again (public quickstart, a local CRUD API, the
+dashboard/MCP/flows surface, and a 42-API registry) and found the happy paths
+solid: connect 93 ms, first call 53 ms, 42 APIs cost +4.6 ms of CLI startup.
+Everything uncomfortable lives where the network misbehaves. Three mechanisms
+explain all of it, and each is worth understanding before touching that code.
+
+**1. The retry policy does not know what idempotent means.** `internal/`
+sends every request through one retry wrapper (`attempt 1..3`) that treats
+`5xx` as "try again", regardless of method. That is safe for `GET`/`PUT`/
+`DELETE` and dangerous for `POST`: a server that applies the write and *then*
+answers 500 (commit-then-crash, timeout-after-write, a proxy rewriting the
+response) leaves the client with a failed-looking call and no way to know the
+write landed. Measured with a backend that records the side effect before
+returning 500: one `create-item` invocation → **3 POSTs, 3 rows created (ids
+2,3,4), command exit 1**. The right way: retry only idempotent methods by
+default, or attach `Idempotency-Key` when the spec/API supports it, and give
+the user `--no-retry` / `--retries N`. Do not "fix" this by disabling retries
+globally — the same wrapper is what makes transient 502s invisible today.
+
+**2. A stalled peer costs three fixed 30 s timeouts, and the signals that
+should stop it are swallowed.** Against a TCP listener that accepts and never
+answers, `list-items --base-url <blackhole>` ran **90.4 s** (3 × ~30 s) before
+printing `TIMEOUT: … request failed after 3 attempts`. `SIGINT` sent at 3 s
+did **not** shorten it (still 90.36 s), and `timeout -k 5 25` needed the
+SIGKILL at 30.01 s — so Ctrl-C during a stall does nothing the user can see.
+There is no knob: `config set timeout 5` answers `unknown config key: timeout
+(valid: port, default_format, auto_completion, data_dir)`. The right shape is
+one total deadline for a command (not per attempt) plus an interruptible
+request context so an interrupt cancels the in-flight attempt instead of being
+ignored by the retry loop.
+
+**3. A registry that cannot be opened is reported as an empty registry.** The
+Dashboard owns the DuckDB file (single-writer lock). When the CLI cannot
+resolve a dashboard — the dashboard runs on a non-default port and `port` in
+config was not updated — it falls back to local mode, fails to open the store,
+prints the raw `Conflicting lock is held in … (PID n)` warning, and then keeps
+going as if the registry were empty: `list` says **"No APIs connected." and
+exits 0**, and every generated per-API command collapses into
+`unknown command "<api>"`. That is the worst possible pair: a script asking
+"what is connected?" gets a confident wrong answer, and an operator sees a
+command-not-found instead of "your dashboard holds the lock, set `port` or
+pass `--dashboard-addr`". The right shape is fail-closed: if the store cannot
+be opened and no dashboard answers, exit non-zero with the actionable line
+(and mention `config set port <dashboard-port>`), never invent an empty
+registry. Note the correct usage is documented but nowhere near the error:
+`musterflow config set port 19876` immediately restored routing in this run.
+
+**Auth, re-proven (DF-040):** `auth add <api-id> --type bearer --key …` exits
+0, `auth get <api-id>` returns byte-identical key material (sha256 and length
+compared — the CLI did store the real secret, the terminal merely redacts
+secret-looking output), and still **no `Authorization` header reaches the
+target**. `--auth <api-id>` then says "credential not found" and advises
+`auth add --name … --value …`, which the binary rejects (`unknown flag:
+--name`). So a CLI-created credential can neither be attached by its own id
+nor by any name a shipped command can create — the resolver and the writer
+are two different stores, and only the engine-side keychain is readable.
+
+**Install leg:** still SKIPPED (DF-043) — `bunker list` answers "no active
+server; run 'bunker connect' first" and the host holds no bunkerd credential,
+so no ephemeral fresh-machine install could be attempted this round either.
+
+**Perf:** nothing user-noticeable in the happy path (numbers in the round-7
+report); the single user-visible wait in the whole run is the 90 s stall above.
+
+**Standing harness trap, for the next fire:** a probe backend must be
+`ThreadingHTTPServer`. A single-threaded one plus a client that keeps
+connections alive wedges after the first call, and every subsequent "the
+product hangs" observation is the harness talking. The same fire also learned
+that secret-looking strings are masked on the way to the terminal: verify
+stored credentials with sha256/byte-length comparisons, never by eyeballing
+the printed value.
+

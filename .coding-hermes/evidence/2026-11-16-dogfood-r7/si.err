@@ -1,0 +1,3 @@
+Error: execute request: TIMEOUT: http: request timed out: request failed after 3 attempts: Get "http://127.0.0.1:18101/items": net/http: request canceled (Client.Timeout exceeded while awaiting headers)
+Command exited with non-zero status 124
+SIGINT wall=90.36 rc=124

@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"{\"id\":1,\"name\":\"mcp-widget\",\"status\":\"new\",\"tags\":[\"x\",\"y\"]}"}],"structuredContent":{"id":1,"name":"mcp-widget","status":"new","tags":["x","y"]}}}
