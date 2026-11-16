@@ -428,3 +428,5 @@
 {"id": 428, "timestamp": "2026-11-16T19:08:01Z", "event_type": "task_updated", "task_id": "DF-040", "actor": "foreman", "tick_number": null, "detail": "{\"status\":\"pending\"}"}
 {"id": 429, "timestamp": "2026-11-16T19:08:01Z", "event_type": "task_updated", "task_id": "DF-043", "actor": "foreman", "tick_number": null, "detail": "{\"status\":\"pending\"}"}
 {"id": 430, "timestamp": "2026-11-16T19:08:13Z", "event_type": "task_created", "task_id": "PERF-001", "actor": "foreman", "tick_number": null, "detail": "{\"id\":\"PERF-001\",\"status\":\"pending\"}"}
+{"id": 431, "timestamp": "2026-11-16T22:51:13Z", "event_type": "task_updated", "task_id": "DF-045", "actor": "foreman", "tick_number": null, "detail": "{\"status\":\"in_progress\"}"}
+{"id": 432, "timestamp": "2026-11-16T22:51:13Z", "event_type": "task_updated", "task_id": "DF-040", "actor": "foreman", "tick_number": null, "detail": "{\"status\":\"in_progress\"}"}
