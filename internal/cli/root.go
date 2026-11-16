@@ -643,6 +643,9 @@ func newAuthCommand(registry *app.Registry) *cobra.Command {
 			if err := mgr.Remove(args[0]); err != nil {
 				return err
 			}
+			// Drop any copy exported to the engine keychain for `--auth`
+			// (best effort: a headless host may have no usable keychain).
+			_ = auth.PurgeEngineCredential(args[0])
 			fmt.Printf("✓ Removed auth for %s\n", args[0])
 			return nil
 		},

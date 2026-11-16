@@ -260,6 +260,7 @@ func loadAPICommands(parent *cobra.Command, conn *app.APIConnection) error {
 	}
 
 	for _, cmd := range commands {
+		bridgeGeneratedAuth(cmd)
 		parent.AddCommand(cmd)
 	}
 
