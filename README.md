@@ -115,13 +115,21 @@ musterflow catalog pull <api-id>       # Install a community API
 
 ```bash
 musterflow auth add gh --type apikey --key ghp_xxx
-musterflow auth add db --type bearer --token eyJ...
+musterflow auth add db --type bearer --key eyJ...
 musterflow auth login slack          # OAuth2 browser flow
-musterflow auth add api --type mtls --cert client.pem --key client-key.pem
+musterflow auth add api --type mtls --cert client.pem --key-path client-key.pem
 musterflow auth list                 # Keys are masked
 ```
 
+Generated calls attach a stored credential with `--auth <api-id>`:
+
+```bash
+musterflow gh issues list --auth gh
+```
+
 Supports: API key, Bearer token, OAuth2 (authorization code with PKCE), and mTLS.
+`--auth` attaches API key, Bearer, and OAuth2 secrets as headers; mTLS is
+transport-level and is configured on the call that connects the API.
 
 ### ⚡ Workflows — Starlark Automation
 
