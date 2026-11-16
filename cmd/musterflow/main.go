@@ -98,7 +98,15 @@ func run() error {
 		cli.SetDashboardURL(fmt.Sprintf("http://%s", dashAddr))
 	} else {
 		if err := registry.Load(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
+			// DF-045: remember the failure so commands that need the registry
+			// fail closed with an actionable error instead of reporting an
+			// empty registry. A DuckDB lock conflict is explained on demand
+			// (naming the lock holder and the fix), so the raw driver text is
+			// not printed here.
+			cli.SetStoreError(err)
+			if _, locked := app.AsStoreLock(err); !locked {
+				fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
+			}
 		}
 	}
 
@@ -162,7 +170,10 @@ func run() error {
 		}
 	}
 
-	return rootCmd.ExecuteContext(ctx)
+	// DF-045: cobra reports `unknown command "<api>"` when the registry is
+	// unusable (the per-API subcommands were never registered), which hides the
+	// real cause. Replace that with the store error.
+	return cli.ResolveExecutionError(rootCmd.ExecuteContext(ctx))
 }
 
 func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
@@ -175,6 +186,12 @@ func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
 }
 
 func startServer(registry *app.Registry, cfg config.Config) error {
+	// DF-045: refuse to start a second dashboard over an unreadable registry —
+	// it would serve an empty API list while another process owns the store.
+	if err := cli.StoreUnavailable(); err != nil {
+		return err
+	}
+
 	// Resolve port: CLI flag > config file > default with auto-discovery.
 	// The --dashboard-addr flag may be in "host:port" or ":port" form.
 	port := cfg.Port

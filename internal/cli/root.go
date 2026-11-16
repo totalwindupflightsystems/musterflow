@@ -200,6 +200,11 @@ func newListCommand(registry *app.Registry) *cobra.Command {
 			if dashboardBaseURL != "" {
 				return listViaDashboard()
 			}
+			// DF-045: an unreadable store is not an empty registry. Fail with
+			// the cause (and the fix) instead of printing "No APIs connected."
+			if err := StoreUnavailable(); err != nil {
+				return err
+			}
 			conns := registry.List()
 			if len(conns) == 0 {
 				fmt.Println("No APIs connected.")
@@ -485,6 +490,10 @@ func newMCPCommand(registry *app.Registry) *cobra.Command {
 			// If the dashboard is running, route through its API to avoid lock conflicts.
 			if dashboardBaseURL != "" {
 				return mcpViaDashboard()
+			}
+			// DF-045: an unreadable store is not an empty registry.
+			if err := StoreUnavailable(); err != nil {
+				return err
 			}
 			fmt.Println("MCP endpoint: http://localhost:9876/mcp")
 			fmt.Println("Transport: HTTP JSON-RPC 2.0")
