@@ -107,7 +107,7 @@ musterflow catalog pull <api-id>       # Install a community API
 ```bash
 musterflow auth add gh --type apikey --key ghp_xxx
 musterflow auth add db --type bearer --key eyJ...
-musterflow auth login slack          # OAuth2 browser flow
+musterflow auth login slack --client-id <id> --client-secret <secret> --auth-url <url> --token-url <url>   # OAuth2 browser flow (all four flags required; optional --scopes, --redirect-port)
 musterflow auth add api --type mtls --cert client.pem --key-path client-key.pem
 musterflow auth list                 # Keys are masked
 ```
@@ -200,7 +200,7 @@ internal/completion/          → Shell completion (bash, zsh, fish)
 | `musterflow auth list` | List configured auth (keys masked) |
 | `musterflow auth remove <id>` | Remove credentials |
 | `musterflow auth get <id>` | Retrieve a credential |
-| `musterflow auth login <id>` | Start OAuth2 browser flow |
+| `musterflow auth login <id>` | Start OAuth2 browser flow (requires `--client-id`, `--client-secret`, `--auth-url`, `--token-url`) |
 | `musterflow config show` | Print active configuration |
 | `musterflow config set <k> <v>` | Update a config value |
 | `musterflow export` | Export API registry as JSONL |
@@ -218,7 +218,7 @@ default_format: table
 auto_completion: true
 ```
 
-`data_dir` accepts a `~` literal, which is expanded — but the file stores the **resolved absolute path** (no trailing slash), written on first run. Scripts should read the resolved value rather than the tilde literal.
+`data_dir` is stored as the **resolved absolute path** (no trailing slash): the first-run default is written that way. A `~` you set yourself is NOT expanded — `config set data_dir '~/.musterflow'` stores the literal `~`, and the app then creates a `~` directory relative to the current working directory. Always pass an absolute path. Scripts should read the resolved value.
 
 Port auto-discovery: if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing which one it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :9999` or by setting `port` in config.
 
