@@ -74,6 +74,7 @@ func TestToolRegistry_GetCommand(t *testing.T) {
 	cmd := tr.GetCommand("listPets")
 	if cmd == nil {
 		t.Fatal("expected command 'listPets', got nil")
+		return
 	}
 	if cmd.Name != "listPets" {
 		t.Errorf("expected Name 'listPets', got %q", cmd.Name)
@@ -123,6 +124,7 @@ func TestToolRegistry_ExecuteCommand_NotFound(t *testing.T) {
 	_, err := tr.ExecuteCommand(context.Background(), "nonexistent", nil)
 	if err == nil {
 		t.Fatal("expected error for non-existent tool")
+		return
 	}
 }
 
@@ -132,6 +134,7 @@ func TestToolRegistry_AddCommand(t *testing.T) {
 	err := tr.AddCommand(handlers.Command{Name: "test", Description: "test"})
 	if err == nil {
 		t.Fatal("expected error for AddCommand (not supported)")
+		return
 	}
 }
 
@@ -141,6 +144,7 @@ func TestToolRegistry_RemoveCommand(t *testing.T) {
 	err := tr.RemoveCommand("listPets")
 	if err == nil {
 		t.Fatal("expected error for RemoveCommand (not supported)")
+		return
 	}
 }
 
@@ -150,6 +154,7 @@ func TestToolRegistry_UpdateCommand(t *testing.T) {
 	err := tr.UpdateCommand("listPets", handlers.Command{Name: "listPets", Description: "updated"})
 	if err == nil {
 		t.Fatal("expected error for UpdateCommand (not supported)")
+		return
 	}
 }
 
@@ -187,6 +192,7 @@ func TestFetchSpecData_FileNotFound(t *testing.T) {
 	_, err := fetchSpecData("/nonexistent/path/spec.json")
 	if err == nil {
 		t.Fatal("expected error for non-existent file")
+		return
 	}
 }
 
@@ -198,6 +204,7 @@ func TestFetchSpecData_HTTPError(t *testing.T) {
 	_, err := fetchSpecData(srv.URL)
 	if err == nil {
 		t.Fatal("expected error for HTTP 404 status")
+		return
 	}
 }
 
@@ -263,6 +270,7 @@ func TestRefresh_AllFail(t *testing.T) {
 	err := tr.Refresh()
 	if err == nil {
 		t.Fatal("expected error when all APIs fail")
+		return
 	}
 }
 

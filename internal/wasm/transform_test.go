@@ -12,6 +12,7 @@ func TestNewRegistry(t *testing.T) {
 	reg := NewRegistry(dir)
 	if reg == nil {
 		t.Fatal("expected non-nil Registry")
+		return
 	}
 	if reg.dir != dir {
 		t.Errorf("expected dir=%q, got %q", dir, reg.dir)
@@ -158,6 +159,7 @@ func TestRun_ModuleNotFound(t *testing.T) {
 	_, err := Run(filepath.Join(t.TempDir(), "nope.wasm"), `{"x":1}`)
 	if err == nil {
 		t.Fatal("expected error for missing module")
+		return
 	}
 	if !strings.Contains(err.Error(), "not found") {
 		t.Errorf("error = %v, want 'not found' mention", err)

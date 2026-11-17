@@ -59,6 +59,7 @@ func TestFetchEntryNotFound(t *testing.T) {
 	got, _, err := client.FetchEntry("nonexistent")
 	if err == nil {
 		t.Fatal("expected error for not found, got nil")
+		return
 	}
 	if got != nil {
 		t.Errorf("expected nil entry on not found, got %+v", got)
@@ -76,6 +77,7 @@ func TestFetchEntryInvalidJSON(t *testing.T) {
 	_, _, err := client.FetchEntry("badjson")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON, got nil")
+		return
 	}
 }
 
@@ -140,6 +142,7 @@ func TestSearchBadStatusCode(t *testing.T) {
 	_, err := client.Search("anything")
 	if err == nil {
 		t.Fatal("expected error for bad status code, got nil")
+		return
 	}
 }
 
@@ -154,6 +157,7 @@ func TestSearchInvalidJSON(t *testing.T) {
 	_, err := client.Search("anything")
 	if err == nil {
 		t.Fatal("expected error for invalid JSON, got nil")
+		return
 	}
 }
 
@@ -167,6 +171,7 @@ func TestSearchNotFoundReturnsError(t *testing.T) {
 	results, err := client.Search("anything")
 	if err == nil {
 		t.Fatal("expected error for 404, got nil")
+		return
 	}
 	if results != nil {
 		t.Errorf("expected nil results for 404, got %v", results)

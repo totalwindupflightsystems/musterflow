@@ -135,6 +135,7 @@ func TestEnsureEngineCredentialNotFoundHintUsesRealFlags(t *testing.T) {
 	err := EnsureEngineCredential(config.Config{Auth: map[string]config.AuthConfig{}}, "probe")
 	if err == nil {
 		t.Fatal("expected a not-found error for an unstored credential")
+		return
 	}
 	msg := err.Error()
 	if !strings.Contains(msg, "musterflow auth add probe --type apikey --key") {
@@ -171,6 +172,7 @@ func TestEnsureEngineCredentialRejectsMTLS(t *testing.T) {
 	}}, "probe")
 	if err == nil {
 		t.Fatal("expected an error for an mTLS credential")
+		return
 	}
 	if !strings.Contains(err.Error(), "--cert/--key-path") {
 		t.Fatalf("error does not point at the mTLS flags: %v", err)

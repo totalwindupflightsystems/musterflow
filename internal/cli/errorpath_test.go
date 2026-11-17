@@ -27,6 +27,7 @@ func TestErrorPath_UnknownCommand(t *testing.T) {
 	execErr := root.Execute()
 	if execErr == nil {
 		t.Fatal("expected non-nil error for unknown command, got nil")
+		return
 	}
 
 	combined := out.String() + errOut.String()
@@ -64,6 +65,7 @@ func TestErrorPath_UnknownFlag(t *testing.T) {
 	execErr := root.Execute()
 	if execErr == nil {
 		t.Fatal("expected non-nil error for unknown flag, got nil")
+		return
 	}
 
 	combined := out.String() + errOut.String()
@@ -118,6 +120,7 @@ func TestErrorPath_UnknownSubcommandUnderAPI(t *testing.T) {
 	execErr := root.Execute()
 	if execErr == nil {
 		t.Fatal("expected non-nil error for unknown subcommand under API parent, got nil")
+		return
 	}
 }
 

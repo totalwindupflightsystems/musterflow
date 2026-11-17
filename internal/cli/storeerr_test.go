@@ -57,6 +57,7 @@ func TestListFailsWhenStoreIsLocked(t *testing.T) {
 
 	if execErr == nil {
 		t.Fatalf("list returned nil error while the store was locked; output:\n%s", out)
+		return
 	}
 	if strings.Contains(out, "No APIs connected.") {
 		t.Errorf("list still printed 'No APIs connected.' while the store was locked:\n%s", out)
@@ -91,12 +92,14 @@ func TestGeneratedCommandReportsStoreLock(t *testing.T) {
 
 	if rawErr == nil {
 		t.Fatalf("generated command on a locked store returned nil error; output:\n%s", out)
+		return
 	}
 	if !strings.Contains(rawErr.Error(), "unknown command") {
 		t.Fatalf("test does not exercise the unknown-command path: %v", rawErr)
 	}
 	if err == nil {
 		t.Fatal("resolved error is nil")
+		return
 	}
 	msg := err.Error()
 	if strings.Contains(msg, "unknown command") {
@@ -132,6 +135,7 @@ func TestStoreLockErrorNamesDiscoveredPort(t *testing.T) {
 	err := StoreUnavailable()
 	if err == nil {
 		t.Fatal("StoreUnavailable returned nil for a locked store")
+		return
 	}
 	msg := err.Error()
 	for _, want := range []string{
@@ -201,6 +205,7 @@ func TestStoreUnavailableWrapsNonLockError(t *testing.T) {
 	err := StoreUnavailable()
 	if err == nil {
 		t.Fatal("StoreUnavailable returned nil")
+		return
 	}
 	if !strings.Contains(err.Error(), "cannot read the API registry: open store: permission denied") {
 		t.Errorf("unexpected message: %s", err.Error())
@@ -243,6 +248,7 @@ func assertLockError(t *testing.T, execErr error, out string, forbiddenErr ...st
 	t.Helper()
 	if execErr == nil {
 		t.Fatalf("command returned nil error while the store was locked; output:\n%s", out)
+		return
 	}
 	msg := execErr.Error()
 	for _, want := range []string{

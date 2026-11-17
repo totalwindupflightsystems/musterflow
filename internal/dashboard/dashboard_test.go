@@ -427,6 +427,7 @@ func TestServer_Handler(t *testing.T) {
 	h := s.Handler()
 	if h == nil {
 		t.Fatal("Handler() returned nil")
+		return
 	}
 }
 

@@ -336,6 +336,7 @@ func TestCatalogCommand(t *testing.T) {
 	err := root.Execute()
 	if err == nil {
 		t.Fatal("expected error from catalog search with unavailable backend, got nil")
+		return
 	}
 }
 
@@ -674,6 +675,7 @@ func TestBuildRequest(t *testing.T) {
 	}
 	if builder == nil {
 		t.Fatal("expected non-nil builder")
+		return
 	}
 }
 
@@ -699,6 +701,7 @@ func TestBuildRequest_WithPathParams(t *testing.T) {
 	}
 	if builder == nil {
 		t.Fatal("expected non-nil builder")
+		return
 	}
 }
 
@@ -726,6 +729,7 @@ func TestBuildRequest_WithBodyFlags(t *testing.T) {
 	}
 	if builder == nil {
 		t.Fatal("expected non-nil builder")
+		return
 	}
 }
 
@@ -744,6 +748,7 @@ func TestBuildRequest_WithAuthToken(t *testing.T) {
 	}
 	if builder == nil {
 		t.Fatal("expected non-nil builder")
+		return
 	}
 }
 
@@ -1187,6 +1192,7 @@ func TestCatalogCommand_SearchOutput(t *testing.T) {
 	err := root.Execute()
 	if err == nil {
 		t.Fatal("expected error from catalog search with unavailable backend, got nil")
+		return
 	}
 }
 
@@ -1823,6 +1829,7 @@ func TestConfigCommand_SetInvalidKey(t *testing.T) {
 	err := root.Execute()
 	if err == nil {
 		t.Fatal("expected error for unknown config key, got nil")
+		return
 	}
 	if !strings.Contains(err.Error(), "unknown config key") {
 		t.Errorf("expected 'unknown config key' in error, got: %q", err.Error())
@@ -2055,6 +2062,7 @@ func TestFlowCommand_RunPayload_InvalidJSON(t *testing.T) {
 	err := root.Execute()
 	if err == nil {
 		t.Fatal("expected error for invalid --payload JSON")
+		return
 	}
 	if !strings.Contains(err.Error(), "parse --payload") {
 		t.Errorf("expected 'parse --payload' in error, got: %s", err.Error())
@@ -2158,6 +2166,7 @@ func TestFlowCommand_CreateNoNameErrors(t *testing.T) {
 	err := root.Execute()
 	if err == nil {
 		t.Fatal("expected error when no flow name provided")
+		return
 	}
 	if !strings.Contains(err.Error(), "flow name required") {
 		t.Errorf("expected 'flow name required' in error, got: %s", err.Error())
@@ -2581,6 +2590,7 @@ func TestBuildRequest_WithAuthManager(t *testing.T) {
 	}
 	if builder == nil {
 		t.Fatal("expected non-nil builder")
+		return
 	}
 }
 
@@ -2618,6 +2628,7 @@ func TestBuildRequest_WithGlobalAuth(t *testing.T) {
 	}
 	if builder == nil {
 		t.Fatal("expected non-nil builder")
+		return
 	}
 }
 
@@ -3204,6 +3215,7 @@ func TestExportCommand_NilStore_ActionableError(t *testing.T) {
 	err := root.Execute()
 	if err == nil {
 		t.Fatal("expected error for export with nil store and no dashboard")
+		return
 	}
 	if !strings.Contains(err.Error(), "dashboard") {
 		t.Errorf("expected actionable error mentioning dashboard, got: %s", err.Error())
@@ -3225,6 +3237,7 @@ func TestImportCommand_NilStore_ActionableError(t *testing.T) {
 	err := root.Execute()
 	if err == nil {
 		t.Fatal("expected error for import with nil store and no dashboard")
+		return
 	}
 	if !strings.Contains(err.Error(), "dashboard") {
 		t.Errorf("expected actionable error mentioning dashboard, got: %s", err.Error())

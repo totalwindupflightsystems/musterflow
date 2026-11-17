@@ -20,6 +20,7 @@ func TestNewEngine(t *testing.T) {
 	e := NewEngine("/tmp/flows", "http://localhost:9876")
 	if e == nil {
 		t.Fatal("NewEngine returned nil")
+		return
 	}
 	if e.dir != "/tmp/flows" {
 		t.Errorf("dir = %q, want /tmp/flows", e.dir)
@@ -295,6 +296,7 @@ func TestRun_NonexistentFlow(t *testing.T) {
 	_, err := e.Run("nonexistent", nil)
 	if err == nil {
 		t.Fatal("expected error for nonexistent flow")
+		return
 	}
 	if !strings.Contains(err.Error(), "nonexistent") {
 		t.Errorf("error = %v, want mention of nonexistent", err)
@@ -373,6 +375,7 @@ func TestRun_SyntaxError(t *testing.T) {
 	_, err = e.Run("bad-syntax", nil)
 	if err == nil {
 		t.Fatal("expected error for syntax-error flow")
+		return
 	}
 	if !strings.Contains(err.Error(), "parse flow bad-syntax") {
 		t.Errorf("error = %v, want parse error mentioning flow name", err)
@@ -514,6 +517,7 @@ func TestRun_HTTPTransportError(t *testing.T) {
 	_, err = e.Run("dead-flow", nil)
 	if err == nil {
 		t.Fatal("expected a transport error")
+		return
 	}
 	if !strings.Contains(err.Error(), "http_get") {
 		t.Errorf("error = %v, want it to name http_get", err)
@@ -533,6 +537,7 @@ func TestRun_UnknownGlobalStillFails(t *testing.T) {
 	_, err := e.Run("bogus-flow", nil)
 	if err == nil {
 		t.Fatal("expected an undefined-global error")
+		return
 	}
 	if !strings.Contains(err.Error(), "undefined: bogus_fn") {
 		t.Errorf("error = %v, want it to mention undefined: bogus_fn", err)
@@ -616,6 +621,7 @@ func TestRun_HTTPBuiltinArgumentErrors(t *testing.T) {
 			_, err := e.Run(flowName, nil)
 			if err == nil {
 				t.Fatalf("expected an error for %q", tc.source)
+				return
 			}
 			if !strings.Contains(err.Error(), tc.wantSub) {
 				t.Errorf("error = %v, want it to contain %q", err, tc.wantSub)

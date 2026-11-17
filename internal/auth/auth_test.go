@@ -463,6 +463,7 @@ func TestBuildTransport(t *testing.T) {
 	}
 	if info == nil {
 		t.Fatal("expected non-nil for valid mtls")
+		return
 	}
 	transport, ok := info.(*http.Transport)
 	if !ok {

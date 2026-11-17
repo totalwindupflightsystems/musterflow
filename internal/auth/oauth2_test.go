@@ -97,6 +97,7 @@ func TestYAMLTokenStore_LoadNonexistent(t *testing.T) {
 	_, err := store.Load("nonexistent-service")
 	if err == nil {
 		t.Fatal("expected error for nonexistent service")
+		return
 	}
 	if !strings.Contains(err.Error(), "token not found") {
 		t.Errorf("error = %q, want containing 'token not found'", err.Error())
@@ -172,6 +173,7 @@ func TestYAMLTokenStore_LoadFileNotYAML(t *testing.T) {
 	_, err := store.Load("bad")
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")
+		return
 	}
 }
 

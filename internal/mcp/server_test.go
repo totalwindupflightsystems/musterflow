@@ -176,6 +176,7 @@ func TestHTTPServer_ToolsCall(t *testing.T) {
 
 	if resp.Result == nil {
 		t.Fatal("expected result or error, both nil")
+		return
 	}
 
 	// Verify result is a CallToolResult with content
@@ -396,6 +397,7 @@ func TestHTTPServer_MethodNotFound(t *testing.T) {
 	}
 	if resp.Error == nil {
 		t.Fatal("expected error for unknown method, got nil")
+		return
 	}
 }
 

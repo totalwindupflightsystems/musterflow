@@ -70,6 +70,7 @@ func TestRefreshWithRetry_BackoffScheduleRespected(t *testing.T) {
 	err := RefreshWithRetry(ctx, refresh, backoffs, onWarning)
 	if err == nil {
 		t.Fatal("expected context cancellation error, got nil")
+		return
 	}
 
 	// Should have been called twice (2 failures before cancellation).

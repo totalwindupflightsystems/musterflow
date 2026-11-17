@@ -97,6 +97,7 @@ func TestRegistry_GetByNameOrID_NotFound(t *testing.T) {
 	_, err := r.GetByNameOrID("nonexistent-api")
 	if err == nil {
 		t.Fatal("expected error for nonexistent name/id")
+		return
 	}
 	if !strings.Contains(err.Error(), "musterflow list") {
 		t.Errorf("error should mention 'musterflow list', got: %v", err)
@@ -582,6 +583,7 @@ func TestRegistry_Store(t *testing.T) {
 	store := r.Store()
 	if store == nil {
 		t.Fatal("expected non-nil store after Load")
+		return
 	}
 }
 

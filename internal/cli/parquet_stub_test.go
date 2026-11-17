@@ -48,6 +48,7 @@ func TestParquetTypedColumns(t *testing.T) {
 	schema := file.Schema()
 	if schema == nil {
 		t.Fatal("nil schema from parquet file")
+		return
 	}
 
 	// Map of column name → expected parquet.Kind (physical type).
@@ -61,6 +62,7 @@ func TestParquetTypedColumns(t *testing.T) {
 	root := file.Root()
 	if root == nil {
 		t.Fatal("nil root column")
+		return
 	}
 
 	for _, col := range root.Columns() {
