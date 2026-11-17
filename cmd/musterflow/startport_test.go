@@ -173,15 +173,13 @@ func TestSelectStartPort_DashboardOccupantRefuses(t *testing.T) {
 	if !strings.Contains(err.Error(), "--dashboard-addr") {
 		t.Errorf("error %q does not point at --dashboard-addr", err)
 	}
+	// No fallback happened: the refusal carries no chosen port and no fallback
+	// note. (Do not probe base+1 for a free listener — httptest's ephemeral base
+	// port can be handed to an unrelated listener, which made this test flake.)
 	if choice.Port != 0 {
 		t.Errorf("expected no chosen port when refusing, got %d", choice.Port)
 	}
-
-	// No fallback happened: nothing is serving on base+1.
-	probe, err := net.Listen("tcp", fmt.Sprintf(":%d", base+1))
-	if err != nil {
-		t.Errorf("port %d is unexpectedly occupied — a fallback ran despite the refusal: %v", base+1, err)
-	} else {
-		_ = probe.Close()
+	if choice.Note != "" {
+		t.Errorf("expected no fallback note when refusing, got %q", choice.Note)
 	}
 }
