@@ -1,0 +1,33 @@
+{
+  "tick": "musterflow-foreman-2026-11-17-06-00-43",
+  "created_at": "2026-11-17T06:0x:00Z",
+  "budget": 2,
+  "base": "origin/master",
+  "base_sha": "c54ee896fd3f8db8705b8fb477fffd714733f1c0",
+  "worker_model": "openai/gpt-6.1-terra",
+  "worker_provider": "xkiro",
+  "workers": [
+    {
+      "task_id": "DF-039",
+      "priority": "P1",
+      "title": "MCP tool names collide across APIs sharing operationIds",
+      "worktree": "/home/kara/worktrees/musterflow-DF-039",
+      "branch": "wt/DF-039",
+      "brief": "/tmp/brief-mf-t224-DF-039.md",
+      "files_expected": ["internal/mcp/tools.go", "internal/mcp/tools_test.go", "internal/mcp/server.go", "internal/mcp/refresh.go"],
+      "independent_of": ["QA-MUSTERFLOW-006"]
+    },
+    {
+      "task_id": "QA-MUSTERFLOW-006",
+      "priority": "P1",
+      "title": "docker compose deploy cannot build (no muster build context)",
+      "worktree": "/home/kara/worktrees/musterflow-QA-MUSTERFLOW-006",
+      "branch": "wt/QA-MUSTERFLOW-006",
+      "brief": "/tmp/brief-mf-t224-QA006.md",
+      "files_expected": ["docker-compose.yml", "Dockerfile", "docs/operations.md"],
+      "independent_of": ["DF-039"]
+    }
+  ],
+  "merge_policy": "serial, gate each merge (go build + go test ./... -count=1), push after each",
+  "notes": "Worktrees were created by worktree.sh with the default origin/main base (stale, 1bbcf7a); both were fast-forwarded to origin/master c54ee89 in-place because branch deletion was gate-blocked in this unattended session."
+}
