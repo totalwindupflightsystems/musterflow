@@ -3,6 +3,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -273,7 +274,23 @@ func (s *Server) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := s.catalogClient.Search(query)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		// DF-035: a backend-absent catalog is a client-visible not-found, not a
+		// server error. Passing the class through keeps the same operation
+		// answering the same way with or without the dashboard: status 404 and
+		// the client's own message text ("catalog backend not available
+		// (HTTP 404): repo … absent or private"), which is exactly what the
+		// local CLI path prints.
+		//
+		// Everything else stays 500 on purpose: a transport failure
+		// ("fetch catalog index: …"), a non-200 upstream status
+		// ("catalog returned status 503") or an undecodable index
+		// ("decode catalog: …") means the dashboard could not produce an
+		// answer, which is the 500-class this endpoint already advertises.
+		status := http.StatusInternalServerError
+		if errors.Is(err, catalog.ErrBackendUnavailable) {
+			status = http.StatusNotFound
+		}
+		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
 	if entries == nil {
