@@ -692,7 +692,7 @@ auth:
     key: <secret>       # API key or bearer token
 ```
 
-Because that file carries plaintext keys and tokens, it is written with mode `0600`. `musterflow auth list` prints the configured entries with the secret masked (`<api-id>: type=apikey key=****`); `musterflow auth get <api-id>` prints the raw value.
+Because that file carries plaintext keys and tokens, it is written with mode `0600`. `musterflow auth list` prints the configured entries with the secret masked: keys longer than 8 characters show only their first and last four characters (`<api-id>: type=apikey key=ghp_…3456`), and keys of 8 characters or fewer print as `key=****`. `musterflow auth get <api-id>` prints the raw value.
 
 **Port auto-discovery:** if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing the port it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :<port>` or the `port` config key.
 
