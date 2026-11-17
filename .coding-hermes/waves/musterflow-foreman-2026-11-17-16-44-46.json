@@ -1,0 +1,20 @@
+{
+  "wave": "musterflow-foreman-2026-11-17-16-44-46",
+  "tick": 227,
+  "project": "musterflow",
+  "base": "origin/master",
+  "base_sha": "e960562",
+  "budget": 7,
+  "workers": [
+    {"task": "README-4", "worktree": "/home/kara/worktrees/musterflow-README-4", "branch": "wt/README-4", "files": ["README.md"], "model": "openai/gpt-6.1-terra", "provider": "xkiro", "covers": ["README-4", "README-5", "README-6", "DOC-7", "DOC-23"]},
+    {"task": "DOC-8", "worktree": "/home/kara/worktrees/musterflow-DOC-8", "branch": "wt/DOC-8", "files": ["docs/integration-guide.md"], "model": "openai/gpt-6.1-terra", "provider": "xkiro", "covers": ["DOC-8", "DOC-1", "DF-MUSTERFLOW-5-R4", "DF-MUSTERFLOW-5-R5"]}
+  ],
+  "independence": "README.md vs docs/integration-guide.md only; no shared files, no depends_on edges. Two workers (not 7) because every remaining dispatchable row in either file family collides on one of these two files; premise-dead P1/P2 rows were closed or deferred foreman-direct instead of dispatched.",
+  "foreman_direct": [
+    "README-3 premise re-check (badge already Go-1.26.11 == go.mod:3) — close/defer",
+    "DOC-9 premise re-check (integration-guide already documents flow run <name> --payload)",
+    "DOC-22 premise re-check (specs/dashboard.md already says exactly 13 routes, table complete)",
+    "DF-MUSTERFLOW-5 premise re-check (server_test.go:356 covers DF-035 404 pass-through)",
+    "DF-037 load-hygiene audit (no exec.Command / t.Parallel in the test tree)"
+  ]
+}

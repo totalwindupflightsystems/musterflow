@@ -1,0 +1,30 @@
+{
+  "tick": 228,
+  "scheduler_tick": "musterflow-foreman-2026-11-17-17-45-01",
+  "created_at": "2026-11-17T17:45:00-05:00",
+  "base_commit": "e960562",
+  "wave_budget": 8,
+  "worker_model": "openai/gpt-6.1-terra",
+  "worker_provider": "xkiro",
+  "tasks": [
+    {
+      "id": "README-4",
+      "bundle_rows": ["README-4", "README-5", "README-6", "DOC-7", "DOC-23"],
+      "brief": ".coding-hermes/waves/brief-README-4.md",
+      "worktree": "/home/kara/worktrees/musterflow-README-4",
+      "branch": "wt/README-4",
+      "files": ["README.md"]
+    },
+    {
+      "id": "DOC-8",
+      "bundle_rows": ["DOC-8", "DOC-1", "DF-MUSTERFLOW-5-R4", "DF-MUSTERFLOW-5-R5"],
+      "brief": ".coding-hermes/waves/brief-DOC-8.md",
+      "worktree": "/home/kara/worktrees/musterflow-DOC-8",
+      "branch": "wt/DOC-8",
+      "files": ["docs/integration-guide.md"]
+    }
+  ],
+  "independence": "file-disjoint: README.md vs docs/integration-guide.md; no shared files, no depends_on edges",
+  "merge_order": ["README-4", "DOC-8"],
+  "carried_over_from": "musterflow-foreman-2026-11-17-16-44-46 (worktrees + briefs staged, no workers dispatched)"
+}
