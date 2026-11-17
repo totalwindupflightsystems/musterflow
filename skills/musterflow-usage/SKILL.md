@@ -22,7 +22,7 @@ engine (trigger+print only — no API-call builtins yet, DF-030).
 ## Entry points
 
 - CLI binary: `cmd/musterflow/main.go` → `musterflow` (build: `go build -o musterflow ./cmd/musterflow/`)
-- Dashboard + API + MCP + webhooks: `musterflow start` → all on `:9876` (9877-9886 fallback)
+- Dashboard + API + MCP + webhooks: `musterflow start` → all on `:9876` (`port+1` … `port+9` fallback when another program holds it; a MusterFlow occupant is refused, not bypassed)
 - Build prerequisite: the private `github.com/wojons/muster` engine, resolved
   by `bash scripts/resolve-engine.sh` (generates `go.work`; never edits
   `go.mod`; exits 1 honestly when the engine is missing — DF-032 FIXED

@@ -510,4 +510,4 @@ auto_completion: true
 └── flows/                 # Starlark workflow scripts
 ```
 
-**Port auto-discovery:** if port 9876 is occupied, MusterFlow tries 9877–9886. Override with `--dashboard-addr :<port>` or the `port` config key.
+**Port auto-discovery:** if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing the port it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :<port>` or the `port` config key.

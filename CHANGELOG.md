@@ -21,6 +21,7 @@ All notable changes to MusterFlow will be documented in this file.
 - DuckDB lock conflict between CLI and dashboard (TASK-026)
 - CLI-dashboard routing for all 17 subcommands
 - MCP routing and completion prompt blocking
+- `start` now matches the documented port auto-discovery (GAP-018): a foreign process on the configured port is survived by serving on the next free port in `[port, port+9]` and printing which one it chose; a port held by another MusterFlow dashboard is refused instead of silently starting a second dashboard on another port
 
 ### Changed
 - Upgraded kin-openapi to v0.142, cobra to v1.10.2, x/term to v0.45

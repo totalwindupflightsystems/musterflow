@@ -204,10 +204,18 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 		}
 	}
 
-	port, err := config.FindPort(port)
+	// Port selection (GAP-018): a foreign process on the configured port is
+	// survived by walking the documented range [port, port+9], while an
+	// existing MusterFlow dashboard is refused rather than bypassed — see
+	// selectStartPort.
+	choice, err := selectStartPort(port, dashboardPortOccupied)
 	if err != nil {
-		return fmt.Errorf("no available port: %w", err)
+		return err
 	}
+	if choice.Note != "" {
+		fmt.Println(choice.Note)
+	}
+	port = choice.Port
 
 	addr := fmt.Sprintf(":%d", port)
 	fmt.Printf("⚡ MusterFlow %s\n\n", Version)

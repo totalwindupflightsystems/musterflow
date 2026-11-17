@@ -165,4 +165,4 @@ the same directory lives on the `musterflow-data` volume
 | dashboard loads, all flows fail | `GET /api/health` connected count, `musterflow_errors_total{reason="server_error"}` | upstream API key or base URL changed |
 | request spikes with no visible change | `musterflow_http_requests_total` by `path`, `musterflow_errors_total` by `reason` | a webhook or MCP client retry loop |
 | process restarts repeatedly | `changes(musterflow_process_start_time_seconds[1h])`, `docker compose logs` | OOM or bad `config.yaml` |
-| port conflict at start | `ss -ltnp \| grep 9876` | `FindPort` shifts the daemon up to 10 ports; the log line reports the real one |
+| port conflict at start | `ss -ltnp \| grep 9876` | `FindPort` shifts the daemon up to 10 ports and the log line reports the real one; if the occupant is another MusterFlow dashboard, `start` refuses instead of shifting |
