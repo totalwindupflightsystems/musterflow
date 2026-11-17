@@ -90,6 +90,7 @@ func TestToolRegistry_ListTools(t *testing.T) {
 	}
 	if listPetsTool == nil {
 		t.Fatalf("expected tool 'listPets', got: %v", toolNames(tools))
+		return
 	}
 
 	if listPetsTool.Description == "" {

@@ -3037,6 +3037,7 @@ func TestRootCommand_OutputFileFlag(t *testing.T) {
 	flag := root.PersistentFlags().Lookup("output-file")
 	if flag == nil {
 		t.Fatal("expected --output-file persistent flag on root")
+		return
 	}
 	if flag.Shorthand != "" {
 		t.Errorf("expected --output-file to have NO shorthand, got %q", flag.Shorthand)

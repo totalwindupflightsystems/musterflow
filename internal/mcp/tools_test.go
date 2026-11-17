@@ -57,6 +57,7 @@ func TestToolRegistry_ListCommands(t *testing.T) {
 	}
 	if listPets == nil {
 		t.Fatalf("expected command 'listPets', got: %v", commandNames(commands))
+		return
 	}
 	if listPets.Name != "listPets" {
 		t.Errorf("expected Name 'listPets', got %q", listPets.Name)
