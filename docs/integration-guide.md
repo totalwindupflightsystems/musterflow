@@ -1,6 +1,6 @@
 # MusterFlow Integration Guide
 
-A comprehensive developer guide covering all four surfaces of MusterFlow: the **CLI**, the **dashboard HTTP API**, the **MCP server**, and the **Starlark workflow engine**. Every example is pre-verified against a running MusterFlow instance.
+A comprehensive developer guide covering all four surfaces of MusterFlow: the **CLI**, the **dashboard HTTP API**, the **MCP server**, and the **Starlark workflow engine** — plus the **WASM transform** commands that manage installed transform modules. Every example is pre-verified against a running MusterFlow instance.
 
 ---
 
@@ -100,6 +100,8 @@ When the dashboard is running on the configured port, CLI commands route through
 | `musterflow auth list` | List configured credentials (keys masked) |
 | `musterflow auth login <id>` | OAuth2 browser flow |
 | `musterflow config show` | Print active configuration |
+| `musterflow transform list` | List `.wasm` transforms installed in `~/.musterflow/transforms/` |
+| `musterflow transform install <entry>` | Install a transform from the catalog — placeholder, errors today (see WASM Transforms below) |
 | `musterflow export` / `import` | JSONL export/import of the API registry |
 
 ---
@@ -420,6 +422,149 @@ The `trigger` global inside the Starlark script receives the parsed JSON payload
 
 ---
 
+## WASM Transforms
+
+A transform is a WebAssembly module that rewrites payloads — redacting PII, reshaping a response, or enriching it with derived fields. MusterFlow uses the WASI stdin/stdout convention: **the module reads JSON from stdin and writes the transformed JSON to stdout**, so a transform is a single `.wasm` file with no ABI to bind, compiled for `GOOS=wasip1 GOARCH=wasm` (or any toolchain that emits a WASI preview 1 module, e.g. Rust's `wasm32-wasip1` target).
+
+When a transform is executed through the in-process runner (`wasm.Run` in `internal/wasm`), wazero sandboxes it with the default limits: **128 MiB max memory, 30s max execution time, no network access**.
+
+> **What ships in this release:** the CLI exposes exactly two subcommands, `list` and `install`. `list` reports what is on disk; `install` is a catalog placeholder that exits non-zero. No CLI command, dashboard route, MCP tool, or flow builtin executes a transform yet — the runner exists in the `internal/wasm` package but is not wired to any surface. This section documents the install and inventory surface as shipped, not an end-to-end transform pipeline.
+
+| Subcommand | Behavior today |
+|------------|----------------|
+| `musterflow transform list` | Reads `~/.musterflow/transforms/` and prints every `.wasm` file found |
+| `musterflow transform install <catalog-entry>` | Catalog placeholder — exits 1 with "not yet implemented" |
+
+Both subcommands take no flags of their own; only the global flags (`--data-dir`, `--dashboard-addr`, `--no-dashboard`, `--output-file`) appear in their `--help`.
+
+### Where Transforms Live
+
+Installed transforms are plain `.wasm` files in:
+
+```
+~/.musterflow/transforms/
+```
+
+`musterflow transform list` creates the directory if it is missing. Every file with a `.wasm` extension is listed; other files and subdirectories are ignored.
+
+> **Note:** `~` is your home directory. The transform commands resolve this path from `$HOME` only — the global `--data-dir` flag relocates the registry (`musterflow.db`) but does **not** relocate the transform directory. To point transforms elsewhere, run the command with a different `HOME`.
+
+### Listing Installed Transforms
+
+```bash
+musterflow transform list
+```
+
+With nothing installed, the command exits 0 and prints the directory hint:
+
+```
+$ musterflow transform list
+No transforms installed.
+Place .wasm files in /home/you/.musterflow/transforms/ to install.
+```
+
+> The path is `$HOME`-expanded — yours will differ.
+
+With one transform installed:
+
+```
+$ musterflow transform list
+Installed transforms:
+  pii-redact.wasm (/home/you/.musterflow/transforms/pii-redact.wasm)
+```
+
+Each entry is `<file name> (<absolute path>)`. The registry lists files; it does not read metadata out of the module, so there is no description, version, or author column and no verbose variant of the command.
+
+### Installing from the Catalog
+
+```bash
+musterflow transform install <catalog-entry>
+```
+
+The subcommand takes exactly one catalog entry id. Catalog integration is not implemented in this release, so it fails for every entry with exit code 1:
+
+```
+$ musterflow transform install pii-redact
+Error: WASM transform catalog integration is not yet implemented; place .wasm files in /home/you/.musterflow/transforms to install transforms manually
+```
+
+Calling it with no argument fails earlier, during argument validation:
+
+```
+$ musterflow transform install
+Error: accepts 1 arg(s), received 0
+```
+
+### Manual Install
+
+Because `transform list` reads the directory directly, copying a module in is the install path that works today:
+
+```bash
+mkdir -p ~/.musterflow/transforms
+cp ./pii-redact.wasm ~/.musterflow/transforms/
+musterflow transform list
+```
+
+### Example — Build, Install, List
+
+This module reads a JSON object from stdin, replaces `email` and `phone` with `[redacted]`, and writes the object to stdout — the whole transform contract in one file:
+
+```bash
+mkdir -p /tmp/pii-redact && cd /tmp/pii-redact
+
+cat > main.go <<'EOF'
+package main
+
+import (
+	"encoding/json"
+	"io"
+	"os"
+)
+
+// WASI stdin/stdout transform: read a JSON object, redact two fields, write it back.
+func main() {
+	body, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		os.Exit(1)
+	}
+	var in map[string]any
+	if err := json.Unmarshal(body, &in); err != nil {
+		os.Exit(1)
+	}
+	for _, key := range []string{"email", "phone"} {
+		if _, ok := in[key]; ok {
+			in[key] = "[redacted]"
+		}
+	}
+	out, err := json.Marshal(in)
+	if err != nil {
+		os.Exit(1)
+	}
+	if _, err := os.Stdout.Write(out); err != nil {
+		os.Exit(1)
+	}
+}
+EOF
+
+go mod init pii-redact
+GOOS=wasip1 GOARCH=wasm go build -o pii-redact.wasm .
+
+mkdir -p ~/.musterflow/transforms
+cp pii-redact.wasm ~/.musterflow/transforms/
+musterflow transform list
+```
+
+The last command prints the installed module:
+
+```
+Installed transforms:
+  pii-redact.wasm (/home/you/.musterflow/transforms/pii-redact.wasm)
+```
+
+> **Note:** `go mod init` is required even for a single file — the Go toolchain builds in module mode. The build emits a WASI preview 1 module (starting with the magic bytes `00 61 73 6d`), and that is all the registry checks: it selects files by `.wasm` extension and never loads or validates the module.
+
+---
+
 ## Example Walkthrough — End to End
 
 ### 1. Connect an API
@@ -507,7 +652,8 @@ auto_completion: true
 ├── musterflow.db          # DuckDB registry (API connections)
 ├── config.yaml            # User configuration
 ├── credentials.yaml       # Masked API credentials
-└── flows/                 # Starlark workflow scripts
+├── flows/                 # Starlark workflow scripts
+└── transforms/            # WASM transforms (.wasm files, created by `transform list`)
 ```
 
 **Port auto-discovery:** if port 9876 is occupied, MusterFlow tries 9877–9886. Override with `--dashboard-addr :<port>` or the `port` config key.
