@@ -1,5 +1,7 @@
 // Package workflow provides the workflow engine for MusterFlow.
 // Workflows are Starlark scripts that chain API calls, with webhook trigger support.
+// Flows see the predeclared globals `trigger`, `http_get`, `http_post` and
+// `http_request` (see builtins.go), so a flow can call HTTP APIs directly.
 //
 // Flow metadata (description, webhook flag) is persisted in a sidecar JSON file
 // named <name>.star.json next to the <name>.star source file. The .star file
@@ -157,7 +159,8 @@ func (e *Engine) List() ([]Flow, error) {
 // print() output. The trigger payload is exposed to the flow as a predeclared
 // global named "trigger": a starlark.Dict when triggerPayload is non-nil, or
 // None when triggerPayload is nil (so flows can guard with `if trigger !=
-// None`). The captured print output (with trailing newlines trimmed) is
+// None`). The HTTP builtins (http_get, http_post, http_request) are predeclared
+// alongside it. The captured print output (with trailing newlines trimmed) is
 // returned as the result string.
 func (e *Engine) Run(name string, triggerPayload map[string]interface{}) (string, error) {
 	flowPath := filepath.Join(e.dir, name+".star")
@@ -173,24 +176,33 @@ func (e *Engine) Run(name string, triggerPayload map[string]interface{}) (string
 		return "", fmt.Errorf("parse flow %s: %w", name, err)
 	}
 
+	// flowBuiltins is the single source of truth for the API-call globals
+	// (http_get, http_post, http_request). The same dict drives both the
+	// compiler's isPredeclared callback and the runtime bindings below, so a
+	// flow cannot compile against a builtin that Run() fails to provide.
+	builtins := flowBuiltins()
+
 	// Compile the parsed AST into a starlark Program. We use starlark.FileProgram
 	// directly because the muster Interpreter.Compile re-reads the source from
 	// ast.Path (a filename) via starlark.SourceProgram, which fails for in-memory
 	// flow sources. FileProgram accepts the already-parsed AST. The isPredeclared
-	// callback returns true for "trigger" so the compiler treats it as a
-	// predeclared global whose binding is supplied by program.Init.
-	program, err := starlark.FileProgram(ast, func(name string) bool {
-		return name == "trigger"
+	// callback returns true for "trigger" and every builtin so the compiler
+	// treats them as predeclared globals whose bindings are supplied by
+	// program.Init.
+	program, err := starlark.FileProgram(ast, func(global string) bool {
+		return global == "trigger" || builtins.Has(global)
 	})
 	if err != nil {
 		return "", fmt.Errorf("compile flow %s: %w", name, err)
 	}
 
-	// Build the predeclared globals for execution. We create a fresh dict
-	// containing only "trigger"; the interpreter is constructed with no
-	// builtins (nil), so there is nothing else to carry over.
+	// Build the predeclared globals for execution: the trigger payload plus
+	// every builtin, in one dict.
 	predeclared := starlark.StringDict{
 		"trigger": triggerToStarlark(triggerPayload),
+	}
+	for builtinName, fn := range builtins {
+		predeclared[builtinName] = fn
 	}
 
 	// Execute with our own thread so we can capture print() output.

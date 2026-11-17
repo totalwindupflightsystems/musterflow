@@ -133,13 +133,36 @@ transport-level and is configured on the call that connects the API.
 
 ### ⚡ Workflows — Starlark Automation
 
-Chain API calls together with Starlark scripts:
+Chain API calls together with Starlark scripts. Every flow is predeclared with four globals: `trigger` (the run payload, or `None`), `http_get`, `http_post` and `http_request`.
 
 ```bash
 musterflow flow create new-issue-notify
 # Edit ~/.musterflow/flows/new-issue-notify.star
+```
+
+```python
+# ~/.musterflow/flows/new-issue-notify.star
+# Starlark has no top-level if/for, so put logic in a function and call it.
+
+def main():
+    resp = http_get("https://api.github.com/repos/totalwindupflightsystems/musterflow",
+                    headers={"Accept": "application/vnd.github+json"})
+    print("status:", resp["status"])
+    print("content-type:", resp["headers"]["Content-Type"])
+
+    note = http_post("https://httpbin.org/post",
+                     body="repo=" + trigger["repo"],
+                     headers={"Content-Type": "text/plain"})
+    print("posted:", note["status"])
+
+main()
+```
+
+```bash
 musterflow flow run new-issue-notify --payload '{"repo":"my-repo"}'
 ```
+
+Each call returns a dict with exactly `status` (int), `body` (string, capped at 1 MiB) and `headers` (first value per header name). Non-2xx statuses are returned, not raised, so flows can branch on them; only connection/DNS/timeout failures raise. Requests time out after 10s.
 
 Webhook triggers via `/hooks/` endpoint for event-driven automation.
 

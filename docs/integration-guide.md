@@ -329,6 +329,67 @@ $ musterflow flow run myflow
 
 The CLI `flow run` prints the Starlark script's output to stdout. The dashboard API (`POST /api/flows/<name>/run`) returns the same output wrapped in a JSON object: `{"result": "42"}`.
 
+### HTTP Builtins
+
+Every flow is predeclared with three HTTP builtins, implemented with the Go standard library (no extra dependencies):
+
+| Builtin | Signature | Notes |
+|---------|-----------|-------|
+| `http_get` | `http_get(url, headers=None)` | GET |
+| `http_post` | `http_post(url, body=None, headers=None)` | POST |
+| `http_request` | `http_request(method, url, headers=None, body=None)` | Any method in the closed set below |
+
+Argument rules:
+
+- `url` — non-empty string.
+- `method` — upper-cased before validation; must be one of `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`. Anything else raises an error that lists the valid methods.
+- `headers` — optional `starlark.Dict` of `str -> str`. Non-string keys or values raise.
+- `body` — optional string or bytes. A non-empty body on `GET`/`HEAD` raises.
+
+Response dict — exactly three keys:
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `status` | int | HTTP status code |
+| `body` | string | response body, truncated at 1 MiB |
+| `headers` | dict of str -> str | first value per canonical header name |
+
+Semantics:
+
+- **HTTP status codes are data, not errors.** A 404 or 500 returns a normal dict; only transport failures (DNS, dial, TLS, timeout) raise. Raised errors are prefixed with the failing builtin, e.g. `http_get: Get "http://127.0.0.1:1/": dial tcp ...`.
+- **Timeout is 10s per request.**
+- **Response bodies are capped at 1 MiB** and truncated past that, so an upstream cannot make the daemon buffer an unbounded body.
+
+```python
+def main():
+    resp = http_get("https://httpbin.org/json")
+    print("status:", resp["status"])
+    print(resp["headers"]["Content-Type"])
+
+    created = http_post("https://httpbin.org/post", body="hello",
+                        headers={"Content-Type": "text/plain"})
+    print("created:", created["status"])
+
+    missing = http_request("DELETE", "https://httpbin.org/status/404")
+    print("not an error:", missing["status"])
+
+main()
+```
+
+Starlark has no top-level `if`/`for` statements, so flow logic goes inside a function body that you then call.
+
+### Passing the Trigger Payload
+
+The payload reaches the flow as the `trigger` global, but each entry point wraps it differently:
+
+| Entry point | How the payload is supplied |
+|-------------|-----------------------------|
+| CLI | `musterflow flow run <name> --payload '{"repo":"x"}'` — the flag value is the payload object |
+| Dashboard API | `POST /api/flows/<name>/run` expects the payload under the `trigger` key: `{"trigger": {"repo": "x"}}` |
+| Webhook | `POST /hooks/<name>` uses the raw request body as the payload (no `trigger` wrapper) |
+
+When no payload is supplied, `trigger` is `None`.
+
 ### Webhook-Triggered Flows
 
 A flow can receive an external webhook payload. Create it with the `--webhook` flag:

@@ -1,6 +1,13 @@
 package workflow
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -369,6 +376,278 @@ func TestRun_SyntaxError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "parse flow bad-syntax") {
 		t.Errorf("error = %v, want parse error mentioning flow name", err)
+	}
+}
+
+// ── DF-030: HTTP builtins ────────────────────────────────────────────────
+
+// TestRun_HTTPGet proves http_get returns the status/body/headers dict and that
+// a flow can print fields of it.
+func TestRun_HTTPGet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("method = %q, want GET", r.Method)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Reply", "hello")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	src := `resp = http_get("` + srv.URL + `")
+print(resp["status"])
+print(resp["body"])
+print(resp["headers"]["X-Reply"])`
+	if _, err := e.Create("get-flow", src, "", false); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	output, err := e.Run("get-flow", nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := "200\n{\"ok\":true}\nhello"
+	if output != want {
+		t.Errorf("output = %q, want %q", output, want)
+	}
+}
+
+// TestRun_HTTPPost proves http_post sends the Starlark body and headers dict and
+// that a custom request header reaches the server.
+func TestRun_HTTPPost(t *testing.T) {
+	type seen struct {
+		method string
+		body   string
+		header string
+	}
+	got := make(chan seen, 1)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got <- seen{method: r.Method, body: string(body), header: r.Header.Get("X-Flow")}
+		_ = json.NewEncoder(w).Encode(map[string]string{"method": r.Method})
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	src := `resp = http_post("` + srv.URL + `", body="hello", headers={"X-Flow": "yes"})
+print(resp["body"])`
+	if _, err := e.Create("post-flow", src, "", false); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	output, err := e.Run("post-flow", nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !strings.Contains(output, `"method":"POST"`) {
+		t.Errorf("output = %q, want echoed method POST", output)
+	}
+
+	select {
+	case s := <-got:
+		if s.method != http.MethodPost {
+			t.Errorf("server saw method = %q, want POST", s.method)
+		}
+		if s.body != "hello" {
+			t.Errorf("server saw body = %q, want hello", s.body)
+		}
+		if s.header != "yes" {
+			t.Errorf("server saw X-Flow = %q, want yes", s.header)
+		}
+	default:
+		t.Fatal("server never received the request")
+	}
+}
+
+// TestRun_HTTPNon2xxIsNotAnError proves an HTTP error status is returned as
+// data (a dict) instead of raising, so a flow can branch on it.
+func TestRun_HTTPNon2xxIsNotAnError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "gone fishing", http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	src := `resp = http_get("` + srv.URL + `")
+print("not found" if resp["status"] == 404 else "unexpected")`
+	if _, err := e.Create("404-flow", src, "", false); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	output, err := e.Run("404-flow", nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if output != "not found" {
+		t.Errorf("output = %q, want \"not found\"", output)
+	}
+}
+
+// TestRun_HTTPTransportError proves a connection failure surfaces as a Starlark
+// error naming the failing builtin.
+func TestRun_HTTPTransportError(t *testing.T) {
+	// Grab an ephemeral port and close it again so nothing is listening.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	src := `http_get("http://` + addr + `/nope")`
+	if _, err := e.Create("dead-flow", src, "", false); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err = e.Run("dead-flow", nil)
+	if err == nil {
+		t.Fatal("expected a transport error")
+	}
+	if !strings.Contains(err.Error(), "http_get") {
+		t.Errorf("error = %v, want it to name http_get", err)
+	}
+}
+
+// TestRun_UnknownGlobalStillFails proves installing builtins did not open the
+// compiler to arbitrary globals.
+func TestRun_UnknownGlobalStillFails(t *testing.T) {
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	if _, err := e.Create("bogus-flow", `bogus_fn()`, "", false); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err := e.Run("bogus-flow", nil)
+	if err == nil {
+		t.Fatal("expected an undefined-global error")
+	}
+	if !strings.Contains(err.Error(), "undefined: bogus_fn") {
+		t.Errorf("error = %v, want it to mention undefined: bogus_fn", err)
+	}
+}
+
+// TestRun_TriggerAndBuiltinsCoexist proves the trigger payload and the HTTP
+// builtins are visible in the same flow.
+func TestRun_TriggerAndBuiltinsCoexist(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/echo/alice" {
+			t.Errorf("path = %q, want /echo/alice", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("pong"))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	src := `resp = http_get("` + srv.URL + `/echo/" + trigger["user"])
+print(trigger["user"] + ":" + resp["body"])`
+	if _, err := e.Create("combo-flow", src, "", false); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	output, err := e.Run("combo-flow", map[string]interface{}{"user": "alice"})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if output != "alice:pong" {
+		t.Errorf("output = %q, want alice:pong", output)
+	}
+}
+
+// TestRun_HTTPBuiltinArgumentErrors covers the closed-set and type validation
+// the builtins perform before any request is made.
+func TestRun_HTTPBuiltinArgumentErrors(t *testing.T) {
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	tests := []struct {
+		name    string
+		source  string
+		wantSub string
+	}{
+		{
+			name:    "invalid method lists valid methods",
+			source:  `http_request("TRACE", "http://127.0.0.1:1/")`,
+			wantSub: "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
+		},
+		{
+			name:    "non-dict headers rejected",
+			source:  `http_get("http://127.0.0.1:1/", headers=["a"])`,
+			wantSub: "headers must be a dict of str to str",
+		},
+		{
+			name:    "non-str header value rejected",
+			source:  `http_get("http://127.0.0.1:1/", headers={"X": 1})`,
+			wantSub: "headers values must be strings",
+		},
+		{
+			name:    "GET with body rejected",
+			source:  `http_request("GET", "http://127.0.0.1:1/", body="x")`,
+			wantSub: "GET requests must not include a body",
+		},
+		{
+			name:    "non-string body rejected",
+			source:  `http_post("http://127.0.0.1:1/", body=42)`,
+			wantSub: "body must be a string or bytes",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			flowName := strings.ReplaceAll(tc.name, " ", "-")
+			if _, err := e.Create(flowName, tc.source, "", false); err != nil {
+				t.Fatalf("Create: %v", err)
+			}
+			_, err := e.Run(flowName, nil)
+			if err == nil {
+				t.Fatalf("expected an error for %q", tc.source)
+			}
+			if !strings.Contains(err.Error(), tc.wantSub) {
+				t.Errorf("error = %v, want it to contain %q", err, tc.wantSub)
+			}
+		})
+	}
+}
+
+// TestRun_HTTPResponseBodyCapped proves oversized responses are truncated to
+// 1 MiB instead of buffered in full.
+func TestRun_HTTPResponseBodyCapped(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(bytes.Repeat([]byte("x"), flowMaxResponseBody+4096))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	e := NewEngine(dir, "http://localhost:9876")
+
+	src := `resp = http_get("` + srv.URL + `")
+print(len(resp["body"]))`
+	if _, err := e.Create("big-flow", src, "", false); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	output, err := e.Run("big-flow", nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if output != fmt.Sprintf("%d", flowMaxResponseBody) {
+		t.Errorf("body length = %q, want %d", output, flowMaxResponseBody)
 	}
 }
 

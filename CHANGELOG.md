@@ -15,6 +15,7 @@ All notable changes to MusterFlow will be documented in this file.
 - Shell completion (bash, zsh, fish)
 - Parquet output format (parquet-go v0.30.1)
 - JSONL import/export for API registry
+- Workflow engine HTTP builtins: `http_get`, `http_post`, `http_request` (DF-030). Flows can call real APIs: each returns a `{status, body, headers}` dict, non-2xx statuses are data rather than errors, requests time out after 10s and response bodies are capped at 1 MiB
 
 ### Fixed
 - DuckDB lock conflict between CLI and dashboard (TASK-026)
