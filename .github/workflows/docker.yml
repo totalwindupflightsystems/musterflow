@@ -22,20 +22,17 @@ jobs:
       - name: Checkout musterflow
         uses: actions/checkout@v4
 
-      - name: Checkout muster engine
-        uses: actions/checkout@v4
-        with:
-          repository: wojons/muster
-          path: muster
-          token: ${{ secrets.GH_PAT }}
+      # Deliberately no "Checkout muster engine" / "Resolve muster engine replace"
+      # step here. The engine is a published module pinned in go.mod, so this job
+      # builds exactly the module graph a user gets from `docker compose up -d
+      # --build`. A ./muster checkout or a generated go.work would land inside the
+      # build context that the Dockerfile's `COPY . .` pulls in, hiding a
+      # regression that breaks the documented compose path.
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26'
-
-      - name: Resolve muster engine replace
-        run: bash scripts/resolve-engine.sh
 
       - name: Install dependencies
         run: go mod download
