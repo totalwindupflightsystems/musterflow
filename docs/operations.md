@@ -57,6 +57,23 @@ docker compose up -d --build
 docker compose logs -f musterflow
 ```
 
+**Engine prerequisite: none.** The image builds from this repository's context alone, against
+the published `github.com/wojons/muster` module pinned in `go.mod` — no caller needs a muster
+checkout, an extra Docker build context or the `muster` registry image. A local engine
+checkout only affects *host-side* development builds (see "Build and toolchain" above:
+`../muster` or `MUSTER_ENGINE_DIR`, plus `bash scripts/resolve-engine.sh`); it is never
+copied into the image. To publish a different host port (the daemon inside the container
+still listens on `9876`), add a local, uncommitted override rather than editing the committed
+compose file:
+
+```yaml
+# docker-compose.override.yml (local only)
+services:
+  musterflow:
+    ports:
+      - "19876:9876"
+```
+
 ## Health
 
 `GET /api/health` returns `{"status":"ok","connected_apis":N}`. It answers 200 whenever the

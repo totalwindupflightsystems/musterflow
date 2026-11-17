@@ -1,15 +1,17 @@
 # syntax=docker/dockerfile:1
 # MusterFlow — multi-stage Docker build
 #
-# Local build (requires muster engine at ../muster):
-#   docker build -t musterflow --build-context muster=../muster .
+# The muster engine (github.com/wojons/muster) is a PUBLISHED Go module pinned
+# in go.mod/go.sum, so the image builds from this repository's context alone —
+# no engine checkout, no extra build context, no registry image:
+#   docker build -t musterflow .
+#   docker compose up -d --build        # the documented deploy path
 #
-# CI build:
-#   docker build -t musterflow --build-context muster=./muster .
-#
-# The muster engine is a local dependency — provide it via build context.
-# scripts/resolve-engine.sh generates a Go workspace (go.work) pointing at the
-# engine checkout; go.mod is never edited.
+# Engine DEVELOPMENT against a local checkout is a HOST-side concern and is NOT
+# baked into the image: point MUSTER_ENGINE_DIR at the checkout (or clone it as
+# ../muster) and run scripts/resolve-engine.sh to generate go.work, which is
+# gitignored. Inside the image the resolver only runs to clear a stale go.work
+# that `COPY . .` may have carried in from the host; it never edits go.mod.
 
 FROM golang:1.26-bookworm AS builder
 
@@ -20,13 +22,12 @@ WORKDIR /app
 # Debian-based image + gcc/g++ (libstdc++ needed at link time)
 RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
 
-# Copy muster engine from build context
-COPY --from=muster . ./muster
-
+# Copy go.mod/go.sum first so `go mod download` is cached independently of the
+# source tree. scripts/resolve-engine.sh is THE single engine-resolution
+# mechanism: with no engine checkout in the image it is informational only (it
+# may clear a stale go.work) and the module graph resolves the PUBLISHED
+# muster module. No sed surgery or module-edit commands anywhere.
 COPY go.mod go.sum ./
-# scripts/resolve-engine.sh is THE single engine-resolution mechanism — it
-# generates go.work (pointing at ./muster in-container) BEFORE downloading, so
-# the module graph resolves. No sed surgery or module-edit commands anywhere.
 COPY scripts/resolve-engine.sh ./scripts/
 RUN bash scripts/resolve-engine.sh && \
     go mod download
