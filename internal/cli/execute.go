@@ -115,7 +115,7 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 		return fmt.Errorf("read response: %w", err)
 	}
 
-	// Resolve format: --format flag > --output extension > default
+	// Resolve format: explicit -o/--output format > --output-file extension > default
 	format := opts.Format
 	if outputFlag != "" {
 		opts.Output = outputFlag
@@ -183,7 +183,7 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 		}
 	case "parquet":
 		if err := writeParquet(out, data); err != nil {
-			return fmt.Errorf("format Parquet: %w — try --format json instead", err)
+			return fmt.Errorf("format Parquet: %w — try -o json or --output-file <file>.json instead", err)
 		}
 	case "table":
 		printTable(out, data)
