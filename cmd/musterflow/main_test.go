@@ -5,9 +5,12 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/totalwindupflightsystems/musterflow/internal/app"
 )
 
 // TestParseDataDirFlag verifies the --data-dir flag is parsed from raw CLI
@@ -82,6 +85,107 @@ func TestParseNoDashboardFlag(t *testing.T) {
 				t.Errorf("parseNoDashboardFlag(%v) = %v, want %v", tt.args, got, tt.want)
 			}
 		})
+	}
+}
+
+// TestAddrPort verifies the host:port parser used to bind a lock conflict to
+// the dashboard address that was actually probed (DF-033).
+func TestAddrPort(t *testing.T) {
+	tests := []struct {
+		addr string
+		want int
+	}{
+		{"127.0.0.1:19833", 19833},
+		{":9876", 9876},
+		{"localhost:1", 1},
+		{"127.0.0.1", 0},
+		{"", 0},
+		{"127.0.0.1:", 0},
+		{"[::1]:9876", 9876},
+	}
+	for _, tt := range tests {
+		if got := addrPort(tt.addr); got != tt.want {
+			t.Errorf("addrPort(%q) = %d, want %d", tt.addr, got, tt.want)
+		}
+	}
+}
+
+// TestDashboardServesDataDir verifies that the lock's database path is
+// attributed to a data directory only on an exact directory match. This is what
+// keeps `--data-dir <same dir the dashboard serves>` working while a different
+// directory stays local (DF-033).
+func TestDashboardServesDataDir(t *testing.T) {
+	dir := t.TempDir()
+	other := t.TempDir()
+
+	tests := []struct {
+		name string
+		lock *app.StoreLock
+		dir  string
+		want bool
+	}{
+		{"same dir", &app.StoreLock{DBPath: filepath.Join(dir, "musterflow.db")}, dir, true},
+		{"different dir", &app.StoreLock{DBPath: filepath.Join(other, "musterflow.db")}, dir, false},
+		{"parent dir is not the same dir", &app.StoreLock{DBPath: filepath.Join(dir, "sub", "musterflow.db")}, dir, false},
+		{"unnamed db path", &app.StoreLock{}, dir, false},
+		{"no data dir", &app.StoreLock{DBPath: filepath.Join(dir, "musterflow.db")}, "", false},
+		{"nil lock", nil, dir, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := dashboardServesDataDir(tt.lock, tt.dir); got != tt.want {
+				t.Errorf("dashboardServesDataDir(%+v, %q) = %v, want %v", tt.lock, tt.dir, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestLockServesRequestedDir verifies routing is only re-enabled for an
+// explicit --data-dir when BOTH halves of the evidence line up: the lock's
+// database lives in the requested dir and the holder answers on the detected
+// dashboard port. Anything less and the CLI must stay local rather than write
+// into another environment's registry (DF-033).
+func TestLockServesRequestedDir(t *testing.T) {
+	dir := t.TempDir()
+	other := t.TempDir()
+	dbPath := filepath.Join(dir, "musterflow.db")
+
+	tests := []struct {
+		name     string
+		lock     *app.StoreLock
+		dataDir  string
+		dashAddr string
+		want     bool
+	}{
+		{"matching dir and port", &app.StoreLock{DBPath: dbPath, Port: 19833}, dir, "127.0.0.1:19833", true},
+		{"matching dir, port unknown", &app.StoreLock{DBPath: dbPath, Port: 0}, dir, "127.0.0.1:19833", false},
+		{"matching dir, port mismatch", &app.StoreLock{DBPath: dbPath, Port: 9876}, dir, "127.0.0.1:19833", false},
+		{"other dir, matching port", &app.StoreLock{DBPath: filepath.Join(other, "musterflow.db"), Port: 19833}, dir, "127.0.0.1:19833", false},
+		{"unparseable addr", &app.StoreLock{DBPath: dbPath, Port: 19833}, dir, "127.0.0.1", false},
+		{"nil lock", nil, dir, "127.0.0.1:19833", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := lockServesRequestedDir(tt.lock, tt.dataDir, tt.dashAddr); got != tt.want {
+				t.Errorf("lockServesRequestedDir(%+v, %q, %q) = %v, want %v",
+					tt.lock, tt.dataDir, tt.dashAddr, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSuppressedRoutingNote names both the requested directory and the
+// dashboard the CLI is NOT talking to, so a routed-vs-local mixup is never
+// silent (DF-033).
+func TestSuppressedRoutingNote(t *testing.T) {
+	note := suppressedRoutingNote("/tmp/env2", "127.0.0.1:19833")
+	for _, want := range []string{"/tmp/env2", "http://127.0.0.1:19833"} {
+		if !strings.Contains(note, want) {
+			t.Errorf("note %q does not mention %q", note, want)
+		}
+	}
+	if strings.Count(note, "\n") != 1 || !strings.HasSuffix(note, "\n") {
+		t.Errorf("note must be exactly one line, got %q", note)
 	}
 }
 

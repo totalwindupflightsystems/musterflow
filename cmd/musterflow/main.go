@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -85,9 +86,18 @@ func run() error {
 		dashRunning = isMusterflowDashboard(dashAddr)
 	}
 
-	// Load registry
+	// Load registry.
+	//
+	// DF-033: an explicit --data-dir names the registry the user wants touched.
+	// Routing every command through the dashboard would write into the SERVER's
+	// registry instead and still print success, so the flag wins and the CLI
+	// stays local. The one exception is when the dashboard demonstrably serves
+	// that very directory (lock file live there, holder answering on dashAddr):
+	// then routing writes exactly where --data-dir points.
 	registry := app.NewRegistry(cfg.DataDir)
-	if dashRunning {
+	explicitDataDir := flagDataDir != ""
+	routed := false
+	if dashRunning && !explicitDataDir {
 		// Skip LoadReadOnly: DuckDB read-only open still fails with a
 		// "Conflicting lock is held" error when the dashboard process holds
 		// the write lock.  The registry stays empty (store == nil) — this is
@@ -95,18 +105,37 @@ func run() error {
 		// disconnect, catalog, refresh, mcp) route through the dashboard HTTP
 		// API via dashboardBaseURL.  Flow commands (create, list, run) also
 		// route through the dashboard HTTP API via dashboardBaseURL.
-		cli.SetDashboardURL(fmt.Sprintf("http://%s", dashAddr))
-	} else {
+		cli.SetDashboardURL(dashboardURL(dashAddr))
+		routed = true
+	}
+	if !routed {
 		if err := registry.Load(); err != nil {
-			// DF-045: remember the failure so commands that need the registry
-			// fail closed with an actionable error instead of reporting an
-			// empty registry. A DuckDB lock conflict is explained on demand
-			// (naming the lock holder and the fix), so the raw driver text is
-			// not printed here.
-			cli.SetStoreError(err)
-			if _, locked := app.AsStoreLock(err); !locked {
-				fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
+			lock, locked := app.AsStoreLock(err)
+			if locked && explicitDataDir && dashRunning &&
+				lockServesRequestedDir(lock, cfg.DataDir, dashAddr) {
+				// The dashboard holds this very directory, so routing writes
+				// into the directory the user named. Say so — never switch
+				// registry paths silently.
+				cli.SetDashboardURL(dashboardURL(dashAddr))
+				fmt.Fprintf(os.Stderr,
+					"note: --data-dir %s is served by the running dashboard at http://%s; routing this command through it\n",
+					cfg.DataDir, dashAddr)
+			} else {
+				// DF-045: remember the failure so commands that need the
+				// registry fail closed with an actionable error instead of
+				// reporting an empty registry. A DuckDB lock conflict is
+				// explained on demand (naming the lock holder and the fix), so
+				// the raw driver text is not printed here.
+				cli.SetStoreError(err)
+				if !locked {
+					fmt.Fprintf(os.Stderr, "Warning: could not load registry: %v\n", err)
+				}
+				if explicitDataDir && dashRunning {
+					fmt.Fprint(os.Stderr, suppressedRoutingNote(cfg.DataDir, dashAddr))
+				}
 			}
+		} else if explicitDataDir && dashRunning {
+			fmt.Fprint(os.Stderr, suppressedRoutingNote(cfg.DataDir, dashAddr))
 		}
 	}
 
@@ -288,6 +317,66 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 // pipes, and other non-interactive contexts.
 func isTerminal() bool {
 	return term.IsTerminal(int(os.Stdin.Fd()))
+}
+
+// dashboardURL renders the base URL for a detected dashboard address.
+func dashboardURL(addr string) string {
+	return fmt.Sprintf("http://%s", addr)
+}
+
+// suppressedRoutingNote is the single stderr line DF-033 prints when an
+// explicit --data-dir keeps the CLI local while a dashboard is running: the
+// command is about to touch the named directory, NOT the dashboard's registry.
+func suppressedRoutingNote(dataDir, dashAddr string) string {
+	return fmt.Sprintf(
+		"note: --data-dir %s given, so dashboard routing at %s is disabled; the running dashboard keeps its own registry\n",
+		dataDir, dashboardURL(dashAddr))
+}
+
+// addrPort extracts the port from a "host:port" or ":port" address, or 0 when
+// the address has no parseable port.
+func addrPort(addr string) int {
+	idx := strings.LastIndex(addr, ":")
+	if idx < 0 {
+		return 0
+	}
+	var port int
+	if _, err := fmt.Sscanf(addr[idx+1:], "%d", &port); err != nil {
+		return 0
+	}
+	return port
+}
+
+// dashboardServesDataDir reports whether the DuckDB lock holder's database
+// lives in dataDir — i.e. the dashboard already serves the exact directory the
+// user named, so routing a command through it writes where --data-dir points
+// rather than into some other environment's registry (DF-033).
+func dashboardServesDataDir(lock *app.StoreLock, dataDir string) bool {
+	if lock == nil || lock.DBPath == "" || dataDir == "" {
+		return false
+	}
+	lockDir, err := filepath.Abs(filepath.Dir(lock.DBPath))
+	if err != nil {
+		return false
+	}
+	wantDir, err := filepath.Abs(dataDir)
+	if err != nil {
+		return false
+	}
+	return lockDir == wantDir
+}
+
+// lockServesRequestedDir reports whether the lock conflict proves the dashboard
+// detected at dashAddr already serves dataDir. Both halves are required: the
+// holder's database sits in dataDir, AND the holder answers MusterFlow's health
+// probe on the very port we detected (otherwise a different musterflow process
+// holds the lock and routing would again target the wrong registry).
+func lockServesRequestedDir(lock *app.StoreLock, dataDir, dashAddr string) bool {
+	if lock == nil {
+		return false
+	}
+	port := addrPort(dashAddr)
+	return port != 0 && lock.Port == port && dashboardServesDataDir(lock, dataDir)
 }
 
 // isMusterflowDashboard verifies that a musterflow dashboard is actually
