@@ -10,6 +10,9 @@ go.work.sum
 # GitReins — local state files (rebuildable)
 .gitreins/history/
 .gitreins/tasks.yaml
+.gitreins/tasks.yaml.lock
+.gitreins/usage.jsonl
+.gitreins/logs/
 
 # Build artifacts
 bin/
@@ -18,6 +21,8 @@ bin/
 .vfs/graph/graph.db
 .vfs/graph/graph.db.wal
 .vfs/graph/.last_warm
+.vfs/graph/.last_reconcile
+.vfs/graph/.symbols_cache.json
 
 # DuckDB board — local cache (rebuildable from parquet)
 .coding-hermes/board/board.db

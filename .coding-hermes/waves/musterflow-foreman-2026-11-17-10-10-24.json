@@ -1,0 +1,15 @@
+{
+  "wave": "musterflow-foreman-2026-11-17-10-10-24",
+  "tick": 226,
+  "project": "musterflow",
+  "base": "origin/master",
+  "base_sha": "8c488ed",
+  "budget": 9,
+  "workers": [
+    {"task": "DF-047", "worktree": "/home/kara/worktrees/musterflow-DF-047", "branch": "wt/DF-047", "files": [".github/workflows/docker.yml"], "model": "openai/gpt-6.1-terra", "provider": "xkiro"},
+    {"task": "DF-034", "worktree": "/home/kara/worktrees/musterflow-DF-034", "branch": "wt/DF-034", "files": ["internal/cli/root.go", "internal/cli/commands.go", "internal/cli/cli_test.go"], "model": "openai/gpt-6.1-terra", "provider": "xkiro"},
+    {"task": "DF-033", "worktree": "/home/kara/worktrees/musterflow-DF-033", "branch": "wt/DF-033", "files": ["cmd/musterflow/main.go", "cmd/musterflow/main_test.go"], "model": "openai/gpt-6.1-terra", "provider": "xkiro"}
+  ],
+  "independence": "DF-047 = CI workflow only; DF-034 = internal/cli command surface; DF-033 = cmd/musterflow routing. No shared files, no depends_on edges between the three rows.",
+  "foreman_direct": ["QA-MUSTERFLOW-3-R11 (.gitignore strays)", "DOC-12 premise re-check (README auth block already split to --key)"]
+}
