@@ -118,7 +118,7 @@ Generated calls attach a stored credential with `--auth <api-id>`:
 musterflow gh issues list --auth gh
 ```
 
-Supports: API key, Bearer token, OAuth2 (authorization code with PKCE), and mTLS.
+Supports: API key, Bearer token, OAuth2 (authorization code, no PKCE), and mTLS.
 `--auth` attaches API key, Bearer, and OAuth2 secrets as headers; mTLS is
 transport-level and is configured on the call that connects the API.
 
