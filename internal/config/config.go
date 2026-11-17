@@ -89,8 +89,14 @@ func Save(cfg Config) error {
 	return SaveWithDataDir(cfg, dir)
 }
 
+// configFileMode is the permission for the config file. It holds plaintext
+// bearer tokens and API keys, so it must never be readable by group or others.
+const configFileMode os.FileMode = 0600
+
 // SaveWithDataDir writes the config to <dir>/config.yaml.
-// Creates the directory if needed.
+// Creates the directory if needed. The file is always left at 0600; a
+// pre-existing group/world-readable file is tightened on save and its previous
+// mode is reported on stderr.
 func SaveWithDataDir(cfg Config, dir string) error {
 	if dir == "" {
 		dir = defaultDataDir()
@@ -100,12 +106,36 @@ func SaveWithDataDir(cfg Config, dir string) error {
 		return fmt.Errorf("create config dir: %w", err)
 	}
 
+	warnIfLooseConfigPerms(path)
+
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0644)
+	// os.WriteFile only applies the mode when it CREATES the file, so an
+	// existing 0644 config (written by an older release) would keep its loose
+	// mode. Chmod after the write to tighten it.
+	if err := os.WriteFile(path, data, configFileMode); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	if err := os.Chmod(path, configFileMode); err != nil {
+		return fmt.Errorf("secure config permissions: %w", err)
+	}
+	return nil
+}
+
+// warnIfLooseConfigPerms reports an existing config file that group or others
+// can read. The file is rewritten 0600 immediately after, so this is a notice
+// rather than a refusal. A missing file (first save) is not a warning.
+func warnIfLooseConfigPerms(path string) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	if mode := info.Mode().Perm(); mode&0077 != 0 {
+		fmt.Fprintf(os.Stderr, "Warning: config at %s was readable by group/others (%04o) — rewriting with 0600\n", path, mode)
+	}
 }
 
 // ConfigPath returns the path to the config file in the default data directory.

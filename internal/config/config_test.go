@@ -2,9 +2,11 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -269,6 +271,135 @@ func TestSaveAndLoadWithDataDir(t *testing.T) {
 	if loaded.Auth["testapi"].Key != "sk-test1234567890" {
 		t.Errorf("expected auth key sk-test1234567890, got %q", loaded.Auth["testapi"].Key)
 	}
+}
+
+func TestSaveWithDataDir_FileMode0600(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cfg := Config{
+		Port:           4444,
+		DataDir:        tmpDir,
+		DefaultFormat:  "table",
+		AutoCompletion: true,
+		Auth: map[string]AuthConfig{
+			"gh": {Type: "bearer", Key: "«redacted:ghp_…»"},
+		},
+	}
+
+	var saveErr error
+	stderr := captureStderr(t, func() {
+		saveErr = SaveWithDataDir(cfg, tmpDir)
+	})
+	if saveErr != nil {
+		t.Fatalf("SaveWithDataDir: %v", saveErr)
+	}
+
+	path := filepath.Join(tmpDir, "config.yaml")
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat %s: %v", path, err)
+	}
+	if got := info.Mode().Perm(); got != 0600 {
+		t.Errorf("config file mode = %04o, want 0600 (plaintext credentials must not be group/world readable)", got)
+	}
+	// A first save has no loose predecessor, so it must not warn.
+	if stderr != "" {
+		t.Errorf("unexpected stderr on first save: %q", stderr)
+	}
+}
+
+// TestSaveWithDataDir_Preserves0600OnRewrite guards against a rewrite of an
+// already-tight file regressing to a looser mode.
+func TestSaveWithDataDir_Preserves0600OnRewrite(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "config.yaml")
+
+	cfg := Config{Port: 4444, DataDir: tmpDir, Auth: map[string]AuthConfig{}}
+	if err := SaveWithDataDir(cfg, tmpDir); err != nil {
+		t.Fatalf("first SaveWithDataDir: %v", err)
+	}
+
+	cfg.Port = 5555
+	if err := SaveWithDataDir(cfg, tmpDir); err != nil {
+		t.Fatalf("second SaveWithDataDir: %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat %s: %v", path, err)
+	}
+	if got := info.Mode().Perm(); got != 0600 {
+		t.Errorf("config file mode after rewrite = %04o, want 0600", got)
+	}
+}
+
+// TestSaveWithDataDir_TightensLooseFile covers configs written by older
+// releases at 0644: the next save must both warn and tighten the file.
+func TestSaveWithDataDir_TightensLooseFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "config.yaml")
+
+	// Pre-existing world-readable config, as left by the 0644 writer.
+	if err := os.WriteFile(path, []byte("port: 1234\n"), 0644); err != nil {
+		t.Fatalf("seed loose config: %v", err)
+	}
+	if err := os.Chmod(path, 0644); err != nil {
+		t.Fatalf("chmod loose config: %v", err)
+	}
+	before, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat before: %v", err)
+	}
+	if before.Mode().Perm()&0077 == 0 {
+		t.Fatalf("precondition failed: seeded config mode = %04o, expected group/world bits", before.Mode().Perm())
+	}
+
+	cfg := Config{Port: 4444, DataDir: tmpDir, Auth: map[string]AuthConfig{}}
+	var saveErr error
+	stderr := captureStderr(t, func() {
+		saveErr = SaveWithDataDir(cfg, tmpDir)
+	})
+	if saveErr != nil {
+		t.Fatalf("SaveWithDataDir: %v", saveErr)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat after: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0600 {
+		t.Errorf("config file mode after tightening = %04o, want 0600", got)
+	}
+	if !strings.Contains(stderr, "readable by group/others") {
+		t.Errorf("expected a loose-permissions warning on stderr, got %q", stderr)
+	}
+}
+
+// captureStderr redirects os.Stderr for the duration of fn and returns
+// everything written to it.
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	old := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("create pipe: %v", err)
+	}
+	os.Stderr = w
+	defer func() { os.Stderr = old }()
+
+	fn()
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("close pipe writer: %v", err)
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("read pipe: %v", err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatalf("close pipe reader: %v", err)
+	}
+	return string(out)
 }
 
 func TestSave_HonorsDataDir(t *testing.T) {
