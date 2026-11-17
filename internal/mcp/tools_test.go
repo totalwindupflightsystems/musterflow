@@ -382,9 +382,22 @@ func TestRefresh_DropsRemovedAPI(t *testing.T) {
 		t.Fatalf("initial Refresh: %v", err)
 	}
 
-	// Premise: both APIs' tools are present.
-	if got := toolNames(tr.ListTools()); len(got) != 2 || !hasTool(tr.ListTools(), "listPets") || !hasTool(tr.ListTools(), "listUsers") {
-		t.Fatalf("expected [listPets listUsers] before remove, got %v", got)
+	// Premise: both APIs' tools are present — each namespaced under its own
+	// API (DF-039), plus the bare operation names, which are still unique
+	// across the two APIs.
+	before := tr.ListTools()
+	for _, want := range []string{
+		"keep-api__listPets",
+		"drop-api__listUsers",
+		"listPets",
+		"listUsers",
+	} {
+		if !hasTool(before, want) {
+			t.Fatalf("expected tool %q before remove, got %v", want, toolNames(before))
+		}
+	}
+	if len(before) != 4 {
+		t.Fatalf("expected 4 tools (2 APIs x namespaced+bare) before remove, got %v", toolNames(before))
 	}
 
 	// Remove the API that owns listUsers, then re-derive.
@@ -399,8 +412,14 @@ func TestRefresh_DropsRemovedAPI(t *testing.T) {
 	if hasTool(tools, "listUsers") {
 		t.Errorf("removed API's tool 'listUsers' still listed after Refresh: %v", toolNames(tools))
 	}
+	if hasTool(tools, "drop-api__listUsers") {
+		t.Errorf("removed API's namespaced tool 'drop-api__listUsers' still listed after Refresh: %v", toolNames(tools))
+	}
 	if !hasTool(tools, "listPets") {
 		t.Errorf("remaining API's tool 'listPets' missing after Refresh: %v", toolNames(tools))
+	}
+	if !hasTool(tools, "keep-api__listPets") {
+		t.Errorf("remaining API's namespaced tool 'keep-api__listPets' missing after Refresh: %v", toolNames(tools))
 	}
 
 	// The execution config for the removed tool must be gone too (this fails

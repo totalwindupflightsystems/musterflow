@@ -177,12 +177,18 @@ func TestServer_APIDelete_RefreshesMCPTools(t *testing.T) {
 			removedID := df029Connect(t, s, "df029-removed", removedSpec)
 			keptID := df029Connect(t, s, "df029-kept", keptSpec)
 
-			// Premise: both APIs' tools are served before the delete.
+			// Premise: both APIs' tools are served before the delete — each
+			// namespaced under its API (DF-039) plus its bare name.
 			before := df029ToolsList(t, s)
-			if len(before) != 2 {
-				t.Fatalf("expected 2 tools before delete, got %d: %v", len(before), before)
+			if len(before) != 4 {
+				t.Fatalf("expected 4 tools before delete, got %d: %v", len(before), before)
 			}
-			for _, want := range []string{"listWidgets", "listGadgets"} {
+			for _, want := range []string{
+				"df029-removed__listWidgets",
+				"df029-kept__listGadgets",
+				"listWidgets",
+				"listGadgets",
+			} {
 				if !df029Contains(before, want) {
 					t.Fatalf("premise failed: tool %q missing before delete: %v", want, before)
 				}
@@ -221,16 +227,18 @@ func TestServer_APIDelete_RefreshesMCPTools(t *testing.T) {
 				tool string
 				want bool
 			}{
-				{"listWidgets", false}, // removed API's tool must be gone
-				{"listGadgets", true},  // remaining API's tool must stay
+				{"df029-removed__listWidgets", false}, // removed API's namespaced tool
+				{"listWidgets", false},                // ...and its bare alias
+				{"df029-kept__listGadgets", true},     // remaining API's namespaced tool
+				{"listGadgets", true},                 // ...and its bare alias
 			}
 			for _, p := range presence {
 				if got := df029Contains(after, p.tool); got != p.want {
 					t.Errorf("after delete, tool %q present=%v, want %v (tools: %v)", p.tool, got, p.want, after)
 				}
 			}
-			if len(after) != 1 {
-				t.Errorf("expected 1 tool after delete, got %d: %v", len(after), after)
+			if len(after) != 2 {
+				t.Errorf("expected 2 tools after delete, got %d: %v", len(after), after)
 			}
 
 			// GET /api/apis must agree with the tool list.
@@ -259,8 +267,9 @@ func TestServer_APIDelete_LastAPI_EmptiesToolList(t *testing.T) {
 	s, _, _ := df029NewServer(t)
 
 	id := df029Connect(t, s, "df029-only", specPath)
-	if before := df029ToolsList(t, s); len(before) != 1 || before[0] != "listOnly" {
-		t.Fatalf("expected [listOnly] before delete, got %v", before)
+	if before := df029ToolsList(t, s); len(before) != 2 ||
+		!df029Contains(before, "df029-only__listOnly") || !df029Contains(before, "listOnly") {
+		t.Fatalf("expected [df029-only__listOnly listOnly] before delete, got %v", before)
 	}
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/apis/"+id, nil)

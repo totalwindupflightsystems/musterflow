@@ -272,7 +272,7 @@ curl -X POST http://localhost:9876/mcp \
 }
 ```
 
-> **Note:** The full response includes all five tools (`listPets`, `createPet`, `getPet`, `updatePet`, `deletePet`); three are shown above for brevity. MCP tool names are bare OpenAPI `operationId`s (e.g. `listPets`, `createPet`, `getPet`) with no API-name prefix. Because the MCP server registers every connected API's operations in a flat namespace, operationIds that collide across different APIs will overwrite each other — connect APIs with unique operationIds or be aware of the collision risk.
+> **Note:** The full response includes up to ten tools — five `operationId`s, each published twice; three entries are shown above for brevity. Every operation is published as `<api-slug>__<operationId>` (e.g. `pet-store-api__listPets`), where the slug comes from the connection's name, so two APIs that both define `listPets` get two distinct tools that each call their own base URL. The bare `operationId` (e.g. `listPets`) is also published while it identifies exactly one connected API; once any second API defines the same `operationId`, the bare name is withdrawn and only the namespaced names remain.
 
 ### Call a Tool
 
