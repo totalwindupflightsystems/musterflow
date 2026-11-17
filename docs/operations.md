@@ -74,6 +74,29 @@ services:
       - "19876:9876"
 ```
 
+**Regression guard (re-prove the fix).** The image build must never depend on an outside
+build context, registry image or engine checkout. Two checks keep it honest, and both should
+be re-run whenever the `Dockerfile` build stage changes:
+
+```bash
+grep -c 'from=muster' Dockerfile        # must print 0
+```
+
+To re-prove the negative control, restore a `COPY --from=muster . ./muster` line in a scratch
+copy of the `Dockerfile` and build with an isolated builder (a plain `docker build` on a host
+that happens to have an image tagged `muster` will NOT show the failure — it resolves the local
+image instead):
+
+```bash
+docker buildx create --name ctx-check --driver docker-container --use   # isolated image store
+docker buildx build --builder ctx-check -f Dockerfile-with-context .     # must fail at that COPY
+#   ERROR: failed to solve: pull access denied, repository does not exist
+docker buildx rm ctx-check
+```
+
+Measured 2026-11-17 (QA cell `QA-MUSTERFLOW-006`): the pre-fix file failed exactly there on a
+clean builder and the current file builds and serves `GET /api/health` → 200.
+
 ## Health
 
 `GET /api/health` returns `{"status":"ok","connected_apis":N}`. It answers 200 whenever the

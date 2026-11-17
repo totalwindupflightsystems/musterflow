@@ -71,8 +71,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          build-contexts: |
-            muster=./muster
+          # No extra build context: the Dockerfile builds against the published
+          # github.com/wojons/muster module pinned in go.mod (same module graph a
+          # user gets from `docker compose up -d --build`). Passing a `muster`
+          # context here would hide a regression that breaks the documented path.
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
