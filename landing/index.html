@@ -103,7 +103,7 @@ Dashboard: http://localhost:9876</code></pre>
     <div class="card">
       <div class="icon">⌨️</div>
       <h3>CLI</h3>
-      <p>Every connected API becomes typed subcommands. <code>musterflow gh issues list</code>. <code>musterflow stripe charges list</code>. Bash/zsh/fish completion included.</p>
+      <p>Every connected API becomes typed subcommands. <code>musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available</code>. <code>musterflow swagger-petstore-openapi-3-0 store get-inventory -o json</code>. Bash/zsh/fish completion included.</p>
     </div>
     <div class="card">
       <div class="icon">🤖</div>
@@ -124,7 +124,7 @@ Dashboard: http://localhost:9876</code></pre>
     <p style="margin-bottom:1rem">Anyone can add an API. Anyone can share a workflow. Anyone can publish a WASM transform. Quality scoring surfaces the good ones. The catalog is a public GitHub repo — no gatekeepers, no SaaS dependency, no registration required.</p>
     <p><code>$ musterflow connect https://api.github.com</code> — 42 CLI commands + MCP tools, instantly.</p>
     <p style="margin-top:.5rem"><code>$ musterflow catalog push gh</code> — share it with the community.</p>
-    <p style="margin-top:.5rem"><code>$ musterflow flow create</code> → <code>on stripe:charge.succeeded → gh issues create(title="Payment: $amount")</code></p>
+    <p style="margin-top:.5rem"><code>$ musterflow flow create --name charge-hook --webhook</code> → <code>POST /hooks/charge-hook</code> runs the Starlark flow with the decoded JSON body in <code>trigger</code></p>
   </div>
 </section>
 

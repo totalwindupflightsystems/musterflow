@@ -66,7 +66,7 @@ musterflow start
 Every OpenAPI operation becomes a CLI subcommand. Path parameters, query flags, and request bodies are all handled:
 
 ```bash
-$ musterflow <api-name> <operation> --flag1 value --flag2 value
+$ musterflow <api-name> <resource> <operation> --flag1 value --flag2 value
 ```
 
 Output formats: **table** (default), **JSON**, **YAML**, **CSV**, **JSONL**, and **Parquet**.
@@ -105,7 +105,7 @@ musterflow catalog pull <api-id>       # Install a community API
 ### 🔐 Auth — Per-API Credential Management
 
 ```bash
-musterflow auth add gh --type apikey --key ghp_xxx
+musterflow auth add petstore --type apikey --key <token>
 musterflow auth add db --type bearer --key eyJ...
 musterflow auth login slack --client-id <id> --client-secret <secret> --auth-url <url> --token-url <url>   # OAuth2 browser flow (all four flags required; optional --scopes, --redirect-port)
 musterflow auth add api --type mtls --cert client.pem --key-path client-key.pem
@@ -115,7 +115,7 @@ musterflow auth list                 # Keys are masked
 Generated calls attach a stored credential with `--auth <api-id>`:
 
 ```bash
-musterflow gh issues list --auth gh
+musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available --auth petstore
 ```
 
 Supports: API key, Bearer token, OAuth2 (authorization code, no PKCE), and mTLS.
@@ -175,7 +175,7 @@ internal/catalog/             → Community catalog (search, push, pull, scoring
 internal/cli/                 → CLI command tree (cobra)
 internal/config/              → YAML config (~/.musterflow/config.yaml)
 internal/dashboard/           → Web dashboard + REST API
-internal/mcp/                 → MCP HTTP server (JSON-RPC over SSE)
+internal/mcp/                 → MCP HTTP server (HTTP POST JSON-RPC)
 internal/wasm/                → WASM transform sandbox
 internal/workflow/            → Starlark workflow engine
 internal/completion/          → Shell completion (bash, zsh, fish)
@@ -230,7 +230,7 @@ Bash, Zsh, and Fish completion auto-installs on first run in interactive mode. D
 musterflow completion bash | sudo tee /etc/bash_completion.d/musterflow
 ```
 
-Dynamic completion: `musterflow gh <TAB>` shows GitHub API operations. Updates automatically when new APIs are connected.
+Dynamic completion: `musterflow swagger-petstore-openapi-3-0 <TAB>` shows the API's resources and operations. Updates automatically when new APIs are connected.
 
 ## Output Formats
 

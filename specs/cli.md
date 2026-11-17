@@ -449,7 +449,7 @@ When `dashboardBaseURL != ""`, these commands route through the dashboard HTTP A
 | HTTP error from API call | `ExecuteAndFormat` receives HTTP >= 400 | 1 | `"HTTP %s"` (e.g. `"HTTP 404 Not Found"`) |
 | Output file creation error | `--output <path>` with unwritable path | 1 | `"create output file: %w"` |
 | Body marshal error | `BuildRequest` fails to marshal JSON body from flags | 1 | `"marshal body: %w"` |
-| Parquet format error | `--format parquet` with data that can't be columnar-encoded | 1 | `"format Parquet: %w — try --format json instead"` |
+| Parquet format error | `-o parquet` with data that can't be columnar-encoded | 1 | `"format Parquet: %w — try -o json or --output-file <file>.json instead"` |
 | OAuth2 callback timeout | `startCallbackServer` waits 5 minutes with no callback | 1 | `"timed out waiting for authorization (5 minutes)"` |
 | OAuth2 authorization error | Callback receives `error` query param | 1 | `"authorization error: %s (%s)"` |
 | Spec load failure (lazy) | Per-API subcommand accessed, spec URL unreachable | 1 | `"load spec: %w"` |
