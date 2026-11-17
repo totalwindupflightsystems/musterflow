@@ -80,7 +80,7 @@ is, why it behaves the way it does, and the right way to work with it.
   real payload delivery; `trigger` global.
 - Persistence across restarts (DuckDB registry + flows dir).
 - Export/import/disconnect/refresh work when the dashboard is stopped.
-- Port auto-discovery (9877-9886) and `--dashboard-addr` override exist.
+- Port auto-discovery (range `port` … `port+9` — 9877-9885 when 9876 is taken) and `--dashboard-addr` override exist.
 
 ## Hygiene notes
 

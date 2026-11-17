@@ -218,7 +218,7 @@ default_format: table
 auto_completion: true
 ```
 
-Port auto-discovery: if 9876 is occupied, tries 9877–9886. Override with `--dashboard-addr :9999` or by setting `port` in config.
+Port auto-discovery: if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing which one it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :9999` or by setting `port` in config.
 
 ## Shell Completion
 
