@@ -363,6 +363,37 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 	return cmd
 }
 
+// defaultFlowSource is the Starlark template written by `flow create` when no
+// --source is supplied. It is a single source of truth for both create paths:
+// the local engine path here and the dashboard payload path in register.go.
+//
+// The template must run as-is: `musterflow flow run <name>` on a freshly
+// created flow prints "Hello from flow" and exits 0. It also demonstrates the
+// trigger global, which is a dict for webhook/dashboard payloads and None for
+// a plain `flow run`.
+//
+// The shape is dictated by the Starlark dialect, verified empirically against
+// this engine: top-level `if`/`for` STATEMENTS do not compile ("if statement
+// not within a function"), so trigger handling lives inside a def that is
+// called at the end. Referencing `trigger` in a top-level EXPRESSION (e.g.
+// inside a print(...) call) does compile, but a def is the reliable place for
+// any branching logic.
+const defaultFlowSource = `# MusterFlow Starlark workflow - runs as-is: musterflow flow run <name>
+#
+# Globals: trigger (payload dict, or None on a plain run), print, and the HTTP
+# helpers http_get(url), http_post(url, body), http_request(method, url) -
+# each returns {"status", "body", "headers"}.
+# Top-level code may only be assignments and defs: if/for STATEMENTS must live
+# inside a def (a top-level "if trigger != None:" fails to compile).
+def main():
+    if trigger == None:
+        print("Hello from flow")
+    else:
+        print("Triggered with payload: " + str(trigger))
+
+main()
+`
+
 func newFlowCommand(registry *app.Registry) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "flow",
@@ -394,7 +425,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 			}
 			flowSource := source
 			if flowSource == "" {
-				flowSource = "# Write your Starlark workflow here\n"
+				flowSource = defaultFlowSource
 			}
 			if dashboardBaseURL != "" {
 				return flowCreateViaDashboard(flowName, flowSource, description, webhook)
