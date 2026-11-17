@@ -5,12 +5,24 @@ package catalog
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 )
 
 const defaultCatalogRepo = "https://raw.githubusercontent.com/totalwindupflightsystems/musterflow-catalog/main"
+
+// ErrBackendUnavailable classifies the failure where the catalog backend
+// itself is absent: the index URL answers 404 (repo missing, private, or
+// renamed). It carries no message text of its own in the wrapped error — the
+// sentence operators already see ("catalog backend not available (HTTP 404):
+// repo … absent or private") is composed at the 404 site, so classifying on
+// errors.Is changes the failure CLASS without changing a byte of the text.
+//
+// Callers use it to answer with a 404-class status instead of a 500: a missing
+// backend is a not-found condition, not a server error (DF-035).
+var ErrBackendUnavailable = errors.New("catalog backend not available")
 
 // CatalogEntry represents an item in the community catalog.
 type CatalogEntry struct {
@@ -60,7 +72,7 @@ func (c *Client) Search(query string) ([]CatalogEntry, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("catalog backend not available (HTTP %d): repo %s absent or private", resp.StatusCode, c.repoURL)
+		return nil, fmt.Errorf("%w (HTTP %d): repo %s absent or private", ErrBackendUnavailable, resp.StatusCode, c.repoURL)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("catalog returned status %d", resp.StatusCode)

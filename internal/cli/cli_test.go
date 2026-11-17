@@ -1196,6 +1196,59 @@ func TestCatalogCommand_SearchOutput(t *testing.T) {
 	}
 }
 
+// TestCatalogSearchError_IdenticalWithAndWithoutDashboard is the DF-035
+// acceptance at the user-visible surface: the same operation against the same
+// absent backend must report the same error text whether the CLI routes through
+// a running dashboard or not.
+//
+// Local mode is represented by the catalog client's own error, which is what
+// the no-dashboard branch returns verbatim (root.go: `results, err :=
+// client.Search(...)` → `return err`). Dashboard mode is driven end-to-end
+// through a real dashboard server, so this also proves the CLI relays the
+// dashboard's error body instead of printing a bare "dashboard returned HTTP N"
+// line.
+func TestCatalogSearchError_IdenticalWithAndWithoutDashboard(t *testing.T) {
+	// The absent catalog backend both modes talk to.
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer backend.Close()
+
+	_, localErr := catalog.NewClientWithRepoURL(backend.URL).Search("github")
+	if localErr == nil {
+		t.Fatal("premise failed: expected the local catalog client to fail on the absent backend")
+	}
+
+	// Dashboard mode: a real dashboard server whose catalog client points at
+	// the same absent backend.
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	dash := dashboard.NewServer(r, catalog.NewClientWithRepoURL(backend.URL), nil, ":0")
+	ts := httptest.NewServer(dash.Handler())
+	defer ts.Close()
+
+	SetDashboardURL(ts.URL)
+	defer SetDashboardURL("")
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"catalog", "search", "github"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error from catalog search via dashboard, got nil")
+	}
+
+	if got, want := err.Error(), localErr.Error(); got != want {
+		t.Errorf("catalog search error diverges by routing mode:\n with dashboard: %q\n without:        %q", got, want)
+	}
+	if strings.Contains(err.Error(), "dashboard returned HTTP") {
+		t.Errorf("dashboard mode still reports a bare status line instead of the catalog message: %q", err.Error())
+	}
+}
+
 func TestConnectCommand_InvalidURL(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
 	if err := r.Load(); err != nil {

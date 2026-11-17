@@ -6,6 +6,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -151,6 +152,19 @@ func catalogSearchViaDashboard(query string) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
+		// DF-035: relay the dashboard's own message instead of a bare status
+		// line, so `catalog search` prints the same text with or without a
+		// running dashboard (the dashboard passes the catalog client's error
+		// through verbatim — e.g. "catalog backend not available (HTTP 404):
+		// repo … absent or private", which is also the local-mode text).
+		// Same decode-and-relay shape as refreshViaDashboard/connectViaDashboard.
+		var errResult struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		if errResult.Error != "" {
+			return errors.New(errResult.Error)
+		}
 		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
 	}
 

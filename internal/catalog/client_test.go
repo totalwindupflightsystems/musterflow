@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -175,5 +176,47 @@ func TestSearchNotFoundReturnsError(t *testing.T) {
 	}
 	if results != nil {
 		t.Errorf("expected nil results for 404, got %v", results)
+	}
+}
+
+// TestSearchNotFoundIsClassified covers DF-035 at its source: the 404 site must
+// stamp the error with ErrBackendUnavailable so callers (the dashboard handler)
+// can distinguish "backend absent" from a generic failure, while the
+// human-readable text operators see stays byte-identical to the pre-fix
+// message. A non-404 status must NOT carry the sentinel — that failure is an
+// upstream error, not an absent backend.
+func TestSearchNotFoundIsClassified(t *testing.T) {
+	notFound := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer notFound.Close()
+
+	client := NewClientWithRepoURL(notFound.URL)
+	_, err := client.Search("anything")
+	if err == nil {
+		t.Fatal("expected error for 404, got nil")
+	}
+	if !errors.Is(err, ErrBackendUnavailable) {
+		t.Errorf("404 error does not match ErrBackendUnavailable: %v", err)
+	}
+	want := "catalog backend not available (HTTP 404): repo " + notFound.URL + " absent or private"
+	if got := err.Error(); got != want {
+		t.Errorf("404 message text drifted from the local-mode wording:\n got: %q\nwant: %q", got, want)
+	}
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "boom", http.StatusServiceUnavailable)
+	}))
+	defer upstream.Close()
+
+	_, err = NewClientWithRepoURL(upstream.URL).Search("anything")
+	if err == nil {
+		t.Fatal("expected error for 503, got nil")
+	}
+	if errors.Is(err, ErrBackendUnavailable) {
+		t.Errorf("non-404 status must not be classified as backend-unavailable: %v", err)
+	}
+	if want := "catalog returned status 503"; err.Error() != want {
+		t.Errorf("non-404 message: got %q, want %q", err.Error(), want)
 	}
 }

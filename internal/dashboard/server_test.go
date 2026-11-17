@@ -3,6 +3,7 @@ package dashboard
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
+	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/mcp"
 	"github.com/wojons/muster/pkg/mcp/handlers"
 )
@@ -342,4 +344,129 @@ func TestServer_RefreshMCPTools_NilRegistry(t *testing.T) {
 
 	s := NewServer(r, nil, nil, ":0")
 	s.refreshMCPTools() // must not panic
+}
+
+// --- DF-035: catalog search failure class must not depend on routing mode ---
+//
+// Same operation, two routing modes: with the dashboard running the CLI hits
+// GET /api/catalog/search, without it the CLI calls catalog.Client.Search
+// directly. The backend repo is absent (404), so both modes must report the
+// SAME text and the SAME class. Pre-fix, handleCatalogSearch turned every
+// client error into HTTP 500, so dashboard mode printed "dashboard returned
+// HTTP 500" while local mode printed "catalog backend not available (HTTP
+// 404): repo … absent or private".
+
+// df035NewServerWithCatalog builds a dashboard Server backed by a real
+// catalog.Client pointed at an httptest backend. NewServer takes the concrete
+// *catalog.Client (no interface seam), so the package's existing pattern for
+// faking the catalog is an HTTP backend — see the CatalogSearch tests in
+// dashboard_test.go.
+func df035NewServerWithCatalog(t *testing.T, backendURL string) *Server {
+	t.Helper()
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+	return NewServer(r, catalog.NewClientWithRepoURL(backendURL), nil, ":0")
+}
+
+// df035CatalogSearch drives GET /api/catalog/search?q=… and returns the HTTP
+// status plus the "error" field of the JSON body (empty when absent).
+func df035CatalogSearch(t *testing.T, s *Server, query string) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/catalog/search?q="+query, nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	var body struct {
+		Error string `json:"error"`
+	}
+	_ = json.NewDecoder(rec.Body).Decode(&body)
+	return rec.Code, body.Error
+}
+
+// TestServer_CatalogSearch_BackendAbsent_Is404Not500 is the DF-035 acceptance:
+// with the backend absent, the dashboard must answer a 404-class response whose
+// message is byte-identical to the text the local (no-dashboard) path prints.
+func TestServer_CatalogSearch_BackendAbsent_Is404Not500(t *testing.T) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer backend.Close()
+
+	// The local-mode oracle: the CLI's local path returns client.Search's error
+	// verbatim, so this string is exactly what `catalog search` prints with no
+	// dashboard running.
+	_, localErr := catalog.NewClientWithRepoURL(backend.URL).Search("github")
+	if localErr == nil {
+		t.Fatal("premise failed: expected an error from the local catalog client")
+	}
+	if !errors.Is(localErr, catalog.ErrBackendUnavailable) {
+		t.Fatalf("premise failed: 404 not classified as backend-absent: %v", localErr)
+	}
+
+	s := df035NewServerWithCatalog(t, backend.URL)
+	code, msg := df035CatalogSearch(t, s, "github")
+
+	if code == http.StatusInternalServerError {
+		t.Fatalf("backend-absent must not be a server error: got 500 with %q", msg)
+	}
+	if code != http.StatusNotFound {
+		t.Fatalf("expected 404-class status for backend-absent, got %d with %q", code, msg)
+	}
+	if msg != localErr.Error() {
+		t.Errorf("dashboard text diverges from local mode:\n dashboard: %q\n local:     %q", msg, localErr.Error())
+	}
+}
+
+// TestServer_CatalogSearch_UnclassifiedError_Stays500 pins the other arm: only
+// the backend-absent class moves to 404. A transport failure, a non-200
+// upstream status and an undecodable index stay 500 — the dashboard could not
+// produce an answer, which is a server-side condition, not a not-found.
+func TestServer_CatalogSearch_UnclassifiedError_Stays500(t *testing.T) {
+	unavailable := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "boom", http.StatusServiceUnavailable)
+	}))
+	defer unavailable.Close()
+
+	badJSON := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte("{broken"))
+	}))
+	defer badJSON.Close()
+
+	dead := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	deadURL := dead.URL
+	dead.Close() // connection refused from here on
+
+	tests := []struct {
+		name     string
+		backend  string
+		wantText string // exact match, or prefix when suffixed with "*"
+	}{
+		{name: "upstream 503", backend: unavailable.URL, wantText: "catalog returned status 503"},
+		{name: "undecodable index", backend: badJSON.URL, wantText: "decode catalog: *"},
+		{name: "transport failure", backend: deadURL, wantText: "fetch catalog index: *"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := df035NewServerWithCatalog(t, tt.backend)
+			code, msg := df035CatalogSearch(t, s, "github")
+
+			if code != http.StatusInternalServerError {
+				t.Fatalf("expected 500 for an unclassified catalog failure, got %d with %q", code, msg)
+			}
+			if want, isPrefix := strings.CutSuffix(tt.wantText, " *"); isPrefix {
+				if !strings.HasPrefix(msg, want) {
+					t.Errorf("expected message prefix %q, got %q", want, msg)
+				}
+				return
+			}
+			if msg != tt.wantText {
+				t.Errorf("expected message %q, got %q", tt.wantText, msg)
+			}
+		})
+	}
 }
