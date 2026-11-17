@@ -15,9 +15,6 @@ func TestNewYAMLTokenStore(t *testing.T) {
 	dir := t.TempDir()
 	store := NewYAMLTokenStore(dir)
 
-	if store == nil {
-		t.Fatal("NewYAMLTokenStore returned nil")
-	}
 	if store.Dir != dir {
 		t.Errorf("Dir = %q, want %q", store.Dir, dir)
 	}

@@ -12,9 +12,6 @@ import (
 
 func TestNewRegistry(t *testing.T) {
 	r := NewRegistry(t.TempDir())
-	if r == nil {
-		t.Fatal("NewRegistry returned nil")
-	}
 	if r.dbPath == "" {
 		t.Error("dbPath is empty")
 	}

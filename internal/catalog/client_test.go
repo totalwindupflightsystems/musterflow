@@ -38,9 +38,6 @@ func TestFetchEntryValid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchEntry error: %v", err)
 	}
-	if got == nil {
-		t.Fatal("FetchEntry returned nil entry")
-	}
 	if got.ID != entry.ID {
 		t.Errorf("ID: got %q, want %q", got.ID, entry.ID)
 	}

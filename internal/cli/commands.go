@@ -177,10 +177,10 @@ func newTransformCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			reg := wasm.NewRegistry(filepath.Join(app.DefaultDataDir(), "transforms"))
-			if err := reg.InstallFromCatalog(args[0]); err != nil {
-				fmt.Println(err)
-			}
-			return nil
+			// InstallFromCatalog reports the unimplemented-catalog placeholder as an
+			// error; surface it so the CLI exits non-zero instead of printing and
+			// reporting success (staticcheck SA4023: the error is never nil).
+			return reg.InstallFromCatalog(args[0])
 		},
 	})
 
