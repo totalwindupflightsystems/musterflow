@@ -333,3 +333,81 @@ func commandNames(cmds []handlers.Command) []string {
 	}
 	return names
 }
+
+// secondSpec is a minimal OpenAPI spec whose only operation is listUsers.
+const secondSpec = `{
+  "openapi": "3.0.0",
+  "info": { "title": "Second API", "version": "1.0.0" },
+  "paths": {
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List all users"
+      }
+    }
+  }
+}`
+
+// TestRefresh_DropsRemovedAPI is the registry-level half of DF-029:
+// ToolRegistry.Refresh() rebuilds tools AND execution configs from
+// appRegistry.List(), so once a connection is removed a Refresh must drop that
+// API's tool names and keep every other API's tools. Before the dashboard
+// called Refresh() on disconnect, this primitive was correct but unused on the
+// removal path — which is exactly why tools/list went stale.
+func TestRefresh_DropsRemovedAPI(t *testing.T) {
+	// API 1: the petstore spec (listPets).
+	specPath1 := writeTempSpec(t)
+	// API 2: a different operation (listUsers) from a separate file.
+	dir2 := t.TempDir()
+	specPath2 := dir2 + "/spec.json"
+	if err := writeFile(specPath2, secondSpec); err != nil {
+		t.Fatalf("write second spec: %v", err)
+	}
+
+	reg := app.NewRegistry(t.TempDir())
+	if err := reg.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	for _, conn := range []*app.APIConnection{
+		{ID: "api-keep", Name: "keep-api", SpecURL: specPath1, BaseURL: "http://example.com"},
+		{ID: "api-drop", Name: "drop-api", SpecURL: specPath2, BaseURL: "http://example.com"},
+	} {
+		if err := reg.Add(conn); err != nil {
+			t.Fatalf("add %s: %v", conn.ID, err)
+		}
+	}
+
+	tr := NewToolRegistry(reg)
+	if err := tr.Refresh(); err != nil {
+		t.Fatalf("initial Refresh: %v", err)
+	}
+
+	// Premise: both APIs' tools are present.
+	if got := toolNames(tr.ListTools()); len(got) != 2 || !hasTool(tr.ListTools(), "listPets") || !hasTool(tr.ListTools(), "listUsers") {
+		t.Fatalf("expected [listPets listUsers] before remove, got %v", got)
+	}
+
+	// Remove the API that owns listUsers, then re-derive.
+	if err := reg.Remove("api-drop"); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if err := tr.Refresh(); err != nil {
+		t.Fatalf("Refresh after remove: %v", err)
+	}
+
+	tools := tr.ListTools()
+	if hasTool(tools, "listUsers") {
+		t.Errorf("removed API's tool 'listUsers' still listed after Refresh: %v", toolNames(tools))
+	}
+	if !hasTool(tools, "listPets") {
+		t.Errorf("remaining API's tool 'listPets' missing after Refresh: %v", toolNames(tools))
+	}
+
+	// The execution config for the removed tool must be gone too (this fails
+	// at the config lookup, before any HTTP call).
+	if _, err := tr.Execute(context.Background(), "listUsers", nil); err == nil {
+		t.Error("expected Execute of removed tool to fail after Refresh, got nil error")
+	} else if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("expected 'not found' error for removed tool, got: %v", err)
+	}
+}

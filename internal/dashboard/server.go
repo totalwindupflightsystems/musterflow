@@ -72,6 +72,24 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/", serveIndex)
 }
 
+// refreshMCPTools re-derives the MCP tool registry from the current set of
+// connected APIs. Every handler that mutates the registry (connect, refresh,
+// disconnect, import) must call it, so MCP tools/list tracks the registry
+// without a server restart — the README's dynamic-tools promise (DF-015 for
+// the additive paths, DF-029 for disconnect).
+//
+// Failures are non-fatal: the registry mutation has already succeeded and the
+// next mutation re-runs the refresh. A stale tool list is reported loudly on
+// stderr rather than turned into an error response the caller cannot act on.
+func (s *Server) refreshMCPTools() {
+	if s.toolRegistry == nil {
+		return
+	}
+	if err := s.toolRegistry.Refresh(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
+	}
+}
+
 // handleMCP dispatches to the MCP handler if configured, otherwise returns
 // a JSON-RPC error indicating the MCP server is not configured.
 func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
@@ -153,13 +171,9 @@ func (s *Server) handleAPIAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// DF-015: Re-run toolRegistry.Refresh() so the new API's tools appear
-	// in MCP tools/list without a server restart.
-	if s.toolRegistry != nil {
-		if err := s.toolRegistry.Refresh(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
-		}
-	}
+	// DF-015: re-derive the MCP tools so the new API's tools appear in
+	// tools/list without a server restart.
+	s.refreshMCPTools()
 
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":             result.Connection.ID,
@@ -206,6 +220,10 @@ func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 			return
 		}
+		// DF-029: re-derive the MCP tools so the removed API's tools stop
+		// being served by tools/list (and its execution configs disappear)
+		// in this same process, without a server restart.
+		s.refreshMCPTools()
 		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted", "id": conn.ID})
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
@@ -227,13 +245,9 @@ func (s *Server) handleRefreshAPI(w http.ResponseWriter, r *http.Request, apiID 
 		return
 	}
 
-	// DF-015: Re-run toolRegistry.Refresh() so the refreshed API's updated
-	// tools appear in MCP tools/list without a server restart.
-	if s.toolRegistry != nil {
-		if err := s.toolRegistry.Refresh(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
-		}
-	}
+	// DF-015: re-derive the MCP tools so the refreshed API's updated tools
+	// appear in tools/list without a server restart.
+	s.refreshMCPTools()
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"name":            result.Connection.Name,
@@ -371,6 +385,11 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
+		// DF-029: import replaces/inserts connections directly in the store,
+		// so the MCP tools must be re-derived here too — otherwise imported
+		// APIs' tools never appear until a restart (and replaced ones keep
+		// serving their old definitions).
+		s.refreshMCPTools()
 		writeJSON(w, http.StatusOK, map[string]interface{}{"imported": n})
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
