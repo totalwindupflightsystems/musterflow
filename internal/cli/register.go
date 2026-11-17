@@ -364,7 +364,7 @@ func flowListViaDashboard() error {
 // flowCreateViaDashboard creates a workflow via the dashboard HTTP API.
 func flowCreateViaDashboard(name, source, description string, webhook bool) error {
 	if source == "" {
-		source = "# Write your Starlark workflow here\n"
+		source = defaultFlowSource
 	}
 	payload := map[string]interface{}{
 		"name":        name,
