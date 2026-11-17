@@ -218,16 +218,32 @@ Dynamic completion: `musterflow gh <TAB>` shows GitHub API operations. Updates a
 
 ## Output Formats
 
-| Format | Flag | Example |
-|--------|------|---------|
-| Table (default) | `--format table` | Human-readable aligned columns |
-| JSON | `--format json` | `[{"id": 1, "name": "Bella"}]` |
-| YAML | `--format yaml` | Multi-document YAML |
-| CSV | `--format csv` | Header row + comma-separated values |
-| JSONL | `--format jsonl` | One JSON object per line |
-| Parquet | `--format parquet` | Columnar, compressed |
+Generated API commands take `-o/--output <fmt>` to select the format and the persistent
+`--output-file <path>` flag for the destination (stdout when omitted):
 
-Auto-detection from file extension: `--output data.csv` → CSV, `--output data.jsonl` → JSONL.
+```bash
+# Format only
+musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available -o json
+
+# Format to a file — the extension picks the format
+musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available --output-file pets.csv
+```
+
+| Format | Flag | Output |
+|--------|------|--------|
+| Table (default) | `-o table` | Human-readable aligned columns |
+| JSON | `-o json` | Pretty-printed JSON |
+| YAML | `-o yaml` | YAML list/object |
+| CSV | `-o csv` | Header row + comma-separated values |
+| JSONL | `-o jsonl` | One JSON object per line |
+| Parquet | `-o parquet` | Columnar, typed (INT64/DOUBLE/BOOLEAN/STRING) — binary, use `--output-file` |
+
+Resolution order: an explicit `-o` sets the format, `--output-file` sets the destination,
+then the format falls back to the file extension, then to `table`.
+
+Extension auto-detection covers `.csv`, `.jsonl`, and `.parquet` — `--output-file data.csv`
+writes CSV. For a file in another format, pass the format explicitly:
+`-o json --output-file data.json`.
 
 ## License
 
