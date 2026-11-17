@@ -1,0 +1,44 @@
+{
+  "wave_id": "musterflow-foreman-2026-11-17-00-09-53",
+  "scheduler_tick": "musterflow-foreman-2026-11-17-00-09-53",
+  "project": "musterflow",
+  "created_utc": "2026-11-17T00:30:00Z",
+  "budget": 10,
+  "kind": "recovery+wave",
+  "recovery": {
+    "prior_wave": "musterflow-foreman-2026-11-16-22-47-48",
+    "rows": [
+      {"row": "DF-045", "outcome": "closed", "commit": "7c2d0e6", "merge": "846ce4e", "judge": "tier2 PASS 4db55745", "residual": "worker scratch file zz_df045_scratch_test.go removed"},
+      {"row": "DF-040", "outcome": "closed", "commit": "a6b613c", "merge": "7493c4a", "judge": "tier2 PASS 63fa4744", "residual": "judge flagged 2 uncovered failure paths: re-sync after auth add update; no-keychain-host export failure"}
+    ],
+    "push": "origin/master == 7493c4a verified via ls-remote",
+    "worktrees_reaped": ["musterflow-DF-040", "musterflow-DF-045"]
+  },
+  "workers": [
+    {
+      "row": "DF-041",
+      "worktree": "/home/kara/worktrees/musterflow-DF-041",
+      "branch": "wt/DF-041",
+      "base": "origin/master",
+      "base_sha": "7493c4acb7148080bc69ddbe8d2a43ff285390e1",
+      "model": "openai/gpt-6.1-terra",
+      "provider": "xkiro",
+      "brief": "/tmp/mf-brief-DF-041-000953.txt",
+      "status": "dispatched"
+    },
+    {
+      "row": "DOC-3",
+      "worktree": "/home/kara/worktrees/musterflow-DOC-3",
+      "branch": "wt/DOC-3",
+      "base": "origin/master",
+      "base_sha": "7493c4acb7148080bc69ddbe8d2a43ff285390e1",
+      "model": "openai/gpt-6.1-terra",
+      "provider": "xkiro",
+      "brief": "/tmp/mf-brief-DOC-3-000953.txt",
+      "status": "dispatched"
+    }
+  ],
+  "merge_order": ["DF-041", "DOC-3"],
+  "deferred": [],
+  "notes": "Worktree.sh stale-base bug recurred (defaults origin/main 1bbcf7a); worktrees recreated on origin/master 7493c4a manually. DOC-3 collides with duplicate row README-2 (same defect) - README-2 will be closed as dup on merge. DF-041 and DOC-3 have disjoint seams (internal/config vs README.md)."
+}

@@ -1,0 +1,43 @@
+{
+  "wave_id": "musterflow-foreman-2026-11-16-22-47-48",
+  "scheduler_tick": "musterflow-foreman-2026-11-16-22-47-48",
+  "project": "musterflow",
+  "created_utc": "2026-11-16T22:55:00Z",
+  "budget": 12,
+  "workers": [
+    {
+      "row": "DF-045",
+      "worktree": "/home/kara/worktrees/musterflow-DF-045",
+      "branch": "wt/DF-045",
+      "base": "origin/master",
+      "base_sha": "5bae90dca49af83c5d49def3843c18544a10a366",
+      "model": "openai/gpt-6.1-terra",
+      "provider": "xkiro",
+      "brief": "/tmp/mf-brief-DF-045-224748.txt",
+      "status": "dispatched"
+    },
+    {
+      "row": "DF-040",
+      "worktree": "/home/kara/worktrees/musterflow-DF-040",
+      "branch": "wt/DF-040",
+      "base": "origin/master",
+      "base_sha": "5bae90dca49af83c5d49def3843c18544a10a366",
+      "model": "openai/gpt-6.1-terra",
+      "provider": "xkiro",
+      "brief": "/tmp/mf-brief-DF-040-224748.txt",
+      "status": "dispatched"
+    }
+  ],
+  "deferred": [
+    {
+      "row": "PERF-001",
+      "reason": "Fix lives in the muster engine repo (/home/kara/wojons/muster pkg/client retry seam, shared with DF-044). The engine lane already owns a pending PERF-001 row on its own board (.coding-hermes/board/tasks.jsonl in wojons/muster) and ran its own foreman wave today (muster-foreman-2026-11-16-20-38-23) - dispatching a second worker into that repo risks collision. Route once, defer with owner named."
+    },
+    {
+      "row": "DF-044",
+      "reason": "Same engine repo seam as PERF-001 (pkg/client retry idempotency); one engine-side worker must take both. Owned by the muster engine lane's board."
+    }
+  ],
+  "merge_order": ["DF-045", "DF-040"],
+  "notes": "Base corrected: worktree.sh defaulted to stale origin/main (1bbcf7a); recreated on origin/master (5bae90d). Wave composed from dogfood round-7 P1 rows with disjoint file seams; README-only overlaps avoided."
+}
