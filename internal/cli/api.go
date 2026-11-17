@@ -148,7 +148,7 @@ func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
 			}
 			target.SetArgs(remaining)
 			return target.Execute()
-			},
+		},
 	}
 	// Disable interspersed parsing so pflag stops at the first positional
 	// arg (resource/op).  This preserves leaf-specific flags that appear

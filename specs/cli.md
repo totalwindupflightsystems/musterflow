@@ -53,7 +53,7 @@ func NewRootCommand(registry *app.Registry) *cobra.Command
 | 9 | `newAuthCommand(registry)` | `auth` | — | Parent; subcommands: `add`, `list`, `remove`, `get`, `login` |
 | 10 | `newCompletionCommand()` | `completion [bash\|zsh\|fish]` | `ExactArgs(1)` | No registry arg. |
 | 11 | `newExportCommand(registry)` | `export [path]` | `MaximumNArgs(1)` | Flag: `--output, -o` |
-| 12 | `newImportCommand(registry)` | `import <path>` | `ExactArgs(1)` | |
+| 12 | `newImportCommand(registry)` | `import [path]` | `MaximumNArgs(1)` | Flags: `--input`, `--file` (aliases; flag wins over the positional path) |
 | 13 | `newRefreshCommand(registry)` | `refresh <api-id>` | `ExactArgs(1)` | |
 | 14 | `newTransformCommand()` | `transform` | — | Parent; subcommands: `list`, `install` |
 
@@ -339,7 +339,7 @@ type Config struct {
 | `catalog pull` | (positional `<api-id>`) | `catalog.NewClient().FetchEntry(id)` → `app.Connect(ctx, registry, ...)` |
 | `flow create` | `--webhook`, `--description`, `--source`, `--name` | `workflow.NewEngine(dir, baseURL).Create(name, source, description, webhook)` |
 | `flow list` | none | `workflow.NewEngine(dir, baseURL).List()` |
-| `flow run` | `--payload` (positional `<name>`) | `workflow.NewEngine(dir, baseURL).Run(name, payload)` |
+| `flow run` | `--payload`, `--name` (or positional `<name>`) | `workflow.NewEngine(dir, baseURL).Run(name, payload)` |
 | `config show` | none | `config.Load()` → print, mask auth keys with `config.MaskKey` |
 | `config set` | (positional `<key> <value>`) | `config.Load()` → update → `config.Save(cfg)` |
 | `auth add` | `--type`, `--key`, `--cert`, `--key-path` | `auth.NewManager(cfg).Add(apiID, cred)` |

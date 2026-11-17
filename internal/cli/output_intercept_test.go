@@ -114,7 +114,6 @@ func df020Setup(t *testing.T) (*cobra.Command, *httptest.Server) {
 	return root, ts
 }
 
-
 // runLeaf executes the root command with the given args and returns the
 // captured stdout output and any error.
 func runLeaf(root *cobra.Command, args []string) (string, error) {
@@ -129,7 +128,6 @@ func runLeaf(root *cobra.Command, args []string) (string, error) {
 func TestDF020_CSVOutput(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
-
 
 	output, err := runLeaf(root, []string{"df020-test-api", "widgets", "list-widgets", "-o", "csv"})
 	if err != nil {
@@ -150,7 +148,6 @@ func TestDF020_CSVOutput(t *testing.T) {
 func TestDF020_JSONLOutput(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
-
 
 	output, err := runLeaf(root, []string{"df020-test-api", "widgets", "list-widgets", "-o", "jsonl"})
 	if err != nil {
@@ -174,7 +171,6 @@ func TestDF020_ParquetOutput(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
 
-
 	output, err := runLeaf(root, []string{"df020-test-api", "widgets", "list-widgets", "-o", "parquet"})
 	if err != nil {
 		t.Fatalf("list-widgets -o parquet: %v", err)
@@ -193,7 +189,6 @@ func TestDF020_ParquetOutput(t *testing.T) {
 func TestDF020_OutputFileParquet(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
-
 
 	outPath := filepath.Join(t.TempDir(), "widgets.parquet")
 	output, err := runLeaf(root, []string{
@@ -227,7 +222,6 @@ func TestDF020_TableOutputNoRegression(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
 
-
 	output, err := runLeaf(root, []string{"df020-test-api", "widgets", "list-widgets", "-o", "table"})
 	if err != nil {
 		t.Fatalf("list-widgets -o table: %v", err)
@@ -249,7 +243,6 @@ func TestDF020_JSONOutputNoRegression(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
 
-
 	output, err := runLeaf(root, []string{"df020-test-api", "widgets", "list-widgets", "-o", "json"})
 	if err != nil {
 		t.Fatalf("list-widgets -o json: %v", err)
@@ -265,7 +258,6 @@ func TestDF020_JSONOutputNoRegression(t *testing.T) {
 func TestDF020_OutputFileCSV(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
-
 
 	outPath := filepath.Join(t.TempDir(), "widgets.csv")
 	output, err := runLeaf(root, []string{
@@ -294,7 +286,6 @@ func TestDF020_OutputFileCSV(t *testing.T) {
 func TestDF020_OutputFileJSON(t *testing.T) {
 	root, ts := df020Setup(t)
 	defer ts.Close()
-
 
 	outPath := filepath.Join(t.TempDir(), "widgets.json")
 	output, err := runLeaf(root, []string{

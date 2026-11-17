@@ -1066,8 +1066,10 @@ func TestImportCommand_Structure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("find import: %v", err)
 	}
-	if cmd.Use != "import <path>" {
-		t.Errorf("expected Use='import <path>', got %q", cmd.Use)
+	// DF-034: the path is optional at the Args level because --input/--file
+	// may supply it instead.
+	if cmd.Use != "import [path]" {
+		t.Errorf("expected Use='import [path]', got %q", cmd.Use)
 	}
 }
 
@@ -1541,8 +1543,10 @@ func TestFlowCommand_RunSubcommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("find flow run: %v", err)
 	}
-	if runCmd.Use != "run <name>" {
-		t.Errorf("expected Use='run <name>', got %q", runCmd.Use)
+	// DF-034: the name is optional at the Args level because --name may
+	// supply it instead.
+	if runCmd.Use != "run [name]" {
+		t.Errorf("expected Use='run [name]', got %q", runCmd.Use)
 	}
 }
 
@@ -3452,5 +3456,255 @@ func TestFlowCommand_CreateWithoutSource_DashboardPath_StarFileExists(t *testing
 	}
 	if !strings.Contains(output, "df028-dash.star") {
 		t.Errorf("expected flow name in Edit line, got: %s", output)
+	}
+}
+
+// --- DF-034: flag-shape parity — flow run --name, import --input/--file ---
+
+// df034CreateFlow creates a flow through the CLI so the run tests below have
+// a real .star file to execute.
+func df034CreateFlow(t *testing.T, r *app.Registry, name, source string) {
+	t.Helper()
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "create", name, "--source", source})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("flow create %q: %v", name, err)
+	}
+}
+
+func TestFlowCommand_RunNameFlag(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	df034CreateFlow(t, r, "probe-named", `print(trigger["x"])`)
+
+	// DF-034 AC: --name supplies the flow, and --payload still works with it.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "--name", "probe-named", "--payload", `{"x":34}`})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow run --name: %v", err)
+		}
+	})
+	if !strings.Contains(output, "34") {
+		t.Errorf("expected '34' in run output, got: %s", output)
+	}
+}
+
+func TestFlowCommand_RunPositionalWithPayload(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	df034CreateFlow(t, r, "probe-pos", `print(trigger["x"])`)
+
+	// DF-034 AC: the positional form keeps working alongside --payload.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "probe-pos", "--payload", `{"x":43}`})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("flow run positional: %v", err)
+		}
+	})
+	if !strings.Contains(output, "43") {
+		t.Errorf("expected '43' in run output, got: %s", output)
+	}
+}
+
+func TestFlowCommand_RunNoNameErrors(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	// DF-034 AC: neither positional nor --name is an actionable error.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error when no flow name provided to flow run")
+		return
+	}
+	if !strings.Contains(err.Error(), "flow name required") {
+		t.Errorf("expected 'flow name required' in error, got: %s", err.Error())
+	}
+}
+
+func TestFlowCommand_RunConflictingNamesError(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"flow", "run", "pos-name", "--name", "flag-name"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error when positional and --name disagree")
+		return
+	}
+	if !strings.Contains(err.Error(), "conflicting flow names") {
+		t.Errorf("expected 'conflicting flow names' in error, got: %s", err.Error())
+	}
+}
+
+// df034JSONL writes a one-connection JSONL file and returns its path.
+func df034JSONL(t *testing.T, id string) string {
+	t.Helper()
+	content := `{"id":"` + id + `","name":"` + id + `-api","spec_url":"https://example.com/spec.json",` +
+		`"base_url":"https://api.example.com","version":"","description":"","auth_type":"none",` +
+		`"endpoint_count":1,"added_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"}` + "\n"
+	path := filepath.Join(t.TempDir(), id+".jsonl")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("write import file: %v", err)
+	}
+	return path
+}
+
+func TestImportCommand_InputFlag(t *testing.T) {
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	path := df034JSONL(t, "df034-in")
+
+	// DF-034 AC: --input supplies the path.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import", "--input", path})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("import --input: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Imported 1") {
+		t.Errorf("expected 'Imported 1' in output, got: %s", output)
+	}
+}
+
+func TestImportCommand_FileAlias(t *testing.T) {
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	path := df034JSONL(t, "df034-alias")
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import", "--file", path})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("import --file: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Imported 1") {
+		t.Errorf("expected 'Imported 1' in output, got: %s", output)
+	}
+}
+
+func TestImportCommand_PositionalWithFlagPresent(t *testing.T) {
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	path := df034JSONL(t, "df034-pos")
+
+	// DF-034 AC: the positional form keeps working.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import", path})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Fatalf("import positional: %v", err)
+		}
+	})
+	if !strings.Contains(output, "Imported 1") {
+		t.Errorf("expected 'Imported 1' in output, got: %s", output)
+	}
+}
+
+func TestImportCommand_NoPathErrors(t *testing.T) {
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	// DF-034 AC: neither positional nor a flag → error naming both forms.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error when import gets no path")
+		return
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "--input") || !strings.Contains(msg, "positional") {
+		t.Errorf("expected error naming positional and --input, got: %s", msg)
+	}
+}
+
+func TestImportCommand_MissingFileFlagForm(t *testing.T) {
+	SetDashboardURL("")
+	defer SetDashboardURL("")
+
+	r := app.NewRegistry(t.TempDir())
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	// A missing file must still produce the readable "open:" error.
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"import", "--input", "/nonexistent/df034/file.jsonl"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for import from nonexistent file")
+		return
+	}
+	if !strings.Contains(err.Error(), "open") {
+		t.Errorf("expected 'open' in error, got: %s", err.Error())
 	}
 }

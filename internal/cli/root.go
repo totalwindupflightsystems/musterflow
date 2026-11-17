@@ -405,6 +405,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		description string
 		source      string
 		name        string
+		runName     string
 		payload     string
 	)
 
@@ -497,10 +498,27 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 	})
 
 	runCmd := &cobra.Command{
-		Use:   "run <name>",
+		Use:   "run [name]",
 		Short: "Run a workflow",
-		Args:  cobra.ExactArgs(1),
+		Long:  "Run a workflow.\nThe flow name may be given positionally (`flow run <name>`) or with --name.",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// DF-034: accept --name as well as the positional form, using the
+			// same resolution rules as `flow create` so sibling subcommands
+			// expose one flag shape. The flag variable is per-command
+			// (runName, not the shared `name`) so a value parsed for
+			// `flow create --name X` can never leak into a later
+			// `flow run` in the same process.
+			flowName := runName
+			if flowName != "" {
+				if len(args) == 1 && args[0] != flowName {
+					return fmt.Errorf("conflicting flow names: positional %q vs --name %q", args[0], flowName)
+				}
+			} else if len(args) == 1 {
+				flowName = args[0]
+			} else {
+				return fmt.Errorf("flow name required (positional or --name)")
+			}
 			var triggerPayload map[string]interface{}
 			if payload != "" {
 				if err := json.Unmarshal([]byte(payload), &triggerPayload); err != nil {
@@ -508,13 +526,13 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 				}
 			}
 			if dashboardBaseURL != "" {
-				return flowRunViaDashboard(args[0], triggerPayload)
+				return flowRunViaDashboard(flowName, triggerPayload)
 			}
 			engine := workflow.NewEngine(
 				filepath.Join(registry.DataDir(), "flows"),
 				"http://localhost:9876",
 			)
-			output, err := engine.Run(args[0], triggerPayload)
+			output, err := engine.Run(flowName, triggerPayload)
 			if err != nil {
 				return err
 			}
@@ -526,6 +544,7 @@ func newFlowCommand(registry *app.Registry) *cobra.Command {
 		},
 	}
 	runCmd.Flags().StringVar(&payload, "payload", "", "JSON trigger payload for the flow")
+	runCmd.Flags().StringVar(&runName, "name", "", "Flow name (alternative to positional argument)")
 	cmd.AddCommand(runCmd)
 
 	return cmd
