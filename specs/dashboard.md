@@ -57,20 +57,32 @@ func (s *Server) Handler() http.Handler
 func (s *Server) registerRoutes()
 ```
 
-Registers exactly 8 route patterns on `s.mux`:
+Registers exactly 13 route patterns on `s.mux` (`internal/dashboard/server.go:59-73`), in
+registration order. "any" in the Methods column means the handler performs no method
+check and answers every method the same way; the POST-only contract on `/mcp` is enforced
+inside the delegated `mcp.HTTPServer`, not in `registerRoutes`.
 
 | # | Pattern | Handler | Methods | Description |
 |---|---------|---------|---------|-------------|
-| 1 | `/api/health` | `s.handleHealth` | GET | Health check with connected API count |
-| 2 | `/api/apis` | `s.handleAPIs` | GET, POST | List all APIs / connect a new API |
-| 3 | `/api/apis/` | `s.handleAPIByID` | GET, DELETE, POST | Get/delete/refresh a specific API by ID |
-| 4 | `/api/catalog/search` | `s.handleCatalogSearch` | GET | Search community catalog |
-| 5 | `/api/mcp/info` | `s.handleMCPInfo` | GET | MCP endpoint info with tool list |
-| 6 | `/mcp` | `s.handleMCP` | POST (JSON-RPC) | MCP JSON-RPC 2.0 endpoint |
-| 7 | `/hooks/` | `s.handleWebhook` | POST | Webhook trigger for Starlark workflows |
-| 8 | `/` | `serveIndex` | GET | Dashboard HTML page |
+| 1 | `/api/health` | `s.handleHealth` | any | Health check with connected API count (`{"status": "ok", "connected_apis": N}`) |
+| 2 | `/api/apis` | `s.handleAPIs` | GET, POST | List all connected APIs / connect a new one (POST without a body → 405) |
+| 3 | `/api/apis/` | `s.handleAPIByID` | GET, DELETE, POST | Get or delete one API by ID or name; POST `<id-or-name>/refresh` re-reads its spec and reports the version delta |
+| 4 | `/api/flows` | `s.handleFlows` | GET, POST | List Starlark flows / create a new flow (`{"name", "source", "description", "webhook"}` → 201) |
+| 5 | `/api/flows/` | `s.handleFlowRun` | POST | Run a flow: `/api/flows/<name>/run` with optional `{"trigger": {...}}` → `{"result": ...}`; a path without the `/run` suffix → 404 |
+| 6 | `/api/catalog/search` | `s.handleCatalogSearch` | any | Search the community catalog (`?q=`) → `{"results": [...], "total": N}` |
+| 7 | `/api/mcp/info` | `s.handleMCPInfo` | any | MCP endpoint info with the current tool list and API count |
+| 8 | `/api/export` | `s.handleExport` | GET | Stream the whole connection registry as JSONL (`application/x-ndjson`) for backup/transfer |
+| 9 | `/api/import` | `s.handleImport` | POST | Import connections from a JSONL request body (same-ID entries replaced) → `{"imported": N}` |
+| 10 | `/mcp` | `s.handleMCP` | POST (JSON-RPC) | MCP JSON-RPC 2.0 endpoint; delegates to the handler set by `SetMCPHandler`, otherwise returns the `-32000` not-configured JSON-RPC error |
+| 11 | `/hooks/` | `s.handleWebhook` | any | Webhook trigger for a Starlark flow: `/hooks/<name>` runs that flow with the decoded JSON body as its payload |
+| 12 | `/metrics` | `s.metrics.HandleMetrics` | any | Prometheus text exposition (`text/plain; version=0.0.4`, stable section order) for scraping |
+| 13 | `/` | `serveIndex` | any | Dashboard UI: the `go:embed`-ed `index.html`, overridable by `web/index.html` on disk in dev mode; catch-all, so `ServeMux` longest-prefix matching gives every other pattern precedence |
 
-### 2.4 Handler Function Signatures (all unexported)
+`/api/export` and `/api/import` are a matched pair: export emits the registry one JSON
+object per line and import consumes exactly that stream, so a dashboard's connections move
+between hosts (or get backed up) without touching DuckDB directly.
+
+### 2.4 Handler Function Signatures (all unexported except metrics accessors)
 
 ```go
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request)
@@ -78,10 +90,19 @@ func (s *Server) handleAPIs(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleAPIAdd(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleAPIByID(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleRefreshAPI(w http.ResponseWriter, r *http.Request, apiID string)
+func (s *Server) handleFlows(w http.ResponseWriter, r *http.Request)
+func (s *Server) handleFlowCreate(w http.ResponseWriter, r *http.Request)
+func (s *Server) handleFlowRun(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleCatalogSearch(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleMCPInfo(w http.ResponseWriter, r *http.Request)
+func (s *Server) handleExport(w http.ResponseWriter, r *http.Request)
+func (s *Server) handleImport(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request)
 func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request)
+
+// Exported metrics accessors (internal/dashboard/metrics.go):
+func (s *Server) Metrics() *Metrics
+func (m *Metrics) HandleMetrics(w http.ResponseWriter, r *http.Request)
 ```
 
 ### 2.5 Helper Types and Functions
@@ -272,6 +293,8 @@ type ToolRegistry struct {
 
 ### 4.2 HTTP Route Map
 
+All 13 registered patterns (Section 2.3), grouped by surface.
+
 ```mermaid
 flowchart TD
     subgraph Dashboard["Dashboard Server :9876"]
@@ -282,18 +305,32 @@ flowchart TD
         R4a["GET /api/apis/&lt;id&gt; → APIConnection JSON"]
         R4b["DELETE /api/apis/&lt;id&gt; → {status, id}"]
         R4c["POST /api/apis/&lt;id&gt;/refresh → {name, versions, endpoints}"]
-        R5["GET /api/catalog/search?q= → {results, total}"]
-        R6["GET /api/mcp/info → {endpoint, transport, tools}"]
-        R7["POST /mcp → MCP JSON-RPC 2.0"]
-        R8["POST /hooks/&lt;name&gt; → {result} or {error}"]
+        R5a["GET /api/flows → {flows: [...]}"]
+        R5b["POST /api/flows → create flow (201)"]
+        R5c["POST /api/flows/&lt;name&gt;/run → {result}"]
+        R6["GET /api/catalog/search?q= → {results, total}"]
+        R7["GET /api/mcp/info → {endpoint, transport, tools}"]
+        R8["GET /api/export → registry streamed as JSONL"]
+        R9["POST /api/import → {imported: N}"]
+        R10["POST /mcp → MCP JSON-RPC 2.0"]
+        R11["POST /hooks/&lt;name&gt; → {result} or {error}"]
+        R12["GET /metrics → Prometheus text exposition"]
     end
     CLI["CLI routing<br/>(when dashboardBaseURL set<br/>see cli.md Section 4.4)"] --> R3b
     CLI --> R4a
     CLI --> R4b
     CLI --> R3a
     CLI --> R4c
-    CLI --> R5
+    CLI --> R5a
+    CLI --> R5b
+    CLI --> R5c
     CLI --> R6
+    CLI --> R7
+    CLI --> R8
+    CLI --> R9
+    BACKUP["Backup / migration<br/>(export → import)"] --> R8
+    BACKUP --> R9
+    SCRAPER["Prometheus scraper"] --> R12
 ```
 
 ### 4.3 Path Routing Logic (handleAPIByID)
