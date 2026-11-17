@@ -1,0 +1,128 @@
+{
+  "tick": "musterflow-foreman-2026-11-17-07-42-14",
+  "created_at": "2026-11-17T12:45:00Z",
+  "budget": 10,
+  "base": "origin/master",
+  "base_sha": "903e0f3",
+  "worker_model": "openai/gpt-6.1-terra",
+  "worker_provider": "xkiro",
+  "workers": [
+    {
+      "task_id": "DOC-4",
+      "priority": "P1",
+      "title": "integration-guide: document the transform (WASM) command family",
+      "worktree": "/home/kara/worktrees/musterflow-DOC-4",
+      "branch": "wt/DOC-4",
+      "brief": "/tmp/brief-mf-t225-DOC-4.md",
+      "files_expected": [
+        "docs/integration-guide.md"
+      ],
+      "independent_of": [
+        "DF-035",
+        "DF-036",
+        "GAP-018",
+        "DOC-5",
+        "README-3"
+      ]
+    },
+    {
+      "task_id": "DF-035",
+      "priority": "P2",
+      "title": "catalog search error diverges by routing mode (dashboard maps 404-class to HTTP 500)",
+      "worktree": "/home/kara/worktrees/musterflow-DF-035",
+      "branch": "wt/DF-035",
+      "brief": "/tmp/brief-mf-t225-DF-035.md",
+      "files_expected": [
+        "internal/dashboard/server.go",
+        "internal/dashboard/server_test.go"
+      ],
+      "independent_of": [
+        "DOC-4",
+        "DF-036",
+        "GAP-018",
+        "DOC-5",
+        "README-3"
+      ]
+    },
+    {
+      "task_id": "DF-036",
+      "priority": "P2",
+      "title": "flow create template gives zero DSL guidance",
+      "worktree": "/home/kara/worktrees/musterflow-DF-036",
+      "branch": "wt/DF-036",
+      "brief": "/tmp/brief-mf-t225-DF-036.md",
+      "files_expected": [
+        "internal/cli/root.go",
+        "internal/cli/register.go",
+        "internal/cli/commands.go"
+      ],
+      "independent_of": [
+        "DOC-4",
+        "DF-035",
+        "GAP-018",
+        "DOC-5",
+        "README-3"
+      ]
+    },
+    {
+      "task_id": "GAP-018",
+      "priority": "P2",
+      "title": "port auto-discovery 9877-9886 documented but not implemented",
+      "worktree": "/home/kara/worktrees/musterflow-GAP-018",
+      "branch": "wt/GAP-018",
+      "brief": "/tmp/brief-mf-t225-GAP-018.md",
+      "files_expected": [
+        "cmd/musterflow/main.go",
+        "internal/app/listenport.go",
+        "README.md",
+        "docs/integration-guide.md"
+      ],
+      "independent_of": [
+        "DOC-4",
+        "DF-035",
+        "DF-036",
+        "DOC-5",
+        "README-3"
+      ]
+    },
+    {
+      "task_id": "DOC-5",
+      "priority": "P2",
+      "title": "specs/dashboard.md route table stale (says 8, server registers 13)",
+      "worktree": "/home/kara/worktrees/musterflow-DOC-5",
+      "branch": "wt/DOC-5",
+      "brief": "/tmp/brief-mf-t225-DOC-5.md",
+      "files_expected": [
+        "specs/dashboard.md"
+      ],
+      "independent_of": [
+        "DOC-4",
+        "DF-035",
+        "DF-036",
+        "GAP-018",
+        "README-3"
+      ]
+    },
+    {
+      "task_id": "DOC-6",
+      "priority": "P2",
+      "title": "README OAuth2 PKCE claim contradicts internal/auth/oauth2.go",
+      "worktree": "/home/kara/worktrees/musterflow-DOC-6",
+      "branch": "wt/DOC-6",
+      "brief": "/tmp/brief-mf-t225-DOC-6.md",
+      "files_expected": [
+        "README.md",
+        "docs/integration-guide.md"
+      ],
+      "independent_of": [
+        "DOC-4",
+        "DF-035",
+        "DF-036",
+        "GAP-018",
+        "DOC-5"
+      ]
+    }
+  ],
+  "merge_policy": "serial, gate each merge (go build ./... + go vet ./... + go test ./... -count=1), push after each merge",
+  "notes": "6 of 10 admitted slots: the remaining ready rows are QA-harness defects (route to qa-foreman), engine-side rows (DF-044/PERF-001/DF-031/DF-032), or live-network ACs (DF-MUSTERFLOW-1 class) that cannot be graded in-tick. Documented per clause 19. README-3 dropped from the wave: premise already satisfied at base 903e0f3 (badge Go-1.26.11 == go.mod go directive 1.26.11) \u2014 closed as a stale row instead of dispatched. DOC-6 substituted."
+}
