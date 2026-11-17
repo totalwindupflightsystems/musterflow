@@ -163,7 +163,7 @@ API connections stored in DuckDB at `~/.musterflow/musterflow.db`. JSONL export/
 
 ### 🎨 Quality Scoring — Know What You're Connecting
 
-Automatic tier assignment based on: official domain (+5), endpoint count (+3), validated OpenAPI (+2), description presence (+1), examples (+1).
+Automatic tier assignment. A catalog entry scores 0-10 from: official domain (+5), structured OpenAPI spec — `type: openapi` (+2), description longer than 20 characters (+1), non-empty version (+1), more than 100 downloads (+1). Tiers: score ≥ 7 → `official`, ≥ 3 → `community-inferred`, otherwise `untested`.
 
 ## Architecture
 
@@ -204,7 +204,7 @@ internal/completion/          → Shell completion (bash, zsh, fish)
 | `musterflow config show` | Print active configuration |
 | `musterflow config set <k> <v>` | Update a config value |
 | `musterflow export` | Export API registry as JSONL |
-| `musterflow import` | Import API registry from JSONL |
+| `musterflow import <file>` | Import API registry from JSONL |
 | `musterflow completion bash\|zsh\|fish` | Install shell completions |
 
 ## Configuration
@@ -213,10 +213,12 @@ internal/completion/          → Shell completion (bash, zsh, fish)
 
 ```yaml
 port: 9876
-data_dir: ~/.musterflow/
+data_dir: /home/<user>/.musterflow
 default_format: table
 auto_completion: true
 ```
+
+`data_dir` accepts a `~` literal, which is expanded — but the file stores the **resolved absolute path** (no trailing slash), written on first run. Scripts should read the resolved value rather than the tilde literal.
 
 Port auto-discovery: if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing which one it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :9999` or by setting `port` in config.
 
@@ -258,6 +260,19 @@ then the format falls back to the file extension, then to `table`.
 Extension auto-detection covers `.csv`, `.jsonl`, and `.parquet` — `--output-file data.csv`
 writes CSV. For a file in another format, pass the format explicitly:
 `-o json --output-file data.json`.
+
+## Testing
+
+```bash
+# The suite CI runs
+go test -short -count=1 ./...
+
+# Full suite
+go test -count=1 ./...
+```
+
+CI (`.github/workflows/ci.yml`) runs `go build ./...`, `go vet ./...` and the short suite
+on every push and pull request to `master`.
 
 ## License
 
