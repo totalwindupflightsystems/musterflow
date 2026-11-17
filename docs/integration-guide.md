@@ -104,6 +104,30 @@ When the dashboard is running on the configured port, CLI commands route through
 | `musterflow transform install <entry>` | Install a transform from the catalog — placeholder, errors today (see WASM Transforms below) |
 | `musterflow export` / `import` | JSONL export/import of the API registry |
 
+### Raw Request Bodies (`--body`)
+
+Generated operation commands for POST/PUT/PATCH endpoints that take a JSON body also accept `-b, --body`. From the built binary (`musterflow swagger-petstore-openapi-3-0 pet add-pet --help`):
+
+```
+-b, --body string   Raw JSON request body (overrides individual body flags)
+```
+
+- **The value is sent verbatim and REPLACES the whole request body.** When `--body` is supplied, the per-property flags (`--name`, `--id`, …) are ignored — the payload is not merged with them, and required body properties are not enforced (the raw object is assumed to carry them). Without `--body`, the body is assembled from those per-property flags instead.
+- **The value must be valid JSON.** A non-JSON value fails before any request is sent:
+
+  ```
+  $ musterflow swagger-petstore-openapi-3-0 pet add-pet --body 'not-json'
+  Error: invalid JSON for --body: value is not valid JSON (value: "not-json")
+  ```
+
+  Exit status is 1.
+
+Example — one object defines the entire body:
+
+```bash
+musterflow swagger-petstore-openapi-3-0 pet add-pet -b '{"name":"rex","id":7}'
+```
+
 ---
 
 ## Dashboard HTTP API
@@ -127,7 +151,11 @@ POST /hooks/<name>                  → 200  trigger a webhook-enabled flow
 GET  /hooks                         → 307  redirect to /hooks/ (flow name required)
 GET  /api/catalog/search?q=<query>  → 200  catalog search
 GET  /api/mcp/info                  → 200  MCP endpoint info and tool list
+GET  /api/export                    → 200  whole connection registry streamed as JSONL (application/x-ndjson)
+POST /api/import                    → 200  import connections from a JSONL body → {"imported":N}
 ```
+
+Export and import are a matched pair. `GET /api/export` streams one JSON object per line (`application/x-ndjson`), and `POST /api/import` consumes exactly that stream: the request body is JSONL, each parsed connection is inserted, and an entry whose `id` already exists is replaced — the response reports how many rows were imported as `{"imported":N}`. That is how connections move between hosts (backup, transfer to another machine) without opening DuckDB directly. Any other method answers 405, and an empty body is rejected with 400 `{"error":"missing request body"}`.
 
 ### JSON Response Shapes
 
@@ -649,11 +677,36 @@ auto_completion: true
 
 ```
 ~/.musterflow/
+├── config.yaml            # User configuration — also holds API credentials (see below)
 ├── musterflow.db          # DuckDB registry (API connections)
-├── config.yaml            # User configuration
-├── credentials.yaml       # Masked API credentials
 ├── flows/                 # Starlark workflow scripts
 └── transforms/            # WASM transforms (.wasm files, created by `transform list`)
 ```
 
+There is no separate credentials file: per-API credentials live in `config.yaml` under a top-level `auth:` map, keyed by API id:
+
+```yaml
+auth:
+  <api-id>:
+    type: apikey        # none, apikey, bearer, oauth2, mtls
+    key: <secret>       # API key or bearer token
+```
+
+Because that file carries plaintext keys and tokens, it is written with mode `0600`. `musterflow auth list` prints the configured entries with the secret masked (`<api-id>: type=apikey key=****`); `musterflow auth get <api-id>` prints the raw value.
+
 **Port auto-discovery:** if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing the port it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :<port>` or the `port` config key.
+
+### Operational Pitfalls
+
+**A running dashboard holds a single-writer lock on `<data-dir>/musterflow.db`.** DuckDB allows exactly one writing process per database file, so any second process that opens that data dir directly fails with the driver's raw text:
+
+```
+IO Error: Could not set lock on file "<data-dir>/musterflow.db": Conflicting lock is held in <path-to-musterflow> (PID <pid>) by user <user>
+```
+
+The CLI classifies that error (`internal/app/lockerr.go`), names the lock-holding process, and points at the fix instead of reporting an empty registry. Two sanctioned ways forward:
+
+- **Let the CLI route through the running dashboard (the default).** When a dashboard answers on the configured port, CLI commands go over its HTTP API and never touch the database file — no lock, no conflict. If the dashboard is on another port, `--dashboard-addr 127.0.0.1:<port>` (or setting `port` in the config) restores routing; an explicit `--data-dir` that names the very directory the dashboard serves is also routed back through it, with a note on stderr.
+- **Use a separate `--data-dir` for local/offline work.** A distinct directory has its own `musterflow.db` and therefore its own lock, so local experimentation cannot collide with the running dashboard's registry.
+
+`--no-dashboard` against the live data dir is exactly the failing case: it forces local registry mode while the dashboard still holds the lock.
