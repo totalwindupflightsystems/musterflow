@@ -85,16 +85,29 @@ func newExportCommand(registry *app.Registry) *cobra.Command {
 }
 
 func newImportCommand(registry *app.Registry) *cobra.Command {
-	return &cobra.Command{
-		Use:   "import <path>",
+	var inputPath string
+	cmd := &cobra.Command{
+		Use:   "import [path]",
 		Short: "Import APIs from a JSONL file",
-		Long:  "Import API connections from a JSONL file into the registry.",
-		Args:  cobra.ExactArgs(1),
+		Long: "Import API connections from a JSONL file into the registry.\n" +
+			"The file path may be given positionally (`import <path>`) or with --input (alias: --file).",
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// DF-034: accept a path flag as well as the positional form,
+			// mirroring `export` (flag wins, positional fallback) so the
+			// import/export pair exposes one flag shape.
+			path := inputPath
+			if path == "" {
+				if len(args) > 0 {
+					path = args[0]
+				} else {
+					return fmt.Errorf("import file required (positional <path>, --input, or --file)")
+				}
+			}
 			// If the dashboard is running, route through its HTTP API to
 			// avoid DuckDB lock conflicts (the dashboard holds the write lock).
 			if dashboardBaseURL != "" {
-				return importViaDashboard(args[0])
+				return importViaDashboard(path)
 			}
 			// DF-045: an unreadable store is not an empty registry; name the lock.
 			if err := StoreUnavailable(); err != nil {
@@ -104,14 +117,17 @@ func newImportCommand(registry *app.Registry) *cobra.Command {
 			if store == nil {
 				return fmt.Errorf("registry not loaded (the dashboard may be running — export/import route through the dashboard; if the dashboard is NOT running this is a bug)")
 			}
-			n, err := app.ImportJSONL(store, args[0])
+			n, err := app.ImportJSONL(store, path)
 			if err != nil {
 				return err
 			}
-			fmt.Printf("✓ Imported %d APIs from %s\n", n, args[0])
+			fmt.Printf("✓ Imported %d APIs from %s\n", n, path)
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&inputPath, "input", "", "Input JSONL file path (alternative to positional argument)")
+	cmd.Flags().StringVar(&inputPath, "file", "", "Alias for --input")
+	return cmd
 }
 
 func newRefreshCommand(registry *app.Registry) *cobra.Command {
