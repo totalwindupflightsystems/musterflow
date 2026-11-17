@@ -29,24 +29,15 @@ Error: catalog backend not available (HTTP 404): repo https://raw.githubusercont
 
 ### From Source
 
-The build depends on the `github.com/wojons/muster` engine, currently private. `scripts/resolve-engine.sh` resolves it by generating a Go workspace (`go.work`) — it never edits `go.mod`. Clone both repos side by side and run the resolver:
+The `github.com/wojons/muster` engine is a published Go module, so the build pulls it from the module proxy — no engine checkout is needed:
 
 ```bash
-# 1. Clone the engine (needs GitHub access to wojons/muster while it is private)
-git clone https://github.com/wojons/muster.git
-
-# 2. Clone musterflow next to it
 git clone https://github.com/totalwindupflightsystems/musterflow.git
 cd musterflow
-
-# 3. Resolve the engine (generates go.work; go.mod is untouched)
-bash scripts/resolve-engine.sh
-
-# 4. Build
 go build -o musterflow ./cmd/musterflow/
 ```
 
-> **Note:** the resolver looks for the engine at `$MUSTER_ENGINE_DIR`, then `../muster` (sibling clone), then `./muster` (CI/docker build context). `go.work`/`go.work.sum` are local, gitignored artifacts. Once `wojons/muster` is published, steps 1 and 3 are no longer needed.
+> **Engine development:** to build against a local engine checkout instead of the published module, clone `wojons/muster` as a sibling (`../muster`, or point `MUSTER_ENGINE_DIR` at it) and run `bash scripts/resolve-engine.sh`. That generates a `go.work` with a workspace-level replace; `go.work`/`go.work.sum` are local, gitignored artifacts and `go.mod` is never edited. With no checkout present the script is informational only (exit 0) and the published module is used.
 
 ## Integration Guide
 
