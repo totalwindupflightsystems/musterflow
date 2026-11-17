@@ -163,6 +163,11 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 			if dashboardBaseURL != "" {
 				return connectViaDashboard(specURL, baseURL, nameInput, authType)
 			}
+			// DF-045: connecting writes to the registry, so a locked store must
+			// surface the lock instead of a bare "registry not loaded".
+			if err := StoreUnavailable(); err != nil {
+				return err
+			}
 
 			result, err := app.Connect(cmd.Context(), registry, app.ConnectOptions{
 				SpecURL:  specURL,
@@ -235,6 +240,10 @@ func newDisconnectCommand(registry *app.Registry) *cobra.Command {
 			if dashboardBaseURL != "" {
 				return disconnectViaDashboard(args[0])
 			}
+			// DF-045: a locked store must name the lock, not "registry not loaded".
+			if err := StoreUnavailable(); err != nil {
+				return err
+			}
 			if err := app.Disconnect(registry, args[0]); err != nil {
 				return err
 			}
@@ -288,6 +297,11 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 			if dashboardBaseURL != "" {
 				return pushViaDashboard(args[0])
 			}
+			// DF-045: registry.Get on an unreadable store must name the lock,
+			// not report the API as missing.
+			if err := StoreUnavailable(); err != nil {
+				return err
+			}
 			conn, err := registry.Get(args[0])
 			if err != nil {
 				return err
@@ -312,6 +326,10 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if dashboardBaseURL != "" {
 				return pullViaDashboard(args[0])
+			}
+			// DF-045: pulling writes to the registry; name the lock up front.
+			if err := StoreUnavailable(); err != nil {
+				return err
 			}
 			client := catalog.NewClient()
 			entry, _, err := client.FetchEntry(args[0])

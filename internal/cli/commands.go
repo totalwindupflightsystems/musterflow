@@ -63,6 +63,11 @@ func newExportCommand(registry *app.Registry) *cobra.Command {
 			if dashboardBaseURL != "" {
 				return exportViaDashboard(path)
 			}
+			// DF-045: an unreadable store is not an empty registry — fail with
+			// the lock cause instead of exporting zero APIs as if it were.
+			if err := StoreUnavailable(); err != nil {
+				return err
+			}
 			store := registry.Store()
 			if store == nil {
 				return fmt.Errorf("registry not loaded (the dashboard may be running — export/import route through the dashboard; if the dashboard is NOT running this is a bug)")
@@ -91,6 +96,10 @@ func newImportCommand(registry *app.Registry) *cobra.Command {
 			if dashboardBaseURL != "" {
 				return importViaDashboard(args[0])
 			}
+			// DF-045: an unreadable store is not an empty registry; name the lock.
+			if err := StoreUnavailable(); err != nil {
+				return err
+			}
 			store := registry.Store()
 			if store == nil {
 				return fmt.Errorf("registry not loaded (the dashboard may be running — export/import route through the dashboard; if the dashboard is NOT running this is a bug)")
@@ -113,6 +122,10 @@ func newRefreshCommand(registry *app.Registry) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if dashboardBaseURL != "" {
 				return refreshViaDashboard(args[0])
+			}
+			// DF-045: an unreadable store is not "get api: not found".
+			if err := StoreUnavailable(); err != nil {
+				return err
 			}
 			result, err := app.Refresh(cmd.Context(), registry, args[0])
 			if err != nil {
