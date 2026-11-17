@@ -10,7 +10,7 @@ cd musterflow
 go build -o musterflow ./cmd/musterflow/
 ```
 
-Requirements: Go 1.26.5+, GitHub personal access token (for private muster engine repo access).
+Requirements: Go 1.26.11+ (the published `github.com/wojons/muster` module requires it; no engine checkout or access token needed).
 
 ## Build & Test
 

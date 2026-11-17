@@ -16,21 +16,26 @@ metrics endpoint (`/metrics`).
 
 ## Build and toolchain
 
-The workspace (`go.work`) replaces `github.com/wojons/muster` with a local checkout. That
-module carries a newer `go` directive than the fleet host's default toolchain, so builds on
-those hosts need an explicit toolchain pin:
+`github.com/wojons/muster` is consumed as a published Go module (pinned in `go.mod` and
+`go.sum`), so a fresh clone builds with plain `go build ./...` — no engine checkout and no
+`go.work`. The module graph requires **Go 1.26.11 or newer** (both `go.mod` files carry
+`go 1.26.11`); with an older local toolchain, either install 1.26.11+ or let Go fetch it:
 
 ```bash
-GOTOOLCHAIN=go1.26.10 go build ./...
-GOTOOLCHAIN=go1.26.10 go test ./...
+GOTOOLCHAIN=go1.26.11 go build ./...
+GOTOOLCHAIN=go1.26.11 go test ./...
 ```
 
-Without the pin the build stops at `module /path/to/muster requires go >= 1.26.10
-(running go 1.26.6)` — that is a toolchain message, not a code failure.
+Without that, the build stops at `go.mod requires go >= 1.26.11` — a toolchain message,
+not a code failure.
 
-A worktree created with `git worktree add` does **not** inherit `go.work` / `go.work.sum`
-(both are gitignored), so copy them into the worktree before building there, or the build
-fails with `missing go.sum entry ... github.com/wojons/muster/pkg/...`.
+Engine **development** is the only case that needs a local checkout: clone
+`github.com/wojons/muster` as a sibling (`../muster`) or point `MUSTER_ENGINE_DIR` at it, then
+run `bash scripts/resolve-engine.sh` to generate a `go.work` with a workspace-level replace.
+`go.work` / `go.work.sum` are gitignored and never required for a normal build; with no
+checkout the resolver is informational and exits 0 (it also clears a stale `go.work` whose
+replace target no longer exists). A `git worktree add` tree does not inherit `go.work`, so
+engine-development worktrees must re-run the resolver before building there.
 
 ## Run
 
