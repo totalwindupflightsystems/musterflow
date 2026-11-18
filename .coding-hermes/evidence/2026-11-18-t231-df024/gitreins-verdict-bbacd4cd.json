@@ -1,0 +1,498 @@
+{
+  "task_id": "DF-024",
+  "task_title": "Name-vs-ID lookup UX: refresh and catalog push reject API names",
+  "task_criteria": [
+    "PASS when 'musterflow refresh <name>' and 'musterflow catalog push <name>' both resolve a connected API by exact Name (falling back after exact-ID miss) or, when unresolvable, the error names the available ids so the user can act; unit tests cover name resolution on both CLI paths; go build ./... and go test ./... green."
+  ],
+  "passed": true,
+  "worktree": "/home/kara/musterflow",
+  "branch": "master",
+  "commit": "3ad6871b696b1d470e30d696ef2000be0f315273",
+  "pass_class": "judged",
+  "tier2_skipped": false,
+  "working_tree_content_fingerprint": "e3f8105b8ae4abd790f881e9547c8eeda704ff70e33ec4ef593797c6a0fe4dce",
+  "working_tree_dirty_path_count": 3,
+  "items": [
+    {
+      "criterion": "PASS when 'musterflow refresh <name>' and 'musterflow catalog push <name>' both resolve a connected API by exact Name (falling back after exact-ID miss) or, when unresolvable, the error names the available ids so the user can act; unit tests cover name resolution on both CLI paths; go build ./... and go test ./... green.",
+      "status": "PASS",
+      "detail": "Both CLI paths now resolve name-or-id: internal/cli/commands.go:151 `conn, err := registry.GetByNameOrID(args[0])` (refresh) and internal/cli/root.go:309 (catalog push). internal/app/registry.go:139-146 tries exact ID via r.Get first and only then scans List() for `c.Name == idOrName`; registry.go:158-166 builds the not-found error as `api %q not found; connected: <id> (<name>), ... \u2014 use an id or name from 'musterflow list'`, and for an empty registry says `no APIs are connected \u2014 run 'musterflow connect <url>'`. Unit tests on both CLI paths: internal/cli/nameorid_test.go TestRefreshResolvesAPIByNameOrID (by-name, by-id) and TestCatalogPushResolvesAPIByNameOrID (by-name, by-id), plus TestUnknownArgErrorNamesConnectedAPIs and TestUnknownArgOnEmptyRegistrySaysHowToConnect \u2014 `go test -count=1 -run 'NameOrID|UnknownArg' -v ./internal/cli/` printed `--- PASS: TestRefreshResolvesAPIByNameOrID/by-name`, `--- PASS: TestCatalogPushResolvesAPIByNameOrID/by-name`, `--- PASS: TestUnknownArgErrorNamesConnectedAPIs/refresh-nope`, `--- PASS: TestUnknownArgOnEmptyRegistrySaysHowToConnect/catalog-push-nope`, `ok github.com/.../internal/cli 0.156s`. `go build ./...` exit 0 (no output). `go test -count=1 ./...` exit 0, 11 `ok` lines, zero FAIL/panic."
+    },
+    {
+      "criterion": "Exact-ID lookup still wins over a Name match (back-compat: an id that collides with another connection's name resolves by id), and the name fallback only runs after the id miss.",
+      "status": "PASS",
+      "detail": "internal/app/registry.go:139-146 returns immediately on a successful r.Get(idOrName) and only then falls back to the List() name scan. Covered by internal/app/app_test.go:110 TestRegistry_GetByNameOrID_IDWinsOverName (id \"shared-slug\" vs another connection's Name \"shared-slug\" \u2192 resolves to ID \"shared-slug\"); `go test -count=1 ./internal/app/` \u2192 `ok github.com/totalwindupflightsystems/musterflow/internal/app 1.256s`.",
+      "derived": true
+    },
+    {
+      "criterion": "The dashboard path (dashboardBaseURL != \"\") must also accept a name: refreshViaDashboard/pushViaDashboard forward the raw arg to /api/apis/<arg> and /api/apis/<arg>/refresh, and the dashboard handlers must resolve name-or-id.",
+      "status": "PASS",
+      "detail": "internal/cli/register.go:197 POSTs dashboardBaseURL+\"/api/apis/\"+apiID+\"/refresh\" and register.go:241 GETs dashboardBaseURL+\"/api/apis/\"+apiID with the raw argument; internal/dashboard/server.go:207 (GET handler) and server.go:237 (handleRefreshAPI) both call s.registry.GetByNameOrID(id) before acting, so a name works on the dashboard path too. `go test -count=1 ./internal/dashboard/` \u2192 `ok ... 1.992s`.",
+      "derived": true
+    },
+    {
+      "criterion": "The DF-045 store-unavailable guard must still fire before the new lookup, so a locked/unreadable store reports the lock rather than \"api not found\".",
+      "status": "PASS",
+      "detail": "internal/cli/commands.go:145-149 and internal/cli/root.go:303-307 call StoreUnavailable() before GetByNameOrID. `go test -count=1 -run 'Store|Lock' -v ./internal/cli/` printed `--- PASS: TestRefreshFailsWhenStoreIsLocked`, `--- PASS: TestCatalogPushFailsWhenStoreIsLocked`, `--- PASS: TestListFailsWhenStoreIsLocked`, package `ok`.",
+      "derived": true
+    },
+    {
+      "criterion": "The refresh path must pass the resolved connection's ID (not the raw name) into app.Refresh, which itself does an id-only registry.Get and would otherwise fail with \"get api: not found\".",
+      "status": "PASS",
+      "detail": "internal/cli/commands.go:155 calls `app.Refresh(cmd.Context(), registry, conn.ID)` with the resolved ID; internal/app/refresh.go:14-17 does registry.Get(id) and wraps failures as \"get api: %w\". TestRefreshResolvesAPIByNameOrID/by-name passes and asserts \"\u2713 Refreshed echo-test-api\" and \"1.0.0 \u2192 2.0.0\", which is only reachable if the name resolved to the id and the spec was re-fetched (the httptest server serves version 2.0.0).",
+      "derived": true
+    },
+    {
+      "criterion": "User-facing help/docs must advertise the new accepted spelling (<api-id|name>) on both commands, and the existing Use-string assertions must be updated to match.",
+      "status": "PASS",
+      "detail": "internal/cli/commands.go:135 `Use: \"refresh <api-id|name>\"` plus Long text; internal/cli/root.go:293 `Use: \"push <api-id|name>\"` plus Long text; specs/cli.md:57,335,338 and README.md:104 updated. Existing assertions updated at internal/cli/cli_test.go:1118,1496,1615 and pass (`go test -count=1 ./internal/cli/` \u2192 `ok ... 3.499s`).",
+      "derived": true
+    }
+  ],
+  "merge_recommendation": "no_concerns_found",
+  "stages": {
+    "tier1": {
+      "id": "tier1",
+      "passed": true,
+      "any_failed": false,
+      "summary": "  \u2713 secrets: secrets: scanners=gitleaks+builtin cross-check\n  \u2713 tests: scanners: nice=nice -n 10",
+      "steps": [
+        {
+          "id": "secrets",
+          "type": "script",
+          "passed": true,
+          "output": "secrets: scanners=gitleaks+builtin cross-check\nscanners: nice=nice -n 10\n9:12PM INF scanned ~3973419 bytes (3.97 MB) in 442ms\n9:12PM INF no leaks found\nsecrets: gitleaks: clean\nsecrets: builtin cross-check: Scanned 168 files \u2014 clean (excluded harness state: .gitreins/**)\nsecrets: builtin cross-check status: clean\n",
+          "error": "",
+          "data": {
+            "exit_code": 0,
+            "guard_log": "/home/kara/musterflow/.gitreins/logs/guard-20261118T020741.677674Z.log",
+            "secrets_scanners": [
+              "gitleaks",
+              "builtin"
+            ]
+          }
+        },
+        {
+          "id": "tests",
+          "type": "script",
+          "passed": true,
+          "output": "scanners: nice=nice -n 10\nok  \tgithub.com/totalwindupflightsystems/musterflow/cmd/musterflow\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/app\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/auth\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/catalog\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/cli\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/completion\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/config\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/dashboard\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/mcp\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/wasm\t(cached)\nok  \tgithub.com/totalwindupflightsystems/musterflow/internal/workflow\t(cached)\n",
+          "error": "",
+          "data": {
+            "exit_code": 0,
+            "guard_log": "/home/kara/musterflow/.gitreins/logs/guard-20261118T020741.677674Z.log"
+          }
+        }
+      ],
+      "coverage": "secrets+tests"
+    },
+    "tier2": {
+      "id": "tier2",
+      "passed": true,
+      "any_failed": false,
+      "summary": "COMPLETE\n  \u2713 PASS when 'musterflow refresh <name>' and 'musterflow catalog push <name>' both resolve a connected API by exact Name (falling back after exact-ID miss) or, when unresolvable, the error names the available ids so the user can act; unit tests cover name resolution on both CLI paths; go build ./... and go test ./... green.: Both CLI paths now resolve name-or-id: internal/cli/commands.go:151 `conn, err := registry.GetByNameOrID(args[0])` (refresh) and internal/cli/root.go:309 (catalog push). internal/app/registry.go:139-146 tries exact ID via r.Get first and only then scans List() for `c.Name == idOrName`; registry.go:158-166 builds the not-found error as `api %q not found; connected: <id> (<name>), ... \u2014 use an id or name from 'musterflow list'`, and for an empty registry says `no APIs are connected \u2014 run 'musterflow connect <url>'`. Unit tests on both CLI paths: internal/cli/nameorid_test.go TestRefreshResolvesAPIByNameOrID (by-name, by-id) and TestCatalogPushResolvesAPIByNameOrID (by-name, by-id), plus TestUnknownArgErrorNamesConnectedAPIs and TestUnknownArgOnEmptyRegistrySaysHowToConnect \u2014 `go test -count=1 -run 'NameOrID|UnknownArg' -v ./internal/cli/` printed `--- PASS: TestRefreshResolvesAPIByNameOrID/by-name`, `--- PASS: TestCatalogPushResolvesAPIByNameOrID/by-name`, `--- PASS: TestUnknownArgErrorNamesConnectedAPIs/refresh-nope`, `--- PASS: TestUnknownArgOnEmptyRegistrySaysHowToConnect/catalog-push-nope`, `ok github.com/.../internal/cli 0.156s`. `go build ./...` exit 0 (no output). `go test -count=1 ./...` exit 0, 11 `ok` lines, zero FAIL/panic.\n  \u2713 Exact-ID lookup still wins over a Name match (back-compat: an id that collides with another connection's name resolves by id), and the name fallback only runs after the id miss.: internal/app/registry.go:139-146 returns immediately on a successful r.Get(idOrName) and only then falls back to the List() name scan. Covered by internal/app/app_test.go:110 TestRegistry_GetByNameOrID_IDWinsOverName (id \"shared-slug\" vs another connection's Name \"shared-slug\" \u2192 resolves to ID \"shared-slug\"); `go test -count=1 ./internal/app/` \u2192 `ok github.com/totalwindupflightsystems/musterflow/internal/app 1.256s`.\n  \u2713 The dashboard path (dashboardBaseURL != \"\") must also accept a name: refreshViaDashboard/pushViaDashboard forward the raw arg to /api/apis/<arg> and /api/apis/<arg>/refresh, and the dashboard handlers must resolve name-or-id.: internal/cli/register.go:197 POSTs dashboardBaseURL+\"/api/apis/\"+apiID+\"/refresh\" and register.go:241 GETs dashboardBaseURL+\"/api/apis/\"+apiID with the raw argument; internal/dashboard/server.go:207 (GET handler) and server.go:237 (handleRefreshAPI) both call s.registry.GetByNameOrID(id) before acting, so a name works on the dashboard path too. `go test -count=1 ./internal/dashboard/` \u2192 `ok ... 1.992s`.\n  \u2713 The DF-045 store-unavailable guard must still fire before the new lookup, so a locked/unreadable store reports the lock rather than \"api not found\".: internal/cli/commands.go:145-149 and internal/cli/root.go:303-307 call StoreUnavailable() before GetByNameOrID. `go test -count=1 -run 'Store|Lock' -v ./internal/cli/` printed `--- PASS: TestRefreshFailsWhenStoreIsLocked`, `--- PASS: TestCatalogPushFailsWhenStoreIsLocked`, `--- PASS: TestListFailsWhenStoreIsLocked`, package `ok`.\n  \u2713 The refresh path must pass the resolved connection's ID (not the raw name) into app.Refresh, which itself does an id-only registry.Get and would otherwise fail with \"get api: not found\".: internal/cli/commands.go:155 calls `app.Refresh(cmd.Context(), registry, conn.ID)` with the resolved ID; internal/app/refresh.go:14-17 does registry.Get(id) and wraps failures as \"get api: %w\". TestRefreshResolvesAPIByNameOrID/by-name passes and asserts \"\u2713 Refreshed echo-test-api\" and \"1.0.0 \u2192 2.0.0\", which is only reachable if the name resolved to the id and the spec was re-fetched (the httptest server serves version 2.0.0).\n  \u2713 User-facing help/docs must advertise the new accepted spelling (<api-id|name>) on both commands, and the existing Use-string assertions must be updated to match.: internal/cli/commands.go:135 `Use: \"refresh <api-id|name>\"` plus Long text; internal/cli/root.go:293 `Use: \"push <api-id|name>\"` plus Long text; specs/cli.md:57,335,338 and README.md:104 updated. Existing assertions updated at internal/cli/cli_test.go:1118,1496,1615 and pass (`go test -count=1 ./internal/cli/` \u2192 `ok ... 3.499s`).\nBoth CLI paths now resolve a connected API by exact ID then exact Name via Registry.GetByNameOrID, the not-found error names every connected id (and how to connect when empty), dedicated unit tests cover name resolution on refresh and catalog push, and go build ./... plus go test -count=1 ./... are green.",
+      "steps": [
+        {
+          "id": "tier2",
+          "type": "ai_eval",
+          "passed": true,
+          "output": "COMPLETE\n  \u2713 PASS when 'musterflow refresh <name>' and 'musterflow catalog push <name>' both resolve a connected API by exact Name (falling back after exact-ID miss) or, when unresolvable, the error names the available ids so the user can act; unit tests cover name resolution on both CLI paths; go build ./... and go test ./... green.: Both CLI paths now resolve name-or-id: internal/cli/commands.go:151 `conn, err := registry.GetByNameOrID(args[0])` (refresh) and internal/cli/root.go:309 (catalog push). internal/app/registry.go:139-146 tries exact ID via r.Get first and only then scans List() for `c.Name == idOrName`; registry.go:158-166 builds the not-found error as `api %q not found; connected: <id> (<name>), ... \u2014 use an id or name from 'musterflow list'`, and for an empty registry says `no APIs are connected \u2014 run 'musterflow connect <url>'`. Unit tests on both CLI paths: internal/cli/nameorid_test.go TestRefreshResolvesAPIByNameOrID (by-name, by-id) and TestCatalogPushResolvesAPIByNameOrID (by-name, by-id), plus TestUnknownArgErrorNamesConnectedAPIs and TestUnknownArgOnEmptyRegistrySaysHowToConnect \u2014 `go test -count=1 -run 'NameOrID|UnknownArg' -v ./internal/cli/` printed `--- PASS: TestRefreshResolvesAPIByNameOrID/by-name`, `--- PASS: TestCatalogPushResolvesAPIByNameOrID/by-name`, `--- PASS: TestUnknownArgErrorNamesConnectedAPIs/refresh-nope`, `--- PASS: TestUnknownArgOnEmptyRegistrySaysHowToConnect/catalog-push-nope`, `ok github.com/.../internal/cli 0.156s`. `go build ./...` exit 0 (no output). `go test -count=1 ./...` exit 0, 11 `ok` lines, zero FAIL/panic.\n  \u2713 Exact-ID lookup still wins over a Name match (back-compat: an id that collides with another connection's name resolves by id), and the name fallback only runs after the id miss.: internal/app/registry.go:139-146 returns immediately on a successful r.Get(idOrName) and only then falls back to the List() name scan. Covered by internal/app/app_test.go:110 TestRegistry_GetByNameOrID_IDWinsOverName (id \"shared-slug\" vs another connection's Name \"shared-slug\" \u2192 resolves to ID \"shared-slug\"); `go test -count=1 ./internal/app/` \u2192 `ok github.com/totalwindupflightsystems/musterflow/internal/app 1.256s`.\n\n\u2026 [1124 chars omitted \u2014 2 line(s)] \u2026\n  \u2713 The refresh path must pass the resolved connection's ID (not the raw name) into app.Refresh, which itself does an id-only registry.Get and would otherwise fail with \"get api: not found\".: internal/cli/commands.go:155 calls `app.Refresh(cmd.Context(), registry, conn.ID)` with the resolved ID; internal/app/refresh.go:14-17 does registry.Get(id) and wraps failures as \"get api: %w\". TestRefreshResolvesAPIByNameOrID/by-name passes and asserts \"\u2713 Refreshed echo-test-api\" and \"1.0.0 \u2192 2.0.0\", which is only reachable if the name resolved to the id and the spec was re-fetched (the httptest server serves version 2.0.0).\n  \u2713 User-facing help/docs must advertise the new accepted spelling (<api-id|name>) on both commands, and the existing Use-string assertions must be updated to match.: internal/cli/commands.go:135 `Use: \"refresh <api-id|name>\"` plus Long text; internal/cli/root.go:293 `Use: \"push <api-id|name>\"` plus Long text; specs/cli.md:57,335,338 and README.md:104 updated. Existing assertions updated at internal/cli/cli_test.go:1118,1496,1615 and pass (`go test -count=1 ./internal/cli/` \u2192 `ok ... 3.499s`).\nBoth CLI paths now resolve a connected API by exact ID then exact Name via Registry.GetByNameOrID, the not-found error names every connected id (and how to connect when empty), dedicated unit tests cover name resolution on refresh and catalog push, and go build ./... plus go test -count=1 ./... are green.",
+          "error": "",
+          "data": {
+            "verdict": "COMPLETE",
+            "items": [
+              {
+                "criterion": "PASS when 'musterflow refresh <name>' and 'musterflow catalog push <name>' both resolve a connected API by exact Name (falling back after exact-ID miss) or, when unresolvable, the error names the available ids so the user can act; unit tests cover name resolution on both CLI paths; go build ./... and go test ./... green.",
+                "status": "PASS",
+                "detail": "Both CLI paths now resolve name-or-id: internal/cli/commands.go:151 `conn, err := registry.GetByNameOrID(args[0])` (refresh) and internal/cli/root.go:309 (catalog push). internal/app/registry.go:139-146 tries exact ID via r.Get first and only then scans List() for `c.Name == idOrName`; registry.go:158-166 builds the not-found error as `api %q not found; connected: <id> (<name>), ... \u2014 use an id or name from 'musterflow list'`, and for an empty registry says `no APIs are connected \u2014 run 'musterflow connect <url>'`. Unit tests on both CLI paths: internal/cli/nameorid_test.go TestRefreshResolvesAPIByNameOrID (by-name, by-id) and TestCatalogPushResolvesAPIByNameOrID (by-name, by-id), plus TestUnknownArgErrorNamesConnectedAPIs and TestUnknownArgOnEmptyRegistrySaysHowToConnect \u2014 `go test -count=1 -run 'NameOrID|UnknownArg' -v ./internal/cli/` printed `--- PASS: TestRefreshResolvesAPIByNameOrID/by-name`, `--- PASS: TestCatalogPushResolvesAPIByNameOrID/by-name`, `--- PASS: TestUnknownArgErrorNamesConnectedAPIs/refresh-nope`, `--- PASS: TestUnknownArgOnEmptyRegistrySaysHowToConnect/catalog-push-nope`, `ok github.com/.../internal/cli 0.156s`. `go build ./...` exit 0 (no output). `go test -count=1 ./...` exit 0, 11 `ok` lines, zero FAIL/panic.",
+                "resolution_probability": 0.16
+              },
+              {
+                "criterion": "Exact-ID lookup still wins over a Name match (back-compat: an id that collides with another connection's name resolves by id), and the name fallback only runs after the id miss.",
+                "status": "PASS",
+                "detail": "internal/app/registry.go:139-146 returns immediately on a successful r.Get(idOrName) and only then falls back to the List() name scan. Covered by internal/app/app_test.go:110 TestRegistry_GetByNameOrID_IDWinsOverName (id \"shared-slug\" vs another connection's Name \"shared-slug\" \u2192 resolves to ID \"shared-slug\"); `go test -count=1 ./internal/app/` \u2192 `ok github.com/totalwindupflightsystems/musterflow/internal/app 1.256s`.",
+                "derived": true
+              },
+              {
+                "criterion": "The dashboard path (dashboardBaseURL != \"\") must also accept a name: refreshViaDashboard/pushViaDashboard forward the raw arg to /api/apis/<arg> and /api/apis/<arg>/refresh, and the dashboard handlers must resolve name-or-id.",
+                "status": "PASS",
+                "detail": "internal/cli/register.go:197 POSTs dashboardBaseURL+\"/api/apis/\"+apiID+\"/refresh\" and register.go:241 GETs dashboardBaseURL+\"/api/apis/\"+apiID with the raw argument; internal/dashboard/server.go:207 (GET handler) and server.go:237 (handleRefreshAPI) both call s.registry.GetByNameOrID(id) before acting, so a name works on the dashboard path too. `go test -count=1 ./internal/dashboard/` \u2192 `ok ... 1.992s`.",
+                "derived": true
+              },
+              {
+                "criterion": "The DF-045 store-unavailable guard must still fire before the new lookup, so a locked/unreadable store reports the lock rather than \"api not found\".",
+                "status": "PASS",
+                "detail": "internal/cli/commands.go:145-149 and internal/cli/root.go:303-307 call StoreUnavailable() before GetByNameOrID. `go test -count=1 -run 'Store|Lock' -v ./internal/cli/` printed `--- PASS: TestRefreshFailsWhenStoreIsLocked`, `--- PASS: TestCatalogPushFailsWhenStoreIsLocked`, `--- PASS: TestListFailsWhenStoreIsLocked`, package `ok`.",
+                "derived": true
+              },
+              {
+                "criterion": "The refresh path must pass the resolved connection's ID (not the raw name) into app.Refresh, which itself does an id-only registry.Get and would otherwise fail with \"get api: not found\".",
+                "status": "PASS",
+                "detail": "internal/cli/commands.go:155 calls `app.Refresh(cmd.Context(), registry, conn.ID)` with the resolved ID; internal/app/refresh.go:14-17 does registry.Get(id) and wraps failures as \"get api: %w\". TestRefreshResolvesAPIByNameOrID/by-name passes and asserts \"\u2713 Refreshed echo-test-api\" and \"1.0.0 \u2192 2.0.0\", which is only reachable if the name resolved to the id and the spec was re-fetched (the httptest server serves version 2.0.0).",
+                "derived": true
+              },
+              {
+                "criterion": "User-facing help/docs must advertise the new accepted spelling (<api-id|name>) on both commands, and the existing Use-string assertions must be updated to match.",
+                "status": "PASS",
+                "detail": "internal/cli/commands.go:135 `Use: \"refresh <api-id|name>\"` plus Long text; internal/cli/root.go:293 `Use: \"push <api-id|name>\"` plus Long text; specs/cli.md:57,335,338 and README.md:104 updated. Existing assertions updated at internal/cli/cli_test.go:1118,1496,1615 and pass (`go test -count=1 ./internal/cli/` \u2192 `ok ... 3.499s`).",
+                "derived": true
+              }
+            ],
+            "summary": "Both CLI paths now resolve a connected API by exact ID then exact Name via Registry.GetByNameOrID, the not-found error names every connected id (and how to connect when empty), dedicated unit tests cover name resolution on refresh and catalog push, and go build ./... plus go test -count=1 ./... are green.",
+            "provenance": {
+              "model": "deepseek-v4-flash",
+              "base_url_source": "GITREINS_LLM_BASE_URL",
+              "api_key_source": "GITREINS_LLM_API_KEY"
+            }
+          }
+        }
+      ],
+      "model": "deepseek-v4-flash",
+      "base_url_source": "GITREINS_LLM_BASE_URL",
+      "api_key_source": "GITREINS_LLM_API_KEY",
+      "tool_calls": [
+        {
+          "tool": "get_task_item",
+          "command": "get_task_item {\"id\": \"DF-024\"}",
+          "exit_code": 0,
+          "output_sha": "538f3b00f359d65d9cc85ae73b1ce3b708db2147efc408f66ddf2da28872adc1"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /workspace 2>/dev/null || cd .; pwd; ls; git log --oneline -3",
+          "exit_code": 0,
+          "output_sha": "1dc20cce15ac3df85d9b54ccc79f065cea4a450250db4f274f8c517f49e482ac"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && git show --stat HEAD && cat .gitreins/config.yaml 2>/dev/null | head -50",
+          "exit_code": 0,
+          "output_sha": "c699e7b49e65c25c5cfd165b9419cef429b56cfc0de8821afbcf14b1752a1711"
+        },
+        {
+          "tool": "read_file",
+          "command": "read_file {\"path\": \"internal/cli/nameorid_test.go\"}",
+          "exit_code": 0,
+          "output_sha": "2967e7a22d2101514f9f5785928344b7d880f4ca21cffe4c00e6fbf0271bf12c"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && git show HEAD -- internal/app/registry.go internal/cli/commands.go internal/cli/root.go internal/cli/cli_test.go",
+          "exit_code": 0,
+          "output_sha": "7b4c160653199a8cde8b241027459f8d1b480e9e2966294f0219d258679bb26e"
+        },
+        {
+          "tool": "read_file",
+          "command": "read_file {\"limit\": 100, \"offset\": 100, \"path\": \"internal/app/registry.go\"}",
+          "exit_code": 0,
+          "output_sha": "7189563a76185c006938cb3b0d23ec43fceb62d0f199eed3cef57333897732c2"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && git show HEAD -- internal/cli/commands.go",
+          "exit_code": 0,
+          "output_sha": "1550629c662c1a261a90aa04fec43689945840ea2d43cbdf46a962d816b153c1"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && go build ./... 2>&1 | tail -20; echo \"BUILD_EXIT=$?\"",
+          "exit_code": 0,
+          "output_sha": "be91aed05b63091c69dc932e683d9156382a77a570c009f630bc6629c45b2216"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && go test ./... 2>&1 | tail -60; echo \"TEST_EXIT=$?\"",
+          "exit_code": 0,
+          "output_sha": "717ec0b337bb450652a7e2e6cbeb36922132174d44fdcd23c7ac30c1c08e4403"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && go test -count=1 ./... 2>&1 | tail -60; echo \"TEST_EXIT=${PIPESTATUS[0]}\"",
+          "exit_code": 2,
+          "output_sha": "b8f7a28bcc70477fe93fdbe4aacc03bd20d150e76f9e33ac757dc2edc8968fc9"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && go test -count=1 -run 'NameOrID|UnknownArg' -v ./internal/cli/ 2>&1 | tail -60",
+          "exit_code": 0,
+          "output_sha": "4253b5ffcac3261c6057fd682c881460e923b1373d7f75ff88a8130659000b78"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && go test -count=1 ./... > /tmp/t.log 2>&1; echo \"EXIT=$?\"; grep -c '^ok' /tmp/t.log; grep -E 'FAIL|panic' /tmp/t.log | head",
+          "exit_code": 0,
+          "output_sha": "cf9590091657c81e2b0dfe839fd9ea22a19ad2792bc2e41d601bcee8ad9826ad"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"func runCLI\" internal/cli/ && sed -n '1,80p' internal/cli/cli_test.go",
+          "exit_code": 0,
+          "output_sha": "c010743b8e0cd4f3b144af311b8d870d2fe27d2ec0aafa4c8c346dcd83c2505f"
+        },
+        {
+          "tool": "read_file",
+          "command": "read_file {\"limit\": 80, \"offset\": 200, \"path\": \"internal/cli/storeerr_test.go\"}",
+          "exit_code": 0,
+          "output_sha": "8a20b3aeab83a739882bcd0679771bf76bee83bc6511978e0af548d19a64aec9"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && git show HEAD -- internal/cli/cli_test.go",
+          "exit_code": 0,
+          "output_sha": "e566b7cfa856f5bbc2e617ad2a3f2b2d9c7e4f47f6762a6571e9066b6855a9c9"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"GetByNameOrID\" --include=*.go . | head -30",
+          "exit_code": 0,
+          "output_sha": "eb0946d82d962fa86ba6ee9d9c74fe484afab6103a7906741d20fa66925837cb"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"func Refresh\" internal/app/refresh.go && sed -n '1,80p' internal/app/refresh.go",
+          "exit_code": 0,
+          "output_sha": "ad385bc717552ebae06773e53ba38ab80229798d4365ad9d3c666bd7816602c3"
+        },
+        {
+          "tool": "read_file",
+          "command": "read_file {\"limit\": 60, \"offset\": 130, \"path\": \"internal/cli/commands.go\"}",
+          "exit_code": 0,
+          "output_sha": "580e7f24164260fda82f3e820137cceabc1eb358ae27d876b452cb5317a3b240"
+        },
+        {
+          "tool": "read_file",
+          "command": "read_file {\"limit\": 60, \"offset\": 280, \"path\": \"internal/cli/root.go\"}",
+          "exit_code": 0,
+          "output_sha": "257dc056fa0b9d62c4275e487c43845753aea15690e19debcfbdcfd9fa17beac"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"func refreshViaDashboard\\|func pushViaDashboard\" -A 30 internal/cli/*.go | head -80",
+          "exit_code": 0,
+          "output_sha": "7ff3655da956ac7ba5112c4f6e262300a3a6bb326525f2b38bf9716fcf42f332"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && sed -n '190,260p' internal/dashboard/server.go",
+          "exit_code": 0,
+          "output_sha": "d90d4b2c161bf3804f71e796a90bcd625448b92a1016eadc3eae821a9ec9d2d9"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"func (s \\*Store) Get\\b\" -A 25 internal/app/*.go | head -50",
+          "exit_code": 0,
+          "output_sha": "bdb1c9a88c70aa4183573a29fbfb71c4b49859d8d7ccea081bea0745f5f6688f"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && sed -n '40,140p' internal/app/app_test.go",
+          "exit_code": 0,
+          "output_sha": "dc95f37c3c5482cd607bcc842e74dafe1a4eb9c52d357c84c93b21a9705e9261"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"func scanConnection\" -A 30 internal/app/store.go | head -60",
+          "exit_code": 0,
+          "output_sha": "70666d2c793559c10699bd94a9de6a0ba93e123ffa72b512ec99364c84b4a08d"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"func (s \\*Store) Add\" -A 30 internal/app/store.go | head -45",
+          "exit_code": 0,
+          "output_sha": "f87d72ceaf1f0520475fcf66973297775985c583ab26e951954ba53ddaeaca15"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"GetByNameOrID\\|refresh <api-id\\|push <api-id\" specs/cli.md README.md docs/integration-guide.md | head -20",
+          "exit_code": 0,
+          "output_sha": "4d3e699dad214fc19780879fe8e04f68e1ab73df56d5d7610e30b4e3874ac6ca"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"registry.Get(\\|\\.Get(args\\[0\\])\" --include=*.go internal/cli/ | head -20",
+          "exit_code": 0,
+          "output_sha": "5be605c212b94d1218805e0d7f3fc15e45392167e2f83f4fad648956ea962803"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && sed -n '1655,1700p' internal/cli/cli_test.go",
+          "exit_code": 0,
+          "output_sha": "9965034f5eb11f324ff63dd36edbee9e89bd59199f8b44969ba97874d2265024"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && grep -rn \"refresh\" internal/cli/cli_test.go | head -30",
+          "exit_code": 0,
+          "output_sha": "1e7b309ed774a26d8c52e1a529290e96a94b2fe0b7080a644c795e69a1785901"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && sed -n '1075,1112p' internal/cli/cli_test.go",
+          "exit_code": 0,
+          "output_sha": "a74bf4e7df5398c13cdc6574f46c70b917c8e3acd01b8a3b0542e6745b360e70"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && go vet ./internal/cli/ ./internal/app/ 2>&1 | tail -10; echo \"VET_EXIT=$?\"",
+          "exit_code": 0,
+          "output_sha": "dfc1c00ee45b0d1cba7f9fb21778302b9b7e64faa06c66ad2a97968a1e90e1c9"
+        },
+        {
+          "tool": "read_lsp_diagnostics",
+          "command": "read_lsp_diagnostics {}",
+          "exit_code": 0,
+          "output_sha": "ef420cbeebd549fc8c5438d6ea41a3e521fa58e29563c4cae80f491b9bfe2143"
+        },
+        {
+          "tool": "read_static_analysis",
+          "command": "read_static_analysis {\"path\": \"internal/cli\"}",
+          "exit_code": 0,
+          "output_sha": "51804ef13b2cc4d5b384ee19f6baa9983f63b1708b57867aa13a5f78207fa59d"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"PASS: refresh (internal/cli/commands.go:151) and catalog push (internal/cli/root.go:309) both call registry.GetByNameOrID; registry.go:133-166 does exact-ID first then exact-Name fallback, and not-found error lists \\\"id (name)\\\" + 'musterflow list' (empty registry: \\\"no APIs are connected \\u2014 run 'musterflow connect <url>'\\\"). Tests: internal/cli/nameorid_test.go TestRefreshResolvesAPIByNameOrID (by-name/by-id), TestCatalogPushResolvesAPIByNameOrID (by-name/by-id), TestUnknownArgErrorNamesConnectedAPIs, TestUnknownArgOnEmptyRegistrySaysHowToConnect \\u2014 all PASS via `go test -count=1 -run 'NameOrID|UnknownArg' -v ./internal/cli/`. `go build ./...` exit 0; `go test -count=1 ./...` exit 0, 11 packages ok, no FAIL.\", \"key\": \"verified_0\"}",
+          "exit_code": 0,
+          "output_sha": "5fbcfa6d45cc161de6118cbc3943c24c5810a48b43e9b89dfce852b5127fc085"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"Exact-ID lookup still wins over a Name match (back-compat: an id that collides with another connection's name resolves by id), and the name fallback only runs after the id miss.\", \"key\": \"derived_0\"}",
+          "exit_code": 0,
+          "output_sha": "0cc72f41eefcabc0041188a12d16d4f37ec41ab0e01a3ef0341a4723a801e65a"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"PASS: internal/app/registry.go:139-146 tries r.Get(idOrName) first and returns on success; only then scans List() for Name equality. Covered by internal/app/app_test.go:110 TestRegistry_GetByNameOrID_IDWinsOverName (id \\\"shared-slug\\\" vs another conn's Name \\\"shared-slug\\\" -> resolves to ID \\\"shared-slug\\\"), which passes in `go test -count=1 ./internal/app/` (ok, 1.256s).\", \"key\": \"verified_derived_0\"}",
+          "exit_code": 0,
+          "output_sha": "b23166136cac8b9c4fb5b8eb038291f6c61331c169d034f5511d20f483d5c55d"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"The dashboard path (dashboardBaseURL != \\\"\\\") must also accept a name: refreshViaDashboard/pushViaDashboard forward the raw arg to /api/apis/<arg> and /api/apis/<arg>/refresh, and the dashboard handlers must resolve name-or-id.\", \"key\": \"derived_1\"}",
+          "exit_code": 0,
+          "output_sha": "7972d569375202dcaeba7385b57dabe7d4cc00c974a190cf5bcc38a8a1dda80b"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"PASS: internal/cli/register.go:197 (refreshViaDashboard) POSTs /api/apis/<arg>/refresh and register.go:241 (pushViaDashboard) GETs /api/apis/<arg> with the raw arg; internal/dashboard/server.go:207 (GET) and :237 (handleRefreshAPI) both call s.registry.GetByNameOrID(id) before acting, so a name works on the dashboard path too. `go test -count=1 ./internal/dashboard/` -> ok 1.992s.\", \"key\": \"verified_derived_1\"}",
+          "exit_code": 0,
+          "output_sha": "049036d91573f6174bc4e3ef6009e2ce105fb00f51a85db3afe6241bcce25dd2"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"The DF-045 store-unavailable guard must still fire before the new lookup, so a locked/unreadable store reports the lock rather than \\\"api not found\\\".\", \"key\": \"derived_2\"}",
+          "exit_code": 0,
+          "output_sha": "d502fffd2b32ba065cfc15826eda9fec0e0ba7cb50cacbdf29b2e404b71153ca"
+        },
+        {
+          "tool": "run_command",
+          "command": "cd /home/kara/musterflow && go test -count=1 -run 'Store|Lock' -v ./internal/cli/ 2>&1 | grep -E '^(=== RUN|--- (PASS|FAIL)|PASS|FAIL|ok)' | head -40",
+          "exit_code": 0,
+          "output_sha": "5d3cc09f85c2a0acbda894c73509a1fd97b1444b84373034ec2d6258ef26659e"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"PASS: internal/cli/commands.go:145-149 and internal/cli/root.go:303-307 call StoreUnavailable() before GetByNameOrID, so a locked store still reports the lock. `go test -count=1 -run 'Store|Lock' -v ./internal/cli/` -> --- PASS: TestRefreshFailsWhenStoreIsLocked, --- PASS: TestCatalogPushFailsWhenStoreIsLocked (and TestListFailsWhenStoreIsLocked etc.), package ok.\", \"key\": \"verified_derived_2\"}",
+          "exit_code": 0,
+          "output_sha": "e4502eac5df0e9fb8bda976111056aa4964242909eb1f1c2cd316fbcc9778146"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"The refresh path must pass the resolved connection's ID (not the raw name) into app.Refresh, which itself does an id-only registry.Get and would otherwise fail with \\\"get api: not found\\\".\", \"key\": \"derived_3\"}",
+          "exit_code": 0,
+          "output_sha": "4fe16514630f1a9903769d43629513eca833abcf06762c4a71a1c3ff7ee59627"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"PASS: internal/cli/commands.go:155 calls app.Refresh(cmd.Context(), registry, conn.ID) with the resolved ID; internal/app/refresh.go:14-17 does registry.Get(id) and wraps failures as \\\"get api: %w\\\". TestRefreshResolvesAPIByNameOrID/by-name passes and asserts \\\"\\u2713 Refreshed echo-test-api\\\" + \\\"1.0.0 \\u2192 2.0.0\\\", which is only reachable if the name resolved to the id and the spec was re-parsed (spec server serves version 2.0.0).\", \"key\": \"verified_derived_3\"}",
+          "exit_code": 0,
+          "output_sha": "91e4c15b68000435a57aa4dfec5d3d2a81afa0e5779d28e8348b00a67d998e20"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"User-facing help/docs must advertise the new accepted spelling (<api-id|name>) on both commands, and the existing Use-string assertions must be updated to match.\", \"key\": \"derived_4\"}",
+          "exit_code": 0,
+          "output_sha": "fa496bfb73603d8feed843ad1db5085916c615f012e2a6836cc49337a0124925"
+        },
+        {
+          "tool": "sandbox_write",
+          "command": "sandbox_write {\"content\": \"PASS: internal/cli/commands.go:135 \\\"refresh <api-id|name>\\\" + Long text; internal/cli/root.go:293 \\\"push <api-id|name>\\\" + Long text; specs/cli.md:57,335,338 and README.md:104 updated. Existing assertions updated in internal/cli/cli_test.go:1118,1496,1615 and pass (`go test -count=1 ./internal/cli/` ok 3.499s).\", \"key\": \"verified_derived_4\"}",
+          "exit_code": 0,
+          "output_sha": "46ae70ac54cfbb07358e88884a09cdc127d92f93e48d6272cbc6872aca61dfdc"
+        }
+      ]
+    }
+  },
+  "review": {
+    "reviewer_email": "totalwindupflightsystems@gmail.com",
+    "reviewer_name": "totalwindupflightsystems",
+    "commit_author_email": "totalwindupflightsystems@gmail.com",
+    "commit_author_name": "totalwindupflightsystems",
+    "self_review": true,
+    "findings": [
+      {
+        "severity": "low",
+        "file": ".coding-hermes/board/tasks.jsonl",
+        "line": 76,
+        "detection": "task row marked status=complete while its own worker_summary states the reported failure is not reproducible",
+        "detail": "DF-MUSTERFLOW-4 is flipped to \"status\":\"complete\" with worker_summary \"Not reproducible: GOWORK=off go build ./... exits 0 on the current tree\", i.e. the row is closed as fixed when the evidence shows the premise is stale rather than the defect repaired."
+      },
+      {
+        "severity": "low",
+        "file": ".coding-hermes/board/tasks.jsonl",
+        "line": 76,
+        "detection": "completed row retains no commit_hash/guard_result/ci_result while sibling completed rows in the same file carry them",
+        "detail": "The new DF-MUSTERFLOW-4 complete record has no commit_hash, guard_result, ci_result or completed_at, unlike neighbouring completed rows (e.g. DF-029, DF-033, DF-034) which all record commit_hash/guard_result/ci_result."
+      },
+      {
+        "severity": "low",
+        "file": ".coding-hermes/board/tasks.jsonl",
+        "line": 76,
+        "detection": "detail field type changed from string to object on an existing row",
+        "detail": "DF-MUSTERFLOW-4's \"detail\" was a plain string and is rewritten as an object {\"evidence\":[...],\"text\":...}, while the other dogfood rows (DF-MUSTERFLOW-1/3/5) keep \"detail\" as a string \u2014 a schema drift for any reader that expects a string."
+      },
+      {
+        "severity": "low",
+        "file": ".coding-hermes/board/events.jsonl",
+        "line": 505,
+        "detection": "new event records use a different schema than every existing line in the same file",
+        "detail": "The appended lines use {\"id\":497,\"timestamp\",\"event_type\",\"task_id\",\"actor\",\"detail\",\"tick_number\"} whereas all prior lines use {\"ts\",\"id\":\"DF-...\",\"type\",\"detail\"} \u2014 two incompatible event schemas now coexist in one JSONL file."
+      },
+      {
+        "severity": "low",
+        "file": ".coding-hermes/board/tasks.jsonl",
+        "line": 76,
+        "detection": "closure cites an evidence artifact path that is not added by this diff",
+        "detail": "DF-MUSTERFLOW-4 and DF-031 both reference .coding-hermes/evidence/2026-11-18-t231-stale-premise/t231-stale-premise-checks.txt, but the diff adds no such file, so the cited evidence is unverifiable from the change."
+      }
+    ],
+    "summary": "Board-only bookkeeping change: two rows closed and two events appended, with schema drift in both files and closures whose cited evidence artifact is not part of the diff."
+  },
+  "summary": "Stage tier1: PASS\n    \u2713 secrets: secrets: scanners=gitleaks+builtin cross-check\n  \u2713 tests: scanners: nice=nice -n 10\n\nStage tier2: PASS\n  COMPLETE\n  \u2713 PASS when 'musterflow refresh <name>' and 'musterflow catalog push <name>' both resolve a connected API by exact Name (falling back after exact-ID miss) or, when unresolvable, the error names the available ids so the user can act; unit tests cover name resolution on both CLI paths; go build ./... and go test ./... green.: Both CLI paths now resolve name-or-id: internal/cli/commands.go:151 `conn, err := registry.GetByNameOrID(args[0])` (refresh) and internal/cli/root.go:309 (catalog push). internal/app/registry.go:139-146 tries exact ID via r.Get first and only then scans List() for `c.Name == idOrName`; registry.go:158-166 builds the not-found error as `api %q not found; connected: <id> (<name>), ... \u2014 use an id or name from 'musterflow list'`, and for an empty registry says `no APIs are connected \u2014 run 'musterflow connect <url>'`. Unit tests on both CLI paths: internal/cli/nameorid_test.go TestRefreshResolvesAPIByNameOrID (by-name, by-id) and TestCatalogPushResolvesAPIByNameOrID (by-name, by-id), plus TestUnknownArgErrorNamesConnectedAPIs and TestUnknownArgOnEmptyRegistrySaysHowToConnect \u2014 `go test -count=1 -run 'NameOrID|UnknownArg' -v ./internal/cli/` printed `--- PASS: TestRefreshResolvesAPIByNameOrID/by-name`, `--- PASS: TestCatalogPushResolvesAPIByNameOrID/by-name`, `--- PASS: TestUnknownArgErrorNamesConnectedAPIs/refresh-nope`, `--- PASS: TestUnknownArgOnEmptyRegistrySaysHowToConnect/catalog-push-nope`, `ok github.com/.../internal/cli 0.156s`. `go build ./...` exit 0 (no output). `go test -count=1 ./...` exit 0, 11 `ok` lines, zero FAIL/panic.\n  \u2713 Exact-ID lookup still wins over a Name match (back-compat: an id that collides with another connection's name resolves by id), and the name fallback only runs after the id miss.: internal/app/registry.go:139-146 returns immediately on a successful r.Get(idOrName) and only then falls back to the List() name scan. Covered by internal/app/app_test.go:110 TestRegistry_GetByNameOrID_IDWinsOverName (id \"shared-slug\" vs another connection's Name \"shared-slug\" \u2192 resolves to ID \"shared-slug\"); `go test -count=1 ./internal/app/` \u2192 `ok github.com/totalwindupflightsystems/musterflow/internal/app 1.256s`.\n  \u2713 The dashboard path (dashboardBaseURL != \"\") must also accept a name: refreshViaDashboard/pushViaDashboard forward the raw arg to /api/apis/<arg> and /api/apis/<arg>/refresh, and the dashboard handlers must resolve name-or-id.: internal/cli/register.go:197 POSTs dashboardBaseURL+\"/api/apis/\"+apiID+\"/refresh\" and register.go:241 GETs dashboardBaseURL+\"/api/apis/\"+apiID with the raw argument; internal/dashboard/server.go:207 (GET handler) and server.go:237 (handleRefreshAPI) both call s.registry.GetByNameOrID(id) before acting, so a name works on the dashboard path too. `go test -count=1 ./internal/dashboard/` \u2192 `ok ... 1.992s`.\n  \u2713 The DF-045 store-unavailable guard must still fire before the new lookup, so a locked/unreadable store reports the lock rather than \"api not found\".: internal/cli/commands.go:145-149 and internal/cli/root.go:303-307 call StoreUnavailable() before GetByNameOrID. `go test -count=1 -run 'Store|Lock' -v ./internal/cli/` printed `--- PASS: TestRefreshFailsWhenStoreIsLocked`, `--- PASS: TestCatalogPushFailsWhenStoreIsLocked`, `--- PASS: TestListFailsWhenStoreIsLocked`, package `ok`.\n  \u2713 The refresh path must pass the resolved connection's ID (not the raw name) into app.Refresh, which itself does an id-only registry.Get and would otherwise fail with \"get api: not found\".: internal/cli/commands.go:155 calls `app.Refresh(cmd.Context(), registry, conn.ID)` with the resolved ID; internal/app/refresh.go:14-17 does registry.Get(id) and wraps failures as \"get api: %w\". TestRefreshResolvesAPIByNameOrID/by-name passes and asserts \"\u2713 Refreshed echo-test-api\" and \"1.0.0 \u2192 2.0.0\", which is only reachable if the name resolved to the id and the spec was re-fetched (the httptest server serves version 2.0.0).\n  \u2713 User-facing help/docs must advertise the new accepted spelling (<api-id|name>) on both commands, and the existing Use-string assertions must be updated to match.: internal/cli/commands.go:135 `Use: \"refresh <api-id|name>\"` plus Long text; internal/cli/root.go:293 `Use: \"push <api-id|name>\"` plus Long text; specs/cli.md:57,335,338 and README.md:104 updated. Existing assertions updated at internal/cli/cli_test.go:1118,1496,1615 and pass (`go test -count=1 ./internal/cli/` \u2192 `ok ... 3.499s`).\nBoth CLI paths now resolve a connected API by exact ID then exact Name via Registry.GetByNameOrID, the not-found error names every connected id (and how to connect when empty), dedicated unit tests cover name resolution on refresh and catalog push, and go build ./... plus go test -count=1 ./... are green.\n\nOverall: PASS \u2713",
+  "evaluated_at": "2026-11-18T02:14:06.108564",
+  "supersedes": null,
+  "superseded_by": null,
+  "evidence": {
+    "collected_at": "2026-11-18T02:14:06.132891+00:00",
+    "items": [
+      {
+        "name": "patch",
+        "label": "Landed commit patch",
+        "file": "commit.patch",
+        "bytes": 20561,
+        "truncated": false,
+        "source": "git show 3ad6871b696b"
+      },
+      {
+        "name": "worktree",
+        "label": "Working-tree diff (graded)",
+        "file": "worktree.patch",
+        "bytes": 53591,
+        "truncated": false,
+        "source": "git diff HEAD (working tree)"
+      }
+    ],
+    "task_id": "DF-024"
+  }
+}
