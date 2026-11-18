@@ -124,8 +124,12 @@ func (r *Registry) Get(id string) (*APIConnection, error) {
 // GetByNameOrID resolves an API connection by exact ID first, then by exact
 // Name match. If the ID lookup succeeds, that wins. If not, the registry is
 // scanned for a connection whose Name equals idOrName. If two connections share
-// a Name, the first List() hit wins. When nothing is found, the error lists
-// the connected ids so the user can pick the right one via 'musterflow list'.
+// a Name, the first List() hit wins.
+//
+// When nothing is found, the error names every connected API as "id (name)" so
+// the user can retry with a real one; an empty registry says so and names the
+// command that adds one. Callers should surface this error unchanged — it is
+// the actionable part of a failed lookup (DF-024).
 func (r *Registry) GetByNameOrID(idOrName string) (*APIConnection, error) {
 	if r.store == nil {
 		return nil, fmt.Errorf("registry not loaded")
@@ -144,11 +148,19 @@ func (r *Registry) GetByNameOrID(idOrName string) (*APIConnection, error) {
 		}
 	}
 
-	ids := make([]string, len(conns))
-	for i, c := range conns {
-		ids[i] = c.ID
+	if len(conns) == 0 {
+		return nil, fmt.Errorf("api %q not found: no APIs are connected — run 'musterflow connect <url>' to add one", idOrName)
 	}
-	return nil, fmt.Errorf("api %q not found (connected: %s — use an id or name from 'musterflow list')", idOrName, strings.Join(ids, ", "))
+
+	choices := make([]string, len(conns))
+	for i, c := range conns {
+		if c.Name == "" {
+			choices[i] = c.ID
+			continue
+		}
+		choices[i] = fmt.Sprintf("%s (%s)", c.ID, c.Name)
+	}
+	return nil, fmt.Errorf("api %q not found; connected: %s — use an id or name from 'musterflow list'", idOrName, strings.Join(choices, ", "))
 }
 
 // List returns all connected APIs.

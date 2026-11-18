@@ -290,19 +290,23 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 	})
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "push <api-id>",
+		Use:   "push <api-id|name>",
 		Short: "Push a connected API to the community catalog",
-		Args:  cobra.ExactArgs(1),
+		Long: "Print the community-catalog entry JSON for a connected API.\n" +
+			"The API may be given by id (as shown by 'musterflow list') or by its name.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if dashboardBaseURL != "" {
 				return pushViaDashboard(args[0])
 			}
-			// DF-045: registry.Get on an unreadable store must name the lock,
-			// not report the API as missing.
+			// DF-045: registry lookups on an unreadable store must name the
+			// lock, not report the API as missing.
 			if err := StoreUnavailable(); err != nil {
 				return err
 			}
-			conn, err := registry.Get(args[0])
+			// DF-024: resolve name-or-id, surfacing the lookup error unchanged
+			// so it names the connected APIs.
+			conn, err := registry.GetByNameOrID(args[0])
 			if err != nil {
 				return err
 			}

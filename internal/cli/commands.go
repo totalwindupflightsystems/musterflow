@@ -132,9 +132,11 @@ func newImportCommand(registry *app.Registry) *cobra.Command {
 
 func newRefreshCommand(registry *app.Registry) *cobra.Command {
 	return &cobra.Command{
-		Use:   "refresh <api-id>",
+		Use:   "refresh <api-id|name>",
 		Short: "Refresh API spec and regenerate commands",
-		Args:  cobra.ExactArgs(1),
+		Long: "Re-fetch the OpenAPI spec for a connected API and update its version and endpoint count.\n" +
+			"The API may be given by id (as shown by 'musterflow list') or by its name.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if dashboardBaseURL != "" {
 				return refreshViaDashboard(args[0])
@@ -143,7 +145,14 @@ func newRefreshCommand(registry *app.Registry) *cobra.Command {
 			if err := StoreUnavailable(); err != nil {
 				return err
 			}
-			result, err := app.Refresh(cmd.Context(), registry, args[0])
+			// DF-024: resolve name-or-id so the name shown by 'musterflow list'
+			// works here too. Return the resolution error unchanged: it names
+			// the connected APIs, which is the actionable part.
+			conn, err := registry.GetByNameOrID(args[0])
+			if err != nil {
+				return err
+			}
+			result, err := app.Refresh(cmd.Context(), registry, conn.ID)
 			if err != nil {
 				return err
 			}

@@ -101,11 +101,11 @@ The community catalog backend (`totalwindupflightsystems/musterflow-catalog` Git
 ```bash
 # Once the catalog backend is available:
 musterflow catalog search github       # Search for APIs
-musterflow catalog push <api-id>        # Share a connected API (use the ID from `musterflow list`)
+musterflow catalog push <api-id|name>  # Share a connected API (id or name from `musterflow list`)
 musterflow catalog pull <api-id>       # Install a community API
 ```
 
-> **Note:** `catalog push` takes an **api-id** (the ID shown by `musterflow list`), not the API name.
+> **Note:** `catalog push` accepts either the **api-id** or the **name** of a connected API (both shown by `musterflow list`).
 
 ### 🔐 Auth — Per-API Credential Management
 
@@ -193,10 +193,10 @@ internal/completion/          → Shell completion (bash, zsh, fish)
 | `musterflow connect <url>` | Connect an API from its OpenAPI spec URL |
 | `musterflow list` | List all connected APIs |
 | `musterflow disconnect <id>` | Remove a connected API |
-| `musterflow refresh <id>` | Re-fetch and update an API's spec |
+| `musterflow refresh <id|name>` | Re-fetch and update an API's spec |
 | `musterflow start` | Start the dashboard and MCP server |
 | `musterflow catalog search <q>` | Search the community API catalog (experimental — backend not yet available) |
-| `musterflow catalog push <id>` | Push an API connection to the catalog |
+| `musterflow catalog push <id|name>` | Push an API connection to the catalog |
 | `musterflow catalog pull <id>` | Install an API from the catalog |
 | `musterflow flow create <name>` | Create a Starlark workflow |
 | `musterflow flow list` | List all workflows |

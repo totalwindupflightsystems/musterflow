@@ -92,9 +92,9 @@ When the dashboard is running on the configured port, CLI commands route through
 | Command | Description |
 |---------|-------------|
 | `musterflow disconnect <id>` | Remove a connected API |
-| `musterflow refresh <id>` | Re-fetch and update an API's spec |
+| `musterflow refresh <id|name>` | Re-fetch and update an API's spec |
 | `musterflow catalog search <q>` | Search the community catalog |
-| `musterflow catalog push <id>` | Share an API connection |
+| `musterflow catalog push <id|name>` | Share an API connection |
 | `musterflow catalog pull <id>` | Install a community API |
 | `musterflow auth add <id>` | Add credentials (apikey, bearer, oauth2, mtls) |
 | `musterflow auth list` | List configured credentials (keys masked) |

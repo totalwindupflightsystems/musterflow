@@ -1115,8 +1115,8 @@ func TestRefreshCommand_Structure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("find refresh: %v", err)
 	}
-	if cmd.Use != "refresh <api-id>" {
-		t.Errorf("expected Use='refresh <api-id>', got %q", cmd.Use)
+	if cmd.Use != "refresh <api-id|name>" {
+		t.Errorf("expected Use='refresh <api-id|name>', got %q", cmd.Use)
 	}
 }
 
@@ -1493,8 +1493,8 @@ func TestAuthCommand_LoginSubcommand(t *testing.T) {
 func TestRefreshCommand_UseAndShort(t *testing.T) {
 	r := app.NewRegistry(t.TempDir())
 	cmd := newRefreshCommand(r)
-	if cmd.Use != "refresh <api-id>" {
-		t.Errorf("expected Use='refresh <api-id>', got %q", cmd.Use)
+	if cmd.Use != "refresh <api-id|name>" {
+		t.Errorf("expected Use='refresh <api-id|name>', got %q", cmd.Use)
 	}
 	if cmd.Short == "" {
 		t.Error("expected non-empty Short")
@@ -1612,8 +1612,8 @@ func TestCatalogCommand_PushSubcommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("find catalog push: %v", err)
 	}
-	if pushCmd.Use != "push <api-id>" {
-		t.Errorf("expected Use='push <api-id>', got %q", pushCmd.Use)
+	if pushCmd.Use != "push <api-id|name>" {
+		t.Errorf("expected Use='push <api-id|name>', got %q", pushCmd.Use)
 	}
 	if pushCmd.Short == "" {
 		t.Error("expected non-empty Short for catalog push")
@@ -1643,7 +1643,7 @@ func TestCatalogCommand_PullSubcommand(t *testing.T) {
 
 func TestCatalogCommand_SubcommandFlags(t *testing.T) {
 	// AC-024.2: verify subcommands use positional args (not --query/--repo/--name flags).
-	// The catalog commands use positional arguments: search <query>, push <api-id>, pull <api-id>.
+	// The catalog commands use positional arguments: search <query>, push <api-id|name>, pull <api-id>.
 	r := app.NewRegistry(t.TempDir())
 	cmd := newCatalogCommand(r)
 

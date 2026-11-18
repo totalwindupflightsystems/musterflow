@@ -54,7 +54,7 @@ func NewRootCommand(registry *app.Registry) *cobra.Command
 | 10 | `newCompletionCommand()` | `completion [bash\|zsh\|fish]` | `ExactArgs(1)` | No registry arg. |
 | 11 | `newExportCommand(registry)` | `export [path]` | `MaximumNArgs(1)` | Flag: `--output, -o` |
 | 12 | `newImportCommand(registry)` | `import [path]` | `MaximumNArgs(1)` | Flags: `--input`, `--file` (aliases; flag wins over the positional path) |
-| 13 | `newRefreshCommand(registry)` | `refresh <api-id>` | `ExactArgs(1)` | |
+| 13 | `newRefreshCommand(registry)` | `refresh <api-id\|name>` | `ExactArgs(1)` | Resolves the arg via `registry.GetByNameOrID` (DF-024) |
 | 14 | `newTransformCommand()` | `transform` | — | Parent; subcommands: `list`, `install` |
 
 After the 14 static subcommands, `loadAPISubcommands(root, registry)` adds one dynamically-generated subcommand per connected API (Section 2.6).
@@ -332,10 +332,10 @@ type Config struct {
 | `connect` | `--base-url/-u`, `--name/-n`, `--auth` | `app.Connect(ctx, registry, ConnectOptions{...})` or `connectViaDashboard(...)` |
 | `disconnect` | (positional `<api-id>`) | `app.Disconnect(registry, id)` or `disconnectViaDashboard(id)` |
 | `list` | none | `registry.List()` or `listViaDashboard()` |
-| `refresh` | (positional `<api-id>`) | `app.Refresh(ctx, registry, id)` or `refreshViaDashboard(id)` |
+| `refresh` | (positional `<api-id\|name>`) | `registry.GetByNameOrID(arg)` → `app.Refresh(ctx, registry, conn.ID)` or `refreshViaDashboard(arg)` |
 | `mcp` | none | `registry.List()` print or `mcpViaDashboard()` |
 | `catalog search` | (positional `<query>`) | `catalog.NewClient().Search(query)` or `catalogSearchViaDashboard(query)` |
-| `catalog push` | (positional `<api-id>`) | `registry.Get(id)` → `catalog.ConnectionToCatalogEntry(conn)` → print JSON |
+| `catalog push` | (positional `<api-id\|name>`) | `registry.GetByNameOrID(arg)` → `catalog.ConnectionToCatalogEntry(conn)` → print JSON |
 | `catalog pull` | (positional `<api-id>`) | `catalog.NewClient().FetchEntry(id)` → `app.Connect(ctx, registry, ...)` |
 | `flow create` | `--webhook`, `--description`, `--source`, `--name` | `workflow.NewEngine(dir, baseURL).Create(name, source, description, webhook)` |
 | `flow list` | none | `workflow.NewEngine(dir, baseURL).List()` |
@@ -425,9 +425,9 @@ When `dashboardBaseURL != ""`, these commands route through the dashboard HTTP A
 | `connect` | `POST /api/apis` with JSON body `{spec_url, base_url, name, auth_type}` |
 | `disconnect <id>` | `DELETE /api/apis/<id>` |
 | `list` | `GET /api/apis` |
-| `refresh <id>` | `POST /api/apis/<id>/refresh` |
+| `refresh <id|name>` | `POST /api/apis/<id-or-name>/refresh` |
 | `catalog search <q>` | `GET /api/catalog/search?q=<q>` |
-| `catalog push <id>` | `GET /api/apis/<id>` → print catalog entry JSON |
+| `catalog push <id|name>` | `GET /api/apis/<id-or-name>` → print catalog entry JSON |
 | `catalog pull <id>` | `catalog.FetchEntry(id)` → `POST /api/apis` |
 | `mcp` | `GET /api/mcp/info` |
 
