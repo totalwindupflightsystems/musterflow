@@ -1,5 +1,10 @@
 guards:
   secrets: true
+  # DF-046: docs/CI/board-only commits stage no Go files, so every substantive
+  # gate skips -> DEGRADED PASS that the hook used to refuse (commit silently
+  # no-opped, exit 0, HEAD unmoved). Accept skips so non-Go commits land;
+  # product commits still grade full.
+  allow_skips: true
   lint: false
   tests: false
   test_mode: full

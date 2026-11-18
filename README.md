@@ -49,6 +49,11 @@ See [docs/integration-guide.md](docs/integration-guide.md) for the full integrat
 # 1. Connect an API by its OpenAPI spec URL
 musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
 
+#    petstore3 upstream is a third-party host that has had repeated 500
+#    outages. If connect fails on it, any other OpenAPI spec works the same
+#    way — e.g. the petstore v2 spec:
+musterflow connect https://petstore.swagger.io/v2/swagger.json
+
 # 2. Call it from the CLI — subcommands generated automatically
 musterflow swagger-petstore-openapi-3-0 pet find-pets-by-status --status available
 
