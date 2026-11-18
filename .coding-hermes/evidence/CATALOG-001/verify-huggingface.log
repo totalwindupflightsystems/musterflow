@@ -1,0 +1,1525 @@
+CATALOG-001 live verification — huggingface
+utc=2026-11-18T02:55:15Z
+binary=/tmp/mf-cat001-bin sha256=51bfe08691487173b0b4dd3407de6505ba691632c65dab52668b9814be0fbe6b
+scratch data dir=/tmp/mf-cat001-verify/huggingface   (canonical ~/.musterflow NOT used; dashboard port pinned to 19877)
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/huggingface config set port 19877
+✓ Set port = 19877
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/huggingface connect https://huggingface.co/.well-known/openapi.json --name huggingface
+✓ Connected: huggingface
+  ID: 8ac8f489bdf0ba6f
+  Version: 0.0.1
+  Endpoints: 383
+  Base URL: https://huggingface.co
+
+Try: musterflow huggingface --help
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/huggingface list
+Connected APIs (1):
+
+  huggingface (8ac8f489bdf0ba6f)
+    Spec: https://huggingface.co/.well-known/openapi.json
+    Base: https://huggingface.co
+    Endpoints: 383
+    Auth: none
+
+exit=0
+
+### one real CLI call: huggingface models list-api-trending  -o json
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/huggingface huggingface models list-api-trending  -o json
+exit=0
+--- output (raw) ---
+{
+  "recentlyTrending": [
+    {
+      "repoData": {
+        "author": "MiniMaxAI",
+        "authorData": {
+          "_id": "6778fc29920093dbc0c24917",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/676e38ad04af5bec20bc9faf/dUd-LsZEX0H_d4qefO_g6.jpeg",
+          "followerCount": 12357,
+          "fullname": "MiniMax",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "MiniMaxAI",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 727110,
+        "gated": false,
+        "id": "MiniMaxAI/MiniMax-H3-Image",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-16T10:00:08.000Z",
+        "likes": 1473,
+        "openRouterProviders": [],
+        "pipeline_tag": "text-to-image",
+        "private": false,
+        "repoType": "model"
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "Qwen",
+        "authorData": {
+          "_id": "64c8b5837fe12ecd0a7e92eb",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/6215ca5692c0ecfba9186921/hrRM50-6XcdWgg2AKpENG.jpeg",
+          "followerCount": 117095,
+          "fullname": "Qwen",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "Qwen",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "provider": "scaleway",
+            "providerId": "qwen3.8-27b",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 116.00833057387135
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 3.19,
+            "provider": "ovhcloud",
+            "providerId": "Qwen3.8-27B",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 58.82485077574806
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 2.2,
+            "provider": "openrouter",
+            "providerId": "qwen/qwen3.8-27b",
+            "providerStatus": "staging",
+            "task": "conversational",
+            "tokensPerSecond": 150.02155422704078
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 2.5,
+            "provider": "nscale",
+            "providerId": "Qwen/Qwen3.8-27B",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 114.69305284842169
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "features": {
+              "structuredOutput": false,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 3,
+            "provider": "novita",
+            "providerId": "qwen/qwen3.8-27b",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 42.301308348522674
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "provider": "featherless-ai",
+            "providerId": "Qwen/Qwen3.8-27B",
+            "providerStatus": "live",
+            "task": "conversational"
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 2.5,
+            "provider": "deepinfra",
+            "providerId": "Qwen/Qwen3.8-27B",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 61.234659729292844
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00018.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": true,
+            "isFastestThroughput": true,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 1.49,
+            "provider": "cerebras",
+            "providerId": "qwen-3.8-27b",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 776.7177881647979
+          }
+        ],
+        "downloads": 6942530,
+        "gated": false,
+        "id": "Qwen/Qwen3.8-27B",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-07T04:42:17.000Z",
+        "likes": 20442,
+        "numParameters": 27781427952,
+        "openRouterProviders": [
+          "cerebras",
+          "coreweave",
+          "deepinfra",
+          "nebius",
+          "novita",
+          "parasail",
+          "primeintellect",
+          "reka"
+        ],
+        "pipeline_tag": "image-text-to-text",
+        "private": false,
+        "repoType": "model",
+        "widgetOutputUrls": []
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "higurashi-ai",
+        "authorData": {
+          "_id": "6adf5b8433df90e5a4db3bca",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/68578b4627c1610b7c36d99a/9RrasO2R-pXaXpUM0F4TP.png",
+          "followerCount": 110,
+          "fullname": "higurashi",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "higurashi-ai",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 4445,
+        "gated": false,
+        "id": "higurashi-ai/Haru-4B",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-13T01:22:38.000Z",
+        "likes": 511,
+        "numParameters": 5270000897,
+        "openRouterProviders": [],
+        "pipeline_tag": "audio-to-audio",
+        "private": false,
+        "repoType": "model"
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "Lightricks",
+        "authorData": {
+          "_id": "628378625d21028fbbddddf8",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/669524bcbcd81f395e8f60f6/0ynfqKEWMh_dn3h4ff1K5.png",
+          "followerCount": 6858,
+          "fullname": "LTX.io",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "Lightricks",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 2828071,
+        "gated": "auto",
+        "id": "Lightricks/LTX-2.5",
+        "isLikedByUser": false,
+        "lastModified": "2026-10-11T07:00:53.000Z",
+        "likes": 12409,
+        "openRouterProviders": [],
+        "pipeline_tag": "image-to-video",
+        "private": false,
+        "repoType": "model"
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "thinkingmachines",
+        "authorData": {
+          "_id": "680a7a652b58ee7c02483aa3",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/680a76de1b8d08640089fab0/r60-JyW_pv4llgjEyDYj9.png",
+          "followerCount": 2143,
+          "fullname": "Thinking Machines Lab",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "thinkingmachines",
+          "plan": "plus",
+          "type": "org"
+        },
+        "availableInferenceProviders": [
+          {
+            "adapterWeightsPath": "model-00001-of-00024.safetensors",
+            "features": {
+              "structuredOutput": false,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": true,
+            "isFastestThroughput": true,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 1,
+            "provider": "together",
+            "providerId": "thinkingmachines/Inkling-2-Small",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 299.3179612007649
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00024.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 1,
+            "provider": "openrouter",
+            "providerId": "thinkingmachines/inkling-2-small",
+            "providerStatus": "staging",
+            "task": "conversational",
+            "tokensPerSecond": 93.17712304545958
+          },
+          {
+            "adapterWeightsPath": "model-00001-of-00024.safetensors",
+            "features": {
+              "structuredOutput": true,
+              "toolCalling": true
+            },
+            "isCheapestPricingOutput": false,
+            "isFastestThroughput": false,
+            "isModelAuthor": false,
+            "modelStatus": "live",
+            "pricingOutput": 1,
+            "provider": "deepinfra",
+            "providerId": "thinkingmachines/Inkling-2-Small",
+            "providerStatus": "live",
+            "task": "conversational",
+            "tokensPerSecond": 131.54935639873142
+          }
+        ],
+        "downloads": 18359,
+        "gated": false,
+        "id": "thinkingmachines/Inkling-2-Small",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-17T18:39:09.000Z",
+        "likes": 442,
+        "numParameters": 594050672720,
+        "openRouterProviders": [
+          "deepinfra",
+          "nebius",
+          "primeintellect",
+          "together"
+        ],
+        "pipeline_tag": "image-text-to-text",
+        "private": false,
+        "repoType": "model",
+        "widgetOutputUrls": []
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "unsloth",
+        "authorData": {
+          "_id": "656593929c09eb1447337e84",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/62ecdc18b72a69615d6bd857/E4lkPz1TZNLzIFr_dR273.png",
+          "followerCount": 40403,
+          "fullname": "Unsloth AI",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "unsloth",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 6827598,
+        "gated": false,
+        "id": "unsloth/Qwen3.8-27B-GGUF",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-12T02:15:52.000Z",
+        "likes": 6143,
+        "numParameters": 27320697856,
+        "openRouterProviders": [],
+        "private": false,
+        "repoType": "model"
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "Vyber07",
+        "datasetsServerInfo": {
+          "formats": [
+            "json"
+          ],
+          "libraries": [
+            "datasets",
+            "pandas",
+            "polars",
+            "mlcroissant"
+          ],
+          "modalities": [
+            "text"
+          ],
+          "numRows": 1,
+          "viewer": "viewer"
+        },
+        "downloads": 24049,
+        "gated": "auto",
+        "id": "Vyber07/cyber-security",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-08-31T17:57:10.000Z",
+        "likes": 1171,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "author": "Angais",
+        "datasetsServerInfo": {
+          "formats": [
+            "parquet"
+          ],
+          "libraries": [
+            "datasets",
+            "dask",
+            "polars",
+            "mlcroissant"
+          ],
+          "modalities": [
+            "image",
+            "text"
+          ],
+          "numRows": 1409404,
+          "viewer": "viewer"
+        },
+        "downloads": 66943,
+        "gated": false,
+        "id": "Angais/pixel-art-atlas-1.4m",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-06T13:05:13.000Z",
+        "likes": 558,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "author": "Comfy-Org",
+        "authorData": {
+          "_id": "66ad672ec15099dd4b022b09",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/630433fea362e7e8b51f5e2b/bsDc8lR72KhKvm-wXxYsv.png",
+          "followerCount": 16217,
+          "fullname": "Comfy Org",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "Comfy-Org",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 2660341,
+        "gated": false,
+        "id": "Comfy-Org/MiniMax-H3-Image",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-11T12:10:29.000Z",
+        "likes": 519,
+        "openRouterProviders": [],
+        "pipeline_tag": "text-to-image",
+        "private": false,
+        "repoType": "model"
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "black-forest-labs",
+        "authorData": {
+          "_id": "66aa705a6620cd2c481ed9c0",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/633f7a8f4be90e06da248e0f/m5YoF33abJ09vcwFxt1Mj.png",
+          "followerCount": 44439,
+          "fullname": "Black Forest Labs",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "black-forest-labs",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 1062051,
+        "gated": "auto",
+        "id": "black-forest-labs/flux-3-image-klein-comfy",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-02T23:49:46.000Z",
+        "likes": 3410,
+        "openRouterProviders": [],
+        "pipeline_tag": "image-to-image",
+        "private": false,
+        "repoType": "model"
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "chatrlabs",
+        "authorData": {
+          "_id": "6acc6f809e1925fe68577464",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/649a3bf7e6a46226024a5e5f/zvC1DEPAGkI2kpVIWNsTh.png",
+          "followerCount": 97,
+          "fullname": "Chatr Labs",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "chatrlabs",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 160748,
+        "gated": false,
+        "id": "chatrlabs/Qwen-Image-2.1-Uncensored-Omni-Quantized",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-14T17:03:43.000Z",
+        "likes": 512,
+        "numParameters": 7115124736,
+        "openRouterProviders": [],
+        "pipeline_tag": "text-to-image",
+        "private": false,
+        "repoType": "model"
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "sensenova",
+        "authorData": {
+          "_id": "64f0405f8a4cf3e5e6b38f9c",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/652d06833b5997ed71ce5c46/k66xcOMf4NVbMSFulUjHY.png",
+          "followerCount": 868,
+          "fullname": "SenseNova",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "sensenova",
+          "plan": "team",
+          "type": "org"
+        },
+        "availableInferenceProviders": [],
+        "downloads": 0,
+        "gated": "auto",
+        "id": "sensenova/SenseNova-Loop-9B",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-17T12:19:38.000Z",
+        "likes": 203,
+        "numParameters": 9412963952,
+        "openRouterProviders": [],
+        "pipeline_tag": "image-text-to-text",
+        "private": false,
+        "repoType": "model",
+        "widgetOutputUrls": []
+      },
+      "repoType": "model"
+    },
+    {
+      "repoData": {
+        "author": "nvidia",
+        "downloads": 1683886,
+        "gated": false,
+        "id": "nvidia/simready-assets",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-16T18:04:13.000Z",
+        "likes": 1632,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "ai_category": "Other",
+        "ai_short_description": "Explore the Ultimate MoE Training Handbook",
+        "author": "huggingface",
+        "authorData": {
+          "_id": "5e67bd5b1009063689407478",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/1583856921041-5dd96eb166059660ed1ee413.png",
+          "followerCount": 110580,
+          "fullname": "Hugging Face",
+          "isHf": true,
+          "isHfAdmin": true,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "huggingface",
+          "plan": "team",
+          "type": "org"
+        },
+        "colorFrom": "blue",
+        "colorTo": "indigo",
+        "createdAt": "2026-10-09T15:24:25.000Z",
+        "disabled": false,
+        "emoji": "🧩",
+        "featured": false,
+        "id": "huggingface/moe-blogpost",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-05T18:07:55.000Z",
+        "likes": 722,
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "huggingface-moe-blogpost.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 604800,
+          "hardware": {
+            "current": "cpu-upgrade",
+            "requested": "cpu-upgrade"
+          },
+          "replicas": {
+            "current": 1,
+            "requested": 1
+          },
+          "sha": "ef70726e6f8b99d74298a16a4894340f288a58c2",
+          "stage": "RUNNING"
+        },
+        "sdk": "docker",
+        "shortDescription": "A hands-on guide to training Mixture-of-Experts models",
+        "tags": [
+          "docker",
+          "region:us"
+        ],
+        "title": "The Ultimate MoE Training Handbook",
+        "trendingScore": 183,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "ai_category": "Other",
+        "ai_short_description": "Compare coding-agent harnesses across models and efforts",
+        "author": "joelniklaus",
+        "authorData": {
+          "_id": "5fae5f68b8423e1d80b8a988",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/1656078368144-5fae5f68b8423e1d80b8a988.jpeg",
+          "followerCount": 234,
+          "fullname": "Joel Niklaus",
+          "isHf": true,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isPro": false,
+          "isUserFollowing": false,
+          "name": "joelniklaus",
+          "type": "user"
+        },
+        "colorFrom": "yellow",
+        "colorTo": "gray",
+        "createdAt": "2026-10-15T06:00:13.000Z",
+        "disabled": false,
+        "emoji": "🧭",
+        "featured": false,
+        "id": "joelniklaus/harness-leaderboard",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-17T16:04:27.000Z",
+        "likes": 430,
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "joelniklaus-harness-decision-index.hf.space",
+              "stage": "READY"
+            },
+            {
+              "domain": "joelniklaus-harness-leaderboard.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "cpu-basic",
+            "requested": "cpu-basic"
+          },
+          "replicas": {
+            "current": 1,
+            "requested": 1
+          },
+          "sha": "b06c2aaf371bba6b751181d314feec05111ab801",
+          "stage": "RUNNING"
+        },
+        "sdk": "docker",
+        "shortDescription": "Which coding-agent harness should you use for your model?",
+        "tags": [
+          "docker",
+          "region:us"
+        ],
+        "title": "Harness Leaderboard",
+        "trendingScore": 142,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "author": "nvidia",
+        "datasetsServerInfo": {
+          "formats": [
+            "csv"
+          ],
+          "libraries": [
+            "datasets",
+            "pandas",
+            "polars",
+            "mlcroissant"
+          ],
+          "modalities": [
+            "3d",
+            "image",
+            "tabular",
+            "text"
+          ],
+          "numRows": 10000,
+          "viewer": "viewer"
+        },
+        "downloads": 17274,
+        "gated": false,
+        "id": "nvidia/USDCraft-10K",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-15T05:51:56.000Z",
+        "likes": 61,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "author": "google",
+        "datasetsServerInfo": {
+          "formats": [],
+          "libraries": [],
+          "modalities": [
+            "document"
+          ],
+          "numRows": 0,
+          "viewer": "preview"
+        },
+        "downloads": 132059,
+        "gated": "auto",
+        "id": "google/physical-engineerings-last-exam",
+        "isBenchmark": true,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-12T19:55:45.000Z",
+        "likes": 91,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "ai_category": "Image Generation",
+        "ai_short_description": "Generate images from text or edit up to 8 pictures",
+        "author": "MiniMaxAI",
+        "authorData": {
+          "_id": "6778fc29920093dbc0c24917",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/676e38ad04af5bec20bc9faf/dUd-LsZEX0H_d4qefO_g6.jpeg",
+          "followerCount": 12357,
+          "fullname": "MiniMax",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "MiniMaxAI",
+          "plan": "team",
+          "type": "org"
+        },
+        "colorFrom": "purple",
+        "colorTo": "indigo",
+        "createdAt": "2026-11-09T13:26:35.000Z",
+        "disabled": false,
+        "emoji": "🎨",
+        "featured": true,
+        "id": "MiniMaxAI/minimax-h3-image",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-10T08:42:18.000Z",
+        "likes": 158,
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "multimodalart-minimax-h3-image.hf.space",
+              "stage": "READY"
+            },
+            {
+              "domain": "minimaxai-minimax-h3-image.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "zero-a10g",
+            "requested": "zero-a10g"
+          },
+          "replicas": {
+            "current": 2,
+            "requested": 1
+          },
+          "sha": "7a9f4b92063119dc65cfb4e0e4968b289d7cd285",
+          "stage": "RUNNING"
+        },
+        "sdk": "gradio",
+        "shortDescription": "Text-to-image and multi-image editing in 6 steps",
+        "tags": [
+          "gradio",
+          "region:us"
+        ],
+        "title": "MiniMax-H3-Image",
+        "trendingScore": 116,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "ai_category": "Video Generation",
+        "ai_short_description": "Generate animated videos from a single image",
+        "author": "kulkas2pintu",
+        "authorData": {
+          "_id": "692d96378eab7650033e002d",
+          "avatarUrl": "/avatars/b6eb2cdc05c93500c7530c7ba1afd421.svg",
+          "followerCount": 771,
+          "fullname": "-------------",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isPro": true,
+          "isUserFollowing": false,
+          "name": "kulkas2pintu",
+          "type": "user"
+        },
+        "colorFrom": "yellow",
+        "colorTo": "pink",
+        "createdAt": "2026-07-15T11:49:16.000Z",
+        "disabled": false,
+        "emoji": "🐌",
+        "featured": false,
+        "id": "kulkas2pintu/wan777",
+        "isLikedByUser": false,
+        "lastModified": "2026-08-23T15:26:43.000Z",
+        "likes": 1677,
+        "originRepo": {
+          "author": {
+            "_id": "63e6e242b6a40bf941e520d5",
+            "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/63e6e242b6a40bf941e520d5/-T6LxA2WbWpgXZKGWqr9T.jpeg",
+            "followerCount": 800,
+            "fullname": "Roger Condori",
+            "isHf": false,
+            "isHfAdmin": false,
+            "isMod": false,
+            "isPro": false,
+            "isUserFollowing": false,
+            "name": "r3gm",
+            "type": "user"
+          },
+          "name": "r3gm/wan2-2-fp8da-aoti-preview"
+        },
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "kulkas2pintu-wan777.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "zero-a10g",
+            "requested": "zero-a10g"
+          },
+          "replicas": {
+            "current": 10,
+            "requested": 1
+          },
+          "sha": "720f97e56fa50e7bc0bcbb516fb00e670ac8933c",
+          "stage": "RUNNING"
+        },
+        "sdk": "gradio",
+        "shortDescription": "generate a video from an image with a text prompt",
+        "tags": [
+          "gradio",
+          "mcp-server",
+          "region:us"
+        ],
+        "title": "Wan2.2 14B Preview",
+        "trendingScore": 115,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "author": "tencent",
+        "downloads": 5958,
+        "gated": false,
+        "id": "tencent/TailorRig",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-05T06:24:47.000Z",
+        "likes": 117,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "author": "nvidia",
+        "datasetsServerInfo": {
+          "formats": [],
+          "libraries": [
+            "datasets",
+            "mlcroissant",
+            "lerobot"
+          ],
+          "modalities": [
+            "image",
+            "tabular",
+            "text",
+            "video"
+          ],
+          "numRows": 39,
+          "viewer": "viewer"
+        },
+        "downloads": 14636,
+        "gated": false,
+        "id": "nvidia/PhysicalAI-Human-1M-100K",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-07T01:51:33.000Z",
+        "likes": 71,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "author": "google",
+        "datasetsServerInfo": {
+          "formats": [
+            "imagefolder"
+          ],
+          "libraries": [
+            "datasets",
+            "mlcroissant"
+          ],
+          "modalities": [
+            "document",
+            "geospatial",
+            "image"
+          ],
+          "numRows": 1,
+          "viewer": "viewer"
+        },
+        "downloads": 5306,
+        "gated": false,
+        "id": "google/multimodal-knowledge-agent",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-10T10:02:28.000Z",
+        "likes": 52,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "author": "venvoo",
+        "downloads": 214059,
+        "gated": "manual",
+        "id": "venvoo/china-a-share-l2-level2-limit-order-book-tick-data",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-17T20:00:06.000Z",
+        "likes": 754,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "ai_category": "Video Generation",
+        "ai_short_description": "Generate a video animation from a single image and prompt",
+        "author": "JCisHERE",
+        "authorData": {
+          "_id": "6a6bb3592566d9e39f12aa89",
+          "avatarUrl": "/avatars/d176ae3bc7ae6b3b1f6cccc6eaf9eb30.svg",
+          "followerCount": 16,
+          "fullname": "Javier Celis",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isPro": true,
+          "isUserFollowing": false,
+          "name": "JCisHERE",
+          "type": "user"
+        },
+        "colorFrom": "indigo",
+        "colorTo": "pink",
+        "createdAt": "2026-09-28T17:30:26.000Z",
+        "disabled": false,
+        "emoji": "🏆",
+        "featured": false,
+        "id": "JCisHERE/wan2-2-i2v-v3",
+        "isLikedByUser": false,
+        "lastModified": "2026-08-28T19:02:47.000Z",
+        "likes": 422,
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "jcishere-wan2-2-i2v-v3.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "zero-a10g",
+            "requested": "zero-a10g"
+          },
+          "replicas": {
+            "current": 8,
+            "requested": 1
+          },
+          "sha": "c3d3fe5a26a9dca5eb2230fe8caff35a08a2576c",
+          "stage": "RUNNING"
+        },
+        "sdk": "gradio",
+        "tags": [
+          "gradio",
+          "mcp-server",
+          "region:us"
+        ],
+        "title": "Wan2.2 14B Fast Preview [NEW]",
+        "trendingScore": 82,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "author": "HubLabs",
+        "datasetsServerInfo": {
+          "formats": [
+            "parquet"
+          ],
+          "libraries": [
+            "datasets",
+            "dask",
+            "polars",
+            "mlcroissant",
+            "lerobot"
+          ],
+          "modalities": [
+            "tabular",
+            "text",
+            "timeseries",
+            "video"
+          ],
+          "numRows": 1093266826,
+          "viewer": "viewer"
+        },
+        "downloads": 2471,
+        "gated": "auto",
+        "id": "HubLabs/HubEgo-100K",
+        "isBenchmark": false,
+        "isEnvironment": false,
+        "isLikedByUser": false,
+        "isTraces": false,
+        "lastModified": "2026-11-18T02:45:40.000Z",
+        "lerobot": {
+          "cameras": [
+            {
+              "codec": "h264",
+              "height": 1080,
+              "key": "observation.images.main",
+              "width": 1920
+            }
+          ],
+          "fps": 30,
+          "hasState": true,
+          "mediaUrls": [
+            "https://huggingface.co/datasets/HubLabs/HubEgo-100K/resolve/main/mono/videos/observation.images.main/chunk-000/file-000.mp4"
+          ],
+          "totalCameras": 1,
+          "totalEpisodes": 72754,
+          "videoMimeType": "video/mp4; codecs=\"avc1.42E01E\""
+        },
+        "likes": 34,
+        "private": false,
+        "repoType": "dataset"
+      },
+      "repoType": "dataset"
+    },
+    {
+      "repoData": {
+        "ai_category": "Image Editing",
+        "ai_short_description": "Swap a face onto another image with AI",
+        "author": "hugging-apps",
+        "authorData": {
+          "_id": "6a4686b8d3d43a21bdf2d25f",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/5f17f0a0925b9863e28ad517/B-SFKqGx8V9AqG6vA2Wef.png",
+          "followerCount": 310,
+          "fullname": "Hugging Apps",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "hugging-apps",
+          "plan": "team",
+          "type": "org"
+        },
+        "colorFrom": "purple",
+        "colorTo": "pink",
+        "createdAt": "2026-09-27T18:26:19.000Z",
+        "disabled": false,
+        "emoji": "🎭",
+        "featured": false,
+        "id": "hugging-apps/bfs-best-face-swap",
+        "isLikedByUser": false,
+        "lastModified": "2026-09-28T16:41:00.000Z",
+        "likes": 967,
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "hugging-apps-bfs-best-face-swap.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "zero-a10g",
+            "requested": "zero-a10g"
+          },
+          "replicas": {
+            "current": 3,
+            "requested": 1
+          },
+          "sha": "eae055aaafa6f4f0c0bea9b1e02975c3f2882092",
+          "stage": "RUNNING"
+        },
+        "sdk": "gradio",
+        "shortDescription": "Head swap with the BFS LoRA on Qwen-Image-2.1 (+turbo)",
+        "tags": [
+          "gradio",
+          "mcp-server",
+          "region:us"
+        ],
+        "title": "BFS Best Face Swap",
+        "trendingScore": 69,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "ai_category": "Image Generation",
+        "ai_short_description": "Generate high‑resolution images from text and edit photos",
+        "author": "PrunaAI",
+        "authorData": {
+          "_id": "652d9a3a65a4619fb5ca7357",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/653772fed7616b72795db894/1GPjjeZP_RGRl1pYgFdZc.png",
+          "followerCount": 628,
+          "fullname": "Pruna AI",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "PrunaAI",
+          "plan": "team",
+          "type": "org"
+        },
+        "colorFrom": "purple",
+        "colorTo": "indigo",
+        "createdAt": "2026-11-03T15:16:32.000Z",
+        "disabled": false,
+        "emoji": "🖼️",
+        "featured": true,
+        "id": "PrunaAI/P-H3-Image",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-05T10:49:09.000Z",
+        "likes": 183,
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "prunaai-p-h3-image.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "zero-a10g",
+            "requested": "zero-a10g"
+          },
+          "replicas": {
+            "current": 2,
+            "requested": 1
+          },
+          "sha": "8518e6cd6b4f218d512da7b0e7cc87aa422986fc",
+          "stage": "RUNNING"
+        },
+        "sdk": "gradio",
+        "shortDescription": "Text-to-image and image editing, based on MiniMax-H3",
+        "tags": [
+          "gradio",
+          "ml-intern",
+          "region:us"
+        ],
+        "title": "P-H3-Image",
+        "trendingScore": 69,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "ai_category": "Image Editing",
+        "ai_short_description": "Edit, swap faces, outpaint, and relight images with AI",
+        "author": "amisima",
+        "authorData": {
+          "_id": "68c95ddb4b381440249db67a",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/no-auth/BpPOeFM3lEPJ2JN9hK9vN.png",
+          "followerCount": 33,
+          "fullname": "Stefan Vichev",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isPro": true,
+          "isUserFollowing": false,
+          "name": "amisima",
+          "type": "user"
+        },
+        "colorFrom": "purple",
+        "colorTo": "pink",
+        "createdAt": "2026-09-25T09:54:39.000Z",
+        "disabled": false,
+        "emoji": "🎨",
+        "featured": false,
+        "id": "amisima/Qwen-2.1-Turbo-Qwen-Face-Swap-MOSS-Image-Edit-Outpaint-Qwen-Detail-Enhancer",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-17T12:56:17.000Z",
+        "likes": 81,
+        "pinned": true,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "amisima-qwen-2-1-turbo.hf.space",
+              "stage": "READY"
+            },
+            {
+              "domain": "amisima-qwen-2-1-turbo-face-swap-moss-image-edit.hf.space",
+              "stage": "READY"
+            },
+            {
+              "domain": "amisima-qwen-2-1-turbo-face-swap-moss-image-edit-23c388c.hf.space",
+              "stage": "READY"
+            },
+            {
+              "domain": "amisima-qwen-2-1-turbo-qwen-face-swap-moss-image-23c388c.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "zero-a10g",
+            "requested": "zero-a10g"
+          },
+          "replicas": {
+            "current": 1,
+            "requested": 1
+          },
+          "sha": "31ca027ec1df343122b58855476f854c24fd9f4b",
+          "stage": "RUNNING"
+        },
+        "sdk": "gradio",
+        "shortDescription": "Turbo, Relight, Camera, Face Swap, MOSS, Outpaint, Enhance",
+        "tags": [
+          "gradio",
+          "image-to-image",
+          "image-editing",
+          "outpainting",
+          "uncrop",
+          "detail-enhancer",
+          "qwen-detail-enhancer",
+          "image-enhancement",
+          "qwen-face-swap",
+          "face-swap",
+          "qwen-image-2.1",
+          "qwen-image-edit",
+          "viggle-turbo",
+          "dmd2",
+          "bfs-head-v1.1",
+          "moss-image-edit",
+          "relighting",
+          "camera-control",
+          "multiple-angles",
+          "zerogpu",
+          "mcp-server",
+          "region:us"
+        ],
+        "title": "Qwen 2.1 Turbo | Relight | Camera Angle | Face Swap | MOSS",
+        "trendingScore": 43,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "ai_category": "Video Generation",
+        "ai_short_description": "Generate videos from images with custom prompts",
+        "author": "rdata92",
+        "authorData": {
+          "_id": "65a96369a7777df7ec149424",
+          "avatarUrl": "/avatars/57598d20f9516fcb1372dfb8b8f6edf7.svg",
+          "followerCount": 2,
+          "fullname": "Ryan Datau",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isPro": false,
+          "isUserFollowing": false,
+          "name": "rdata92",
+          "type": "user"
+        },
+        "colorFrom": "indigo",
+        "colorTo": "green",
+        "createdAt": "2026-10-15T12:54:41.000Z",
+        "disabled": false,
+        "emoji": "🎬",
+        "featured": false,
+        "id": "rdata92/LTX-2.3-10Eros",
+        "isLikedByUser": false,
+        "lastModified": "2026-10-15T13:35:09.000Z",
+        "likes": 199,
+        "pinned": true,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "devMode": false,
+          "domains": [
+            {
+              "domain": "rdata92-ltx-2-3-10eros.hf.space",
+              "stage": "READY"
+            }
+          ],
+          "gcTimeout": 172800,
+          "hardware": {
+            "current": "zero-a10g",
+            "requested": "zero-a10g"
+          },
+          "replicas": {
+            "current": 3,
+            "requested": 1
+          },
+          "sha": "35121371327376c21498453db5a9a3fa682c8a33",
+          "stage": "RUNNING"
+        },
+        "sdk": "gradio",
+        "shortDescription": "ltx 2.3 improved image-to-video with 10eros \u0026 native audio",
+        "tags": [
+          "gradio",
+          "region:us"
+        ],
+        "title": "LTX 2.3 10Eros Image-to-Video",
+        "trendingScore": 43,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    },
+    {
+      "repoData": {
+        "ai_category": "Chatbots",
+        "ai_short_description": "Talk with a 3D avatar directly in your browser",
+        "author": "townbox",
+        "authorData": {
+          "_id": "6aa401e6fa93bd5309686fa1",
+          "avatarUrl": "https://cdn-avatars.huggingface.co/v1/production/uploads/5f17f0a0925b9863e28ad517/0wi_9S-nQ3QhWa6DByOzn.png",
+          "followerCount": 34,
+          "fullname": "Townbox",
+          "isHf": false,
+          "isHfAdmin": false,
+          "isMod": false,
+          "isUserFollowing": false,
+          "name": "townbox",
+          "plan": "team",
+          "type": "org"
+        },
+        "colorFrom": "indigo",
+        "colorTo": "purple",
+        "createdAt": "2026-10-30T12:09:18.000Z",
+        "disabled": false,
+        "emoji": "🗣️",
+        "featured": true,
+        "id": "townbox/ava",
+        "isLikedByUser": false,
+        "lastModified": "2026-11-16T11:57:27.000Z",
+        "likes": 125,
+        "pinned": false,
+        "private": false,
+        "repoType": "space",
+        "runtime": {
+          "hardware": {
+            "current": null,
+            "requested": null
+          },
+          "replicas": {
+            "current": 1,
+            "requested": 1
+          },
+          "stage": "RUNNING"
+        },
+        "sdk": "static",
+        "shortDescription": "Talk face to face with LFM3-Omni, running in your browser",
+        "tags": [
+          "static",
+          "region:us"
+        ],
+        "title": "Ava",
+        "trendingScore": 40,
+        "visibility": "public"
+      },
+      "repoType": "space"
+    }
+  ]
+}
+[90m21:55:16[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+--- end output (45245 bytes) ---

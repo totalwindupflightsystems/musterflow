@@ -1,0 +1,318 @@
+CATALOG-001 connect sweep — utc=2026-11-18T02:56:09Z
+binary=/tmp/mf-cat001-bin sha256=51bfe08691487173b0b4dd3407de6505ba691632c65dab52668b9814be0fbe6b
+scratch data dir=/tmp/mf-cat001-sweep (canonical ~/.musterflow untouched)
+
+✓ Set port = 19877
+### kubernetes
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json --name kubernetes
+✓ Connected: kubernetes
+  ID: 716489e8303ed2fd
+  Version: unversioned
+  Endpoints: 1175
+  Base URL: 
+
+Try: musterflow kubernetes --help
+exit=0
+
+### vercel
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://openapi.vercel.sh/ --name vercel
+✓ Connected: vercel
+  ID: 9a87419efed4870b
+  Version: 0.0.1
+  Endpoints: 487
+  Base URL: https://api.vercel.com
+
+Try: musterflow vercel --help
+exit=0
+
+### huggingface
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://huggingface.co/.well-known/openapi.json --name huggingface
+✓ Connected: huggingface
+  ID: 8ac8f489bdf0ba6f
+  Version: 0.0.1
+  Endpoints: 383
+  Base URL: https://huggingface.co
+
+Try: musterflow huggingface --help
+exit=0
+
+### ollama
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml --name ollama
+✓ Connected: ollama
+  ID: 3f26453ec4d52504
+  Version: 0.1.0
+  Endpoints: 17
+  Base URL: http://localhost:11434
+
+Try: musterflow ollama --help
+exit=0
+
+### nws
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://api.weather.gov/openapi.json --name nws
+✓ Connected: nws
+  ID: 70b5bf949a656585
+  Version: 3.12.2
+  Endpoints: 69
+  Base URL: https://api.weather.gov
+
+Try: musterflow nws --help
+exit=0
+
+### hetzner
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://docs.hetzner.cloud/cloud.spec.json --name hetzner
+✓ Connected: hetzner
+  ID: c3ecb6f87d542f23
+  Version: 1.0.0
+  Endpoints: 190
+  Base URL: https://api.hetzner.cloud/v1
+
+Try: musterflow hetzner --help
+exit=0
+
+### plaid
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/plaid/plaid-openapi/master/2020-09-14.yml --name plaid
+✓ Connected: plaid
+  ID: 3bbb5588add3b1f1
+  Version: 2020-09-14_1.822.2
+  Endpoints: 351
+  Base URL: https://production.plaid.com
+
+Try: musterflow plaid --help
+exit=0
+
+### resend
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/resend/resend-openapi/main/resend.yaml --name resend
+✓ Connected: resend
+  ID: 70f06197c73d3bc0
+  Version: 1.5.1
+  Endpoints: 142
+  Base URL: https://api.resend.com
+
+Try: musterflow resend --help
+exit=0
+
+### sentry
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/getsentry/sentry-api-schema/main/openapi-derefed.json --name sentry
+✓ Connected: sentry
+  ID: 13595b257cfc67f8
+  Version: v0
+  Endpoints: 295
+  Base URL: https://{region}.sentry.io/api/0
+
+Try: musterflow sentry --help
+exit=0
+
+### mongodb-atlas
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/mongodb/atlas-sdk-go/main/openapi/atlas-api-transformed.yaml --name mongodb-atlas
+✓ Connected: mongodb-atlas
+  ID: 4a79e9fc9d7538c4
+  Version: 2.0
+  Endpoints: 541
+  Base URL: https://cloud.mongodb.com
+
+Try: musterflow mongodb-atlas --help
+exit=0
+
+### qdrant
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/qdrant/qdrant/master/docs/redoc/master/openapi.json --name qdrant
+✓ Connected: qdrant
+  ID: 8821f7fa7c6b0545
+  Version: master
+  Endpoints: 69
+  Base URL: https://{protocol}://{hostname}:{port}
+
+Try: musterflow qdrant --help
+exit=0
+
+### typesense
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/typesense/typesense-api-spec/master/openapi.yml --name typesense
+✓ Connected: typesense
+  ID: 3c5bd7082f725f84
+  Version: 30.0
+  Endpoints: 79
+  Base URL: https://{protocol}://{hostname}:{port}
+
+Try: musterflow typesense --help
+exit=0
+
+### docker
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/moby/moby/master/api/swagger.yaml --name docker
+Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "ClusterInfo": invalid example: value must be a string
+Schema:
+  {
+    "example": [
+      "10.10.0.0/16",
+      "20.20.0.0/16"
+    ],
+    "format": "CIDR",
+    "type": "string"
+  }
+
+Value:
+  [
+    "10.10.0.0/16",
+    "20.20.0.0/16"
+  ]
+
+exit=1
+
+### gitlab
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://gitlab.com/gitlab-org/gitlab/-/raw/master/doc/api/openapi/openapi_v2.yaml --name gitlab
+Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "API_Entities_Application": when schema type is 'array', schema 'items' must be non-null
+exit=1
+
+### spotify
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/sonallux/spotify-web-api/main/official-spotify-open-api.yml --name spotify
+Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal bool into field Schema.required of type []string
+exit=1
+
+### square
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/square/connect-api-specification/master/api.json --name square
+Error: parse spec: failed to resolve "AppFeeAllocation" in fragment in URI: "#/components/schemas/AppFeeAllocation": map key "AppFeeAllocation" not found
+exit=1
+
+### digitalocean
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/digitalocean/openapi/main/specification/DigitalOcean-public.v2.yaml --name digitalocean
+Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal object into field Tag.description of type string
+exit=1
+
+### pagerduty
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/PagerDuty/api-schema/main/reference/REST/openapiv3.json --name pagerduty
+Error: parse spec: bad data in "#/components/requestBodies/OrchestrationCacheVariableDataPutResponse" (expecting ref to response object)
+exit=1
+
+### algolia
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/algolia/api-clients-automation/main/specs/search/spec.yml --name algolia
+Error: parse spec: encountered disallowed external reference: "paths/objects/common/schemas.yml#/attributeToUpdate"
+exit=1
+
+### weaviate
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/weaviate/weaviate/main/openapi-specs/schema.json --name weaviate
+Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "AggregateRequest": invalid example: value must be an array
+Schema:
+  {
+    "description": "value as date (as string)",
+    "example": "TODO",
+    "items": {
+      "type": "string"
+    },
+    "nullable": true,
+    "type": "array",
+    "x-omitempty": true
+  }
+
+Value:
+  "TODO"
+
+exit=1
+
+### immich
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://raw.githubusercontent.com/immich-app/immich/main/open-api/immich-openapi-specs.json --name immich
+✓ Connected: immich
+  ID: b996fc7be0379e5a
+  Version: 3.4.0-rc.0
+  Endpoints: 290
+  Base URL: https://raw.githubusercontent.com/api
+
+Try: musterflow immich --help
+exit=0
+
+### jellyfin
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-sweep connect https://api.jellyfin.org/openapi/jellyfin-openapi-stable.json --name jellyfin
+✓ Connected: jellyfin
+  ID: 82420232564edb1c
+  Version: 12.4.0
+  Endpoints: 364
+  Base URL: http://localhost
+
+Try: musterflow jellyfin --help
+exit=0
+
+### final list
+Connected APIs (14):
+
+  hetzner (c3ecb6f87d542f23)
+    Spec: https://docs.hetzner.cloud/cloud.spec.json
+    Base: https://api.hetzner.cloud/v1
+    Endpoints: 190
+    Auth: none
+
+  huggingface (8ac8f489bdf0ba6f)
+    Spec: https://huggingface.co/.well-known/openapi.json
+    Base: https://huggingface.co
+    Endpoints: 383
+    Auth: none
+
+  immich (b996fc7be0379e5a)
+    Spec: https://raw.githubusercontent.com/immich-app/immich/main/open-api/immich-openapi-specs.json
+    Base: https://raw.githubusercontent.com/api
+    Endpoints: 290
+    Auth: none
+
+  jellyfin (82420232564edb1c)
+    Spec: https://api.jellyfin.org/openapi/jellyfin-openapi-stable.json
+    Base: http://localhost
+    Endpoints: 364
+    Auth: none
+
+  kubernetes (716489e8303ed2fd)
+    Spec: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json
+    Base: 
+    Endpoints: 1175
+    Auth: none
+
+  mongodb-atlas (4a79e9fc9d7538c4)
+    Spec: https://raw.githubusercontent.com/mongodb/atlas-sdk-go/main/openapi/atlas-api-transformed.yaml
+    Base: https://cloud.mongodb.com
+    Endpoints: 541
+    Auth: none
+
+  nws (70b5bf949a656585)
+    Spec: https://api.weather.gov/openapi.json
+    Base: https://api.weather.gov
+    Endpoints: 69
+    Auth: none
+
+  ollama (3f26453ec4d52504)
+    Spec: https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml
+    Base: http://localhost:11434
+    Endpoints: 17
+    Auth: none
+
+  plaid (3bbb5588add3b1f1)
+    Spec: https://raw.githubusercontent.com/plaid/plaid-openapi/master/2020-09-14.yml
+    Base: https://production.plaid.com
+    Endpoints: 351
+    Auth: none
+
+  qdrant (8821f7fa7c6b0545)
+    Spec: https://raw.githubusercontent.com/qdrant/qdrant/master/docs/redoc/master/openapi.json
+    Base: https://{protocol}://{hostname}:{port}
+    Endpoints: 69
+    Auth: none
+
+  resend (70f06197c73d3bc0)
+    Spec: https://raw.githubusercontent.com/resend/resend-openapi/main/resend.yaml
+    Base: https://api.resend.com
+    Endpoints: 142
+    Auth: none
+
+  sentry (13595b257cfc67f8)
+    Spec: https://raw.githubusercontent.com/getsentry/sentry-api-schema/main/openapi-derefed.json
+    Base: https://{region}.sentry.io/api/0
+    Endpoints: 295
+    Auth: none
+
+  typesense (3c5bd7082f725f84)
+    Spec: https://raw.githubusercontent.com/typesense/typesense-api-spec/master/openapi.yml
+    Base: https://{protocol}://{hostname}:{port}
+    Endpoints: 79
+    Auth: none
+
+  vercel (9a87419efed4870b)
+    Spec: https://openapi.vercel.sh/
+    Base: https://api.vercel.com
+    Endpoints: 487
+    Auth: none
+
+exit=0

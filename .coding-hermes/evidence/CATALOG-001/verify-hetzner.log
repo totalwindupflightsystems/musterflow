@@ -1,0 +1,42 @@
+CATALOG-001 live verification — hetzner
+utc=2026-11-18T02:55:16Z
+binary=/tmp/mf-cat001-bin sha256=51bfe08691487173b0b4dd3407de6505ba691632c65dab52668b9814be0fbe6b
+scratch data dir=/tmp/mf-cat001-verify/hetzner   (canonical ~/.musterflow NOT used; dashboard port pinned to 19877)
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/hetzner config set port 19877
+✓ Set port = 19877
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/hetzner connect https://docs.hetzner.cloud/cloud.spec.json --name hetzner
+✓ Connected: hetzner
+  ID: c3ecb6f87d542f23
+  Version: 1.0.0
+  Endpoints: 190
+  Base URL: https://api.hetzner.cloud/v1
+
+Try: musterflow hetzner --help
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/hetzner list
+Connected APIs (1):
+
+  hetzner (c3ecb6f87d542f23)
+    Spec: https://docs.hetzner.cloud/cloud.spec.json
+    Base: https://api.hetzner.cloud/v1
+    Endpoints: 190
+    Auth: none
+
+exit=0
+
+### one real CLI call: hetzner actions get_actions --id 1 -o json
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/hetzner hetzner actions get_actions --id 1 -o json
+exit=1
+--- output (raw) ---
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "token is required"
+  }
+}
+Error: HTTP error: 401 Unauthorized
+--- end output (120 bytes) ---

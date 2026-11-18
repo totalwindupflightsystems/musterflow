@@ -1,0 +1,43 @@
+CATALOG-001 live verification — vercel
+utc=2026-11-18T02:54:12Z
+binary=/tmp/mf-cat001-bin sha256=51bfe08691487173b0b4dd3407de6505ba691632c65dab52668b9814be0fbe6b
+scratch data dir=/tmp/mf-cat001-verify/vercel   (canonical ~/.musterflow NOT used; dashboard port pinned to 19877)
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/vercel config set port 19877
+✓ Set port = 19877
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/vercel connect https://openapi.vercel.sh/ --name vercel
+✓ Connected: vercel
+  ID: 9a87419efed4870b
+  Version: 0.0.1
+  Endpoints: 487
+  Base URL: https://api.vercel.com
+
+Try: musterflow vercel --help
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/vercel list
+Connected APIs (1):
+
+  vercel (9a87419efed4870b)
+    Spec: https://openapi.vercel.sh/
+    Base: https://api.vercel.com
+    Endpoints: 487
+    Auth: none
+
+exit=0
+
+### one real CLI call: vercel projects get-projects  -o json
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/vercel vercel projects get-projects  -o json
+exit=1
+--- output (raw) ---
+{
+  "error": {
+    "code": "forbidden",
+    "message": "The request is missing an authentication token",
+    "missingToken": true
+  }
+}
+Error: HTTP error: 403 Forbidden
+--- end output (169 bytes) ---

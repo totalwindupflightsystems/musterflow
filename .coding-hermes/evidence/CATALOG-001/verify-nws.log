@@ -1,0 +1,152 @@
+CATALOG-001 live verification — nws
+utc=2026-11-18T02:54:19Z
+binary=/tmp/mf-cat001-bin sha256=51bfe08691487173b0b4dd3407de6505ba691632c65dab52668b9814be0fbe6b
+scratch data dir=/tmp/mf-cat001-verify/nws   (canonical ~/.musterflow NOT used; dashboard port pinned to 19877)
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/nws config set port 19877
+✓ Set port = 19877
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/nws connect https://api.weather.gov/openapi.json --name nws
+✓ Connected: nws
+  ID: 70b5bf949a656585
+  Version: 3.12.2
+  Endpoints: 69
+  Base URL: https://api.weather.gov
+
+Try: musterflow nws --help
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/nws list
+Connected APIs (1):
+
+  nws (70b5bf949a656585)
+    Spec: https://api.weather.gov/openapi.json
+    Base: https://api.weather.gov
+    Endpoints: 69
+    Auth: none
+
+exit=0
+
+### one real CLI call: nws alerts alerts_types  -o json
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/nws nws alerts alerts_types  -o json
+exit=0
+--- output (raw) ---
+{
+  "@context": [],
+  "eventTypes": [
+    "911 Telephone Outage",
+    "Administrative Message",
+    "Air Quality Alert",
+    "Air Stagnation Advisory",
+    "Ashfall Advisory",
+    "Ashfall Warning",
+    "Avalanche Advisory",
+    "Avalanche Warning",
+    "Avalanche Watch",
+    "Beach Hazards Statement",
+    "Blizzard Warning",
+    "Blowing Dust Advisory",
+    "Blowing Dust Warning",
+    "Blue Alert",
+    "Brisk Wind Advisory",
+    "Child Abduction Emergency",
+    "Civil Danger Warning",
+    "Civil Emergency Message",
+    "Coastal Flood Advisory",
+    "Coastal Flood Statement",
+    "Coastal Flood Warning",
+    "Coastal Flood Watch",
+    "Cold Weather Advisory",
+    "Dense Fog Advisory",
+    "Dense Smoke Advisory",
+    "Dust Advisory",
+    "Dust Storm Warning",
+    "Earthquake Warning",
+    "Evacuation Immediate",
+    "Extreme Heat Warning",
+    "Extreme Heat Watch",
+    "Extreme Cold Warning",
+    "Extreme Cold Watch",
+    "Extreme Fire Danger",
+    "Extreme Wind Warning",
+    "Fire Warning",
+    "Fire Weather Watch",
+    "Flash Flood Statement",
+    "Flash Flood Warning",
+    "Flash Flood Watch",
+    "Flood Advisory",
+    "Flood Statement",
+    "Flood Warning",
+    "Flood Watch",
+    "Freeze Warning",
+    "Freeze Watch",
+    "Freezing Fog Advisory",
+    "Freezing Spray Advisory",
+    "Frost Advisory",
+    "Gale Warning",
+    "Gale Watch",
+    "Hazardous Materials Warning",
+    "Hazardous Seas Warning",
+    "Hazardous Seas Watch",
+    "Hazardous Weather Outlook",
+    "Heat Advisory",
+    "Heavy Freezing Spray Warning",
+    "Heavy Freezing Spray Watch",
+    "High Surf Advisory",
+    "High Surf Warning",
+    "High Wind Warning",
+    "High Wind Watch",
+    "Hurricane Force Wind Warning",
+    "Hurricane Force Wind Watch",
+    "Hurricane Warning",
+    "Hurricane Watch",
+    "Hydrologic Outlook",
+    "Ice Storm Warning",
+    "Lake Effect Snow Warning",
+    "Lake Wind Advisory",
+    "Lakeshore Flood Advisory",
+    "Lakeshore Flood Statement",
+    "Lakeshore Flood Warning",
+    "Lakeshore Flood Watch",
+    "Law Enforcement Warning",
+    "Local Area Emergency",
+    "Low Water Advisory",
+    "Marine Weather Statement",
+    "Nuclear Power Plant Warning",
+    "Radiological Hazard Warning",
+    "Red Flag Warning",
+    "Rip Current Statement",
+    "Severe Thunderstorm Warning",
+    "Severe Thunderstorm Watch",
+    "Severe Weather Statement",
+    "Shelter In Place Warning",
+    "Short Term Forecast",
+    "Small Craft Advisory",
+    "Snow Squall Warning",
+    "Special Marine Warning",
+    "Special Weather Statement",
+    "Storm Surge Warning",
+    "Storm Surge Watch",
+    "Storm Warning",
+    "Storm Watch",
+    "Test",
+    "Tornado Warning",
+    "Tornado Watch",
+    "Tropical Cyclone Local Statement",
+    "Tropical Storm Warning",
+    "Tropical Storm Watch",
+    "Tsunami Advisory",
+    "Tsunami Warning",
+    "Tsunami Watch",
+    "Typhoon Warning",
+    "Typhoon Watch",
+    "Volcano Warning",
+    "Wind Advisory",
+    "Winter Storm Warning",
+    "Winter Storm Watch",
+    "Winter Weather Advisory"
+  ]
+}
+[90m21:54:20[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+--- end output (3149 bytes) ---

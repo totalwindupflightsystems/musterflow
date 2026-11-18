@@ -1,0 +1,175 @@
+CATALOG-001 live verification — ollama
+utc=2026-11-18T02:54:18Z
+binary=/tmp/mf-cat001-bin sha256=51bfe08691487173b0b4dd3407de6505ba691632c65dab52668b9814be0fbe6b
+scratch data dir=/tmp/mf-cat001-verify/ollama   (canonical ~/.musterflow NOT used; dashboard port pinned to 19877)
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/ollama config set port 19877
+✓ Set port = 19877
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/ollama connect https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml --name ollama
+✓ Connected: ollama
+  ID: 3f26453ec4d52504
+  Version: 0.1.0
+  Endpoints: 17
+  Base URL: http://localhost:11434
+
+Try: musterflow ollama --help
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/ollama list
+Connected APIs (1):
+
+  ollama (3f26453ec4d52504)
+    Spec: https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml
+    Base: http://localhost:11434
+    Endpoints: 17
+    Auth: none
+
+exit=0
+
+### one real CLI call: ollama api list  -o json
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/ollama ollama api list  -o json
+exit=0
+--- output (raw) ---
+{
+  "models": [
+    {
+      "capabilities": [
+        "embedding"
+      ],
+      "details": {
+        "context_length": 32768,
+        "embedding_length": 1024,
+        "families": [
+          "qwen3"
+        ],
+        "family": "qwen3",
+        "format": "gguf",
+        "parameter_size": "595.78M",
+        "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439",
+        "quantization_level": "Q8_0"
+      },
+      "digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
+      "model": "text-embedding-qwen3-embedding-0.6b:latest",
+      "modified_at": "2026-08-31T00:15:02.683746147-05:00",
+      "name": "text-embedding-qwen3-embedding-0.6b:latest",
+      "size": 639150858
+    },
+    {
+      "capabilities": [
+        "embedding"
+      ],
+      "details": {
+        "context_length": 32768,
+        "embedding_length": 1024,
+        "families": [
+          "qwen3"
+        ],
+        "family": "qwen3",
+        "format": "gguf",
+        "parameter_size": "595.78M",
+        "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439",
+        "quantization_level": "Q8_0"
+      },
+      "digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
+      "model": "qwen3-embedding:0.6b",
+      "modified_at": "2026-08-31T00:14:45.992927251-05:00",
+      "name": "qwen3-embedding:0.6b",
+      "size": 639150858
+    },
+    {
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ],
+      "details": {
+        "context_length": 131072,
+        "embedding_length": 2880,
+        "families": [
+          "gptoss"
+        ],
+        "family": "gptoss",
+        "format": "gguf",
+        "parameter_size": "20.9B",
+        "parent_model": "",
+        "quantization_level": "MXFP4"
+      },
+      "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
+      "model": "gpt-oss:20b",
+      "modified_at": "2026-08-07T21:34:24.011624058-05:00",
+      "name": "gpt-oss:20b",
+      "size": 13793441244
+    },
+    {
+      "capabilities": [
+        "completion"
+      ],
+      "details": {
+        "families": [
+          "gemma3"
+        ],
+        "family": "gemma3",
+        "format": "gguf",
+        "parameter_size": "4.3B",
+        "parent_model": "",
+        "quantization_level": "Q4_K_M"
+      },
+      "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
+      "model": "gemma3:4b",
+      "modified_at": "2026-07-20T00:15:23.666065125-05:00",
+      "name": "gemma3:4b",
+      "size": 3338801804
+    },
+    {
+      "capabilities": [
+        "completion",
+        "tools",
+        "thinking"
+      ],
+      "details": {
+        "context_length": 1000000,
+        "families": [
+          "glm"
+        ],
+        "family": "glm",
+        "format": "",
+        "parameter_size": "756b",
+        "parent_model": "",
+        "quantization_level": ""
+      },
+      "digest": "ce8fd6f94793a6786f6858717b38067feba631861e3b35e8122cb6635004cd4a",
+      "model": "glm-5.2:cloud",
+      "modified_at": "2026-06-21T23:08:35.902118664-05:00",
+      "name": "glm-5.2:cloud",
+      "remote_host": "https://ollama.com:443",
+      "remote_model": "glm-5.2",
+      "size": 338
+    },
+    {
+      "capabilities": [
+        "embedding"
+      ],
+      "details": {
+        "context_length": 2048,
+        "embedding_length": 768,
+        "families": [
+          "nomic-bert"
+        ],
+        "family": "nomic-bert",
+        "format": "gguf",
+        "parameter_size": "137M",
+        "parent_model": "",
+        "quantization_level": "F16"
+      },
+      "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+      "model": "nomic-embed-text:latest",
+      "modified_at": "2026-06-13T07:27:34.167833786-05:00",
+      "name": "nomic-embed-text:latest",
+      "size": 274302450
+    }
+  ]
+}
+[90m21:54:19[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+--- end output (4060 bytes) ---

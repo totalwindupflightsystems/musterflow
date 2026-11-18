@@ -1,0 +1,36 @@
+CATALOG-001 live verification — kubernetes
+utc=2026-11-18T02:56:31Z
+binary=/tmp/mf-cat001-bin sha256=51bfe08691487173b0b4dd3407de6505ba691632c65dab52668b9814be0fbe6b
+scratch data dir=/tmp/mf-cat001-verify/kubernetes   (canonical ~/.musterflow NOT used; dashboard port pinned to 19877)
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/kubernetes config set port 19877
+✓ Set port = 19877
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/kubernetes connect https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json --name kubernetes
+✓ Connected: kubernetes
+  ID: 716489e8303ed2fd
+  Version: unversioned
+  Endpoints: 1175
+  Base URL: 
+
+Try: musterflow kubernetes --help
+exit=0
+
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/kubernetes list
+Connected APIs (1):
+
+  kubernetes (716489e8303ed2fd)
+    Spec: https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json
+    Base: 
+    Endpoints: 1175
+    Auth: none
+
+exit=0
+
+### one real CLI call: kubernetes core_v1 listCoreV1NamespacedPod  -o json
+$ /tmp/mf-cat001-bin --data-dir /tmp/mf-cat001-verify/kubernetes kubernetes core_v1 listCoreV1NamespacedPod  -o json
+exit=1
+--- output (raw) ---
+Error: create generator: invalid config: base URL is required
+--- end output (62 bytes) ---
