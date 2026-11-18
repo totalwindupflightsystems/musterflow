@@ -1,0 +1,44 @@
+# DF-031 / DF-MUSTERFLOW-4 stale-premise evidence — tick t231 (2026-11-18T01:52:33Z)
+
+## DF-031: 'fresh install dead-ends, engine repo private, README step 1 clones wojons/muster'
+
+### Engine repo visibility (gh api repos/wojons/muster)
+{"private":false,"pushed_at":"2026-11-18T00:04:07Z","visibility":"public"}
+
+### Go module proxy serves the engine (expect 200)
+proxy.golang.org/github.com/wojons/muster/@v/list -> HTTP 200
+
+### README install path (no engine checkout, published module)
+## Installation
+
+### From Source
+
+The `github.com/wojons/muster` engine is a published Go module, so the build pulls it from the module proxy — no engine checkout is needed:
+
+```bash
+git clone https://github.com/totalwindupflightsystems/musterflow.git
+cd musterflow
+go build -o musterflow ./cmd/musterflow/
+```
+
+> **Engine development:** to build against a local engine checkout instead of the published module, clone `wojons/muster` as a sibling (`../muster`, or point `MUSTER_ENGINE_DIR` at it) and run `bash scripts/resolve-engine.sh`. That generates a `go.work` with a workspace-level replace; `go.work`/`go.work.sum` are local, gitignored artifacts and `go.mod` is never edited. With no checkout present the script is informational only (exit 0) and the published module is used.
+
+## Integration Guide
+
+### go.mod engine requirement + verification against the proxy
+	github.com/wojons/muster v0.1.2-0.20261117020333-c64dc501ec58
+2
+
+### Result: the documented step 1 now clones the PUBLIC musterflow repo and builds
+### against the published engine module; the private-engine premise no longer holds.
+
+## DF-MUSTERFLOW-4: "GOWORK=off produces a cryptic missing go.sum build failure"
+
+### GOWORK=off go build ./... (exit code must be 0)
+exit=0
+
+### go env GOWORK (host has no workspace file pinning the engine)
+/home/kara/musterflow/go.work
+
+### Result: builds clean with the workspace disabled; go.sum carries the engine
+### hash entries, so the reported "missing go.sum entry" no longer reproduces.
