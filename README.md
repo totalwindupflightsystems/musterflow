@@ -164,7 +164,7 @@ Webhook triggers via `/hooks/` endpoint for event-driven automation.
 
 ### 🧠 DuckDB — Persistent, Concurrent-Ready Storage
 
-API connections stored in DuckDB at `~/.musterflow/musterflow.db`. JSONL export/import for portability. Automatic migration from legacy JSON registry. Read-only CLI mode when the dashboard is running — no lock conflicts.
+API connections stored in DuckDB at `~/.musterflow/musterflow.db`. JSONL export/import for portability. Automatic migration from legacy JSON registry. When the dashboard is running, CLI commands route through its HTTP API automatically — no direct DuckDB access, no lock conflicts.
 
 ### 🎨 Quality Scoring — Know What You're Connecting
 
