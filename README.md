@@ -242,6 +242,23 @@ The data directory holds everything MusterFlow writes:
 
 Port auto-discovery: if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing which one it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :9999` or by setting `port` in config.
 
+### Per-API credentials (`auth:`)
+
+There is no separate credentials file. `musterflow auth add` / `musterflow auth login` write into `config.yaml` itself, under a top-level `auth:` map keyed by API id:
+
+```yaml
+auth:
+  <api-id>:
+    type: apikey         # none, apikey, bearer, oauth2, mtls
+    key: <secret>        # API key, bearer token, or OAuth2 access token
+    cert: client.pem     # mtls only
+    key_path: key.pem    # mtls only
+```
+
+The key is **file-only**: `config set` does not accept `auth` (`Error: unknown config key: auth (valid: port, default_format, auto_completion, data_dir)`), so entries are managed with `auth add`, `auth login` and `auth remove`. The file is written mode `0600` because these values are plaintext secrets.
+
+Both display surfaces mask the secret. `musterflow auth list` shows keys longer than 8 characters as first four characters + `…` + last four (`<api-id>: type=apikey key=ghp_…3456`), four asterisks (`****`) for a key of 8 characters or fewer, and `(not set)` for an empty key. `musterflow config show` prints the same entries under an `Auth:` heading using first four + `****` + last four, and `****` alone for short or empty keys. `musterflow auth get <api-id>` prints the raw value.
+
 ## Shell Completion
 
 Bash, Zsh, and Fish completion auto-installs on first run in interactive mode. Disable with `auto_completion: false` in config. Manual install:
