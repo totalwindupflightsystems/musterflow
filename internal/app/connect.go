@@ -75,6 +75,13 @@ type ConnectOptions struct {
 }
 
 // Connect loads an OpenAPI spec, validates it, generates commands, and registers the API.
+//
+// A connection is only reported as successful once the command tree the CLI
+// will actually build from it exists: the spec is parsed, derived into a
+// cached SpecPlan, and that plan is run through the same command generator
+// every later operation call uses. A document that parses but yields no
+// callable operations (DF-048) is refused with a LoadDefect naming the file,
+// the JSON pointer and the reason — never reported as connected.
 func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*ConnectResult, error) {
 	data, err := fetchSpec(opts.SpecURL)
 	if err != nil {
@@ -132,7 +139,37 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 		Tolerate:      opts.Tolerate,
 	}
 
+	// Derive the command plan — the same artifact every operation call loads —
+	// and prove it produces a command tree before anything is registered.
+	plan, err := BuildPlan(result.Document, tolerated, repaired)
+	if err != nil {
+		return nil, fmt.Errorf("derive command plan for %s: %w", opts.SpecURL, err)
+	}
+	plan.ConnectionID = id
+	plan.SpecURL = opts.SpecURL
+	plan.Title = apiName
+	plan.BaseURL = baseURL
+	plan.EndpointCount = endpointCount
+	plan.ContentSHA256 = ContentHash(data)
+
+	commands, genErr := CommandsFromPlan(plan, conn)
+	if genErr != nil {
+		return nil, fmt.Errorf("derive command tree for %s: %w", opts.SpecURL, genErr)
+	}
+	// Index the tree so later operation calls build only the resource group
+	// they invoke instead of the whole command tree (PERF-002).
+	IndexPlanResources(plan, commands)
+
+	// Persist the plan BEFORE registering: an API whose cached plan could not
+	// be written would silently fall back to re-reading its source on every
+	// call, which is the behaviour this cache exists to remove.
+	if err := WritePlan(registry.DataDir(), plan); err != nil {
+		return nil, fmt.Errorf("cache parsed spec for %s: %w", opts.SpecURL, err)
+	}
+
 	if err := registry.Add(conn); err != nil {
+		// Do not leave an orphan plan behind for an API that was not registered.
+		_ = RemovePlan(registry.DataDir(), id)
 		return nil, fmt.Errorf("register api: %w", err)
 	}
 
@@ -146,17 +183,35 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 	}, nil
 }
 
-// Disconnect removes a connected API from the registry.
+// Disconnect removes a connected API from the registry and drops its cached
+// command plan (so a later connect starts from the source, never from a stale
+// plan).
 func Disconnect(registry *Registry, id string) error {
-	return registry.Remove(id)
+	if err := registry.Remove(id); err != nil {
+		return err
+	}
+	return RemovePlan(registry.DataDir(), id)
 }
+
+// PlaceholderBaseURL is the base URL the generator is given for a connection
+// that declares none. A spec with no servers[] URL and no --base-url override
+// cannot address a real host, but it can still define operations: building its
+// command tree with a placeholder keeps every operation visible and callable
+// with an explicit --base-url (or MUSTER_BASE_URL) at call time, instead of
+// failing to load with "base URL is required". Connect prints a warning when a
+// connection ends up without a base URL.
+const PlaceholderBaseURL = "http://localhost"
 
 // GenerateCommandConfig creates a generator config for a connected API.
 func GenerateCommandConfig(conn *APIConnection) *generator.Config {
+	baseURL := conn.BaseURL
+	if baseURL == "" {
+		baseURL = PlaceholderBaseURL
+	}
 	return &generator.Config{
 		AppName:          "musterflow",
 		AppDescription:   fmt.Sprintf("MusterFlow CLI for %s", conn.Name),
-		BaseURL:          conn.BaseURL,
+		BaseURL:          baseURL,
 		DefaultFormat:    "table",
 		SupportedFormats: []string{"table", "json", "yaml"},
 		APIName:          conn.Name,
