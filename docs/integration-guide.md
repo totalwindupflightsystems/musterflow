@@ -98,11 +98,34 @@ When the dashboard is running on the configured port, CLI commands route through
 | `musterflow catalog pull <id>` | Install a community API |
 | `musterflow auth add <id>` | Add credentials (apikey, bearer, oauth2, mtls) |
 | `musterflow auth list` | List configured credentials (keys masked) |
-| `musterflow auth login <id>` | OAuth2 browser flow |
+| `musterflow auth login <id>` | OAuth2 browser flow (requires `--client-id`, `--client-secret`, `--auth-url`, `--token-url`) |
 | `musterflow config show` | Print active configuration |
 | `musterflow transform list` | List `.wasm` transforms installed in `~/.musterflow/transforms/` |
 | `musterflow transform install <entry>` | Install a transform from the catalog — placeholder, errors today (see WASM Transforms below) |
 | `musterflow export` / `import` | JSONL export/import of the API registry |
+
+### OAuth2 Login (`auth login`)
+
+`auth login` runs the OAuth2 authorization-code flow (no PKCE) and stores the resulting access token as that API's credential. **All four of the following flags are required**: omit any one and the command fails with `Error: --client-id is required for OAuth2 login` (or the matching flag name) before a browser is opened.
+
+```bash
+musterflow auth login slack \
+  --client-id <id> \
+  --client-secret <secret> \
+  --auth-url https://slack.com/oauth/v2/authorize \
+  --token-url https://slack.com/api/oauth.v2.access
+```
+
+| Flag | Required | Default | Meaning |
+|------|----------|---------|---------|
+| `--client-id` | yes | — | OAuth2 client ID |
+| `--client-secret` | yes | — | OAuth2 client secret |
+| `--auth-url` | yes | — | Authorization endpoint the browser is sent to |
+| `--token-url` | yes | — | Token endpoint the authorization code is exchanged at |
+| `--scopes` | no | none | Comma-separated scopes |
+| `--redirect-port` | no | `19876` | Port for the local callback server |
+
+The command prints the auth URL, opens the browser (printing the URL for manual use if it cannot launch one), waits for the callback on the redirect port, exchanges the code, and stores the credential as `type=oauth2` in the config `auth:` map keyed by the API id (see [Ports & Configuration](#ports--configuration)). The raw token is additionally cached at `~/.musterflow/tokens/<client-id>.yaml` (mode `0600`; the cache is always written under the default `~/.musterflow`, even when `--data-dir` points elsewhere).
 
 ### Raw Request Bodies (`--body`)
 
