@@ -76,6 +76,15 @@ $ musterflow <api-name> <resource> <operation> --flag1 value --flag2 value
 
 Output formats: **table** (default), **JSON**, **YAML**, **CSV**, **JSONL**, and **Parquet**.
 
+POST/PUT/PATCH operations that take a JSON body also accept `-b/--body <json>` as an alternative to the per-property flags. The value is sent **verbatim as the entire request body**: when `--body` is set the per-property flags are ignored (nothing is merged in, and required properties are not checked client-side), and a value that is not valid JSON fails before any request is sent (`Error: invalid JSON for --body`, exit 1).
+
+```bash
+# The raw body replaces the whole payload — --title is ignored here
+musterflow swagger-petstore-openapi-3-0 pet add-pet --title ignored -b '{"name":"body wins"}'
+```
+
+Details: [Raw Request Bodies (`--body`)](docs/integration-guide.md#raw-request-bodies---body).
+
 ### 🤖 MCP Server — AI Agent Integration
 
 Every connected API is registered as an MCP tool served over HTTP. AI agents discover and call them via JSON-RPC:
