@@ -69,8 +69,9 @@ consensus repo for creating an admin key.
 
 ### The assertion is the deliverable
 
-The flow raises — non-zero exit from the CLI, HTTP 500 carrying the message from
-the dashboard — when:
+The flow raises — non-zero exit from the CLI, and a non-2xx response from the
+dashboard whose body carries the message (this dashboard build answers 404 for
+a failed run) — when:
 
 - the session never settles inside `timeout_seconds`,
 - the session settles as `failed` / `paused` / `cancelled`,

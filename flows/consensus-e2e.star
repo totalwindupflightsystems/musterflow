@@ -35,7 +35,8 @@
 #   verbose         True => print every poll                 (default False)
 #
 # THE ASSERTION IS THE DELIVERABLE. The flow raises — non-zero exit from the
-# CLI, HTTP 500 with the message from the dashboard — when the session never
+# CLI, and a non-2xx response from the dashboard whose body carries the message
+# (this dashboard build answers 404 for a failed run) — when the session never
 # settles, settles in a failed/paused state, or settles with an empty
 # last_message. It does not print "ok" merely because the HTTP calls returned
 # 200, so a run that proves nothing cannot report green.
