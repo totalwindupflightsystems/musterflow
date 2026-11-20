@@ -106,8 +106,16 @@ func RefreshWithOptions(ctx context.Context, registry *Registry, id string, opts
 	plan.ContentSHA256 = ContentHash(data)
 
 	commands, genErr := CommandsFromPlan(plan, conn)
-	if genErr != nil {
-		return nil, fmt.Errorf("derive command tree for %s: %w", conn.SpecURL, genErr)
+	if genErr != nil || len(commands) == 0 {
+		defect := DiagnoseLoadFailure(data)
+		if defect == nil {
+			defect = &LoadDefect{Pointer: "/paths", Reason: "the refreshed spec yields an empty command tree; the previous plan is kept"}
+		}
+		defect.Spec = conn.SpecURL
+		if genErr != nil {
+			defect.Cause = genErr
+		}
+		return nil, defect
 	}
 	IndexPlanResources(plan, commands)
 

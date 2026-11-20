@@ -193,6 +193,13 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 			fmt.Printf("  Version: %s\n", result.SpecVersion)
 			fmt.Printf("  Endpoints: %d\n", result.EndpointCount)
 			fmt.Printf("  Base URL: %s\n", result.Connection.BaseURL)
+			if result.Connection.BaseURL == "" {
+				// The spec declares no servers[] URL and --base-url was not
+				// given: the command tree is built (every operation is
+				// visible), but no request can be addressed without a base
+				// URL at call time.
+				fmt.Printf("  ⚠ No base URL in the spec — pass --base-url here or override per call with --base-url\n")
+			}
 			printToleratedDefects(result.Tolerated, "connected")
 			fmt.Printf("\nTry: musterflow %s --help\n", result.Connection.Name)
 

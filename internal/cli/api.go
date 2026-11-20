@@ -250,9 +250,9 @@ func attachFullPlan(parent *cobra.Command, plan *app.SpecPlan, conn *app.APIConn
 		return fmt.Errorf("%s: build commands from command plan: %w", conn.Name, err)
 	}
 	if len(commands) == 0 {
-		// Never let an API exist with an empty command list: "connected" must
-		// mean "callable".
-		return fmt.Errorf("%s: command plan produced no commands; re-run 'musterflow connect %s'", conn.Name, conn.SpecURL)
+		// Never let an API exist with an empty command list: DF-048's whole
+		// point is that "connected" must mean "callable".
+		return app.DiagnoseEmptyPlan(plan)
 	}
 	for _, cmd := range commands {
 		bridgeGeneratedAuth(cmd)
@@ -331,7 +331,7 @@ func newLazyResourceGroup(res app.PlanResource, idx *app.PlanIndex, conn *app.AP
 				return
 			}
 			if len(commands) == 0 {
-				loadErr = fmt.Errorf("%s %s: cached command plan produced no commands", conn.Name, res.Name)
+				loadErr = app.DiagnoseEmptyPlan(idx.Plan(nil))
 				return
 			}
 			for _, real := range commands {
@@ -416,7 +416,13 @@ func rebuildPlan(conn *app.APIConnection, dataDir string) (*app.SpecPlan, error)
 	parser := openapi.NewParser()
 	result, err := parser.Parse(ctx, fixed, openapi.DefaultParseOptions())
 	if err != nil {
-		return nil, fmt.Errorf("parse spec %s: %w", conn.SpecURL, err)
+		defect := app.DiagnoseLoadFailure(fixed)
+		if defect == nil {
+			defect = &app.LoadDefect{Reason: "document was rejected by the parser"}
+		}
+		defect.Spec = conn.SpecURL
+		defect.Cause = err
+		return nil, defect
 	}
 	if len(tolerated) > 0 {
 		fmt.Fprintf(os.Stderr, "⚠ %s: %d cosmetic spec defect(s) tolerated while generating commands\n", conn.Name, len(tolerated))
@@ -439,7 +445,7 @@ func rebuildPlan(conn *app.APIConnection, dataDir string) (*app.SpecPlan, error)
 		return nil, fmt.Errorf("%s: build commands: %w", conn.Name, err)
 	}
 	if len(commands) == 0 {
-		return nil, fmt.Errorf("%s: command plan produced no commands; re-run 'musterflow connect %s'", conn.Name, conn.SpecURL)
+		return nil, app.DiagnoseEmptyPlan(plan)
 	}
 	app.IndexPlanResources(plan, commands)
 

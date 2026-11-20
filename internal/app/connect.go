@@ -106,11 +106,7 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 	parser := openapi.NewParser()
 	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
 	if err != nil {
-		if opts.Tolerate {
-			return nil, fmt.Errorf("parse spec (tolerance applied, %d cosmetic defect(s) repaired, document still rejected): %w",
-				len(tolerated), err)
-		}
-		return nil, fmt.Errorf("parse spec: %w", err)
+		return nil, parseDefect(opts, data, tolerated, err)
 	}
 
 	apiName := opts.Name
@@ -153,8 +149,19 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 	plan.ContentSHA256 = ContentHash(data)
 
 	commands, genErr := CommandsFromPlan(plan, conn)
-	if genErr != nil {
-		return nil, fmt.Errorf("derive command tree for %s: %w", opts.SpecURL, genErr)
+	if genErr != nil || len(commands) == 0 {
+		defect := DiagnoseLoadFailure(data)
+		if defect == nil {
+			defect = &LoadDefect{Pointer: "/paths", Reason: "the generated command tree is empty"}
+		}
+		defect.Spec = opts.SpecURL
+		if genErr != nil {
+			defect.Cause = genErr
+		}
+		if opts.Tolerate {
+			defect.Reason += fmt.Sprintf(" (tolerance pass: %d cosmetic defect(s) repaired or recorded)", len(tolerated))
+		}
+		return nil, defect
 	}
 	// Index the tree so later operation calls build only the resource group
 	// they invoke instead of the whole command tree (PERF-002).
@@ -181,6 +188,51 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 		Tolerated:     tolerated,
 		Repaired:      repaired,
 	}, nil
+}
+
+// parseDefect turns a parser rejection into a LoadDefect: the file the operator
+// named, the JSON pointer of the blocking construct when it can be localised,
+// and both the operator-facing reason and the parser's own error.
+//
+// Localisation has two sources: the document-shape diagnosis (structural
+// defects, e.g. parameters written as a mapping) and, when that finds nothing,
+// the tolerance pass's own walk — a strict parse that fails on a defect the
+// tolerant pass would repair is named by that defect's pointer and code, so the
+// operator learns both what is wrong and that --tolerate addresses it.
+func parseDefect(opts ConnectOptions, data []byte, tolerated []specfix.Warning, parseErr error) error {
+	reason := "document was rejected by the parser"
+	if opts.Tolerate {
+		reason = fmt.Sprintf("document was rejected by the parser even after the tolerance pass (%d cosmetic defect(s) repaired or recorded)",
+			len(tolerated))
+	}
+
+	defect := DiagnoseLoadFailure(data)
+	if defect == nil {
+		defect = repairableDefect(data)
+	}
+	if defect == nil {
+		defect = &LoadDefect{Reason: reason}
+	} else if opts.Tolerate {
+		defect.Reason += fmt.Sprintf(" (%d cosmetic defect(s) repaired or recorded)", len(tolerated))
+	}
+	defect.Spec = opts.SpecURL
+	defect.Cause = parseErr
+	return defect
+}
+
+// repairableDefect names the first defect the tolerance pass recognises (and
+// would repair) in a document a strict parse rejected. It is diagnostic only:
+// the repaired bytes are discarded, so the strict path keeps its strictness.
+func repairableDefect(data []byte) *LoadDefect {
+	fix, err := specfix.Repair(data)
+	if err != nil || len(fix.Warnings) == 0 {
+		return nil
+	}
+	w := fix.Warnings[0]
+	return &LoadDefect{
+		Pointer: w.Path,
+		Reason:  fmt.Sprintf("%s: %s — a strict parse rejects this; re-run with --tolerate to repair it", w.Code, w.Detail),
+	}
 }
 
 // Disconnect removes a connected API from the registry and drops its cached

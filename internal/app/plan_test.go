@@ -28,6 +28,32 @@ const twoResourceSpec = `{
   }
 }`
 
+// webhooksOnlySpec is a valid 3.1.0 document whose only operations are
+// webhooks: it parses, but cannot produce a single CLI command.
+const webhooksOnlySpec = `{
+  "openapi": "3.1.0",
+  "info": {"title": "Hooks", "version": "1.0.0"},
+  "webhooks": {
+    "item-updated": {"post": {"operationId": "item-updated", "responses": {"200": {"description": "ok"}}}}
+  }
+}`
+
+// unloadableSpec is rejected by the parser: `parameters` is a mapping instead
+// of an array of parameter objects.
+const unloadableSpec = `{
+  "openapi": "3.1.0",
+  "info": {"title": "Broken", "version": "1.0.0"},
+  "paths": {
+    "/items/{itemId}": {
+      "get": {
+        "operationId": "get-item",
+        "parameters": {"itemId": {"in": "path", "required": true, "schema": {"type": "string"}}},
+        "responses": {"200": {"description": "ok"}}
+      }
+    }
+  }
+}`
+
 func writeTempSpec(t *testing.T, dir, name, body string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
@@ -197,6 +223,69 @@ func TestReconnectReplacesCachedPlan(t *testing.T) {
 	}
 	if len(ops) != 2 {
 		t.Fatalf("widgets has %d operations after reconnect, want 2", len(ops))
+	}
+}
+
+// TestConnectRefusesUnloadableSpec proves a spec the parser rejects is refused
+// with the file, the JSON pointer and the reason — and is never registered or
+// cached (the DF-048 failure mode was reporting it as connected).
+func TestConnectRefusesUnloadableSpec(t *testing.T) {
+	r := newTestRegistry(t)
+	specPath := writeTempSpec(t, t.TempDir(), "broken.json", unloadableSpec)
+
+	_, err := Connect(context.Background(), r, ConnectOptions{SpecURL: specPath, Tolerate: true, Name: "broken"})
+	if err == nil {
+		t.Fatal("connect --tolerate accepted a spec that cannot load")
+	}
+
+	var defect *LoadDefect
+	if !errors.As(err, &defect) {
+		t.Fatalf("error is %T (%v), want *LoadDefect", err, err)
+	}
+	if defect.Spec != specPath {
+		t.Errorf("defect names spec %q, want %q", defect.Spec, specPath)
+	}
+	if defect.Pointer != "/paths/~1items~1{itemId}/get/parameters" {
+		t.Errorf("defect pointer = %q, want the offending parameters node", defect.Pointer)
+	}
+	if !strings.Contains(defect.Reason, "parameters") {
+		t.Errorf("defect reason %q does not explain the defect", defect.Reason)
+	}
+	if defect.Cause == nil {
+		t.Error("defect carries no parser cause")
+	}
+
+	if conns := r.List(); len(conns) != 0 {
+		t.Fatalf("%d API(s) registered despite a failed connect", len(conns))
+	}
+	if entries, err := os.ReadDir(PlanDir(r.DataDir(), generateID(specPath))); err == nil && len(entries) > 0 {
+		t.Fatalf("plan cache left behind for a refused connect: %d entries", len(entries))
+	}
+}
+
+// TestConnectRefusesEmptyCommandTree proves a document that parses but yields no
+// callable operation is refused instead of being reported as connected.
+func TestConnectRefusesEmptyCommandTree(t *testing.T) {
+	r := newTestRegistry(t)
+	specPath := writeTempSpec(t, t.TempDir(), "hooks.json", webhooksOnlySpec)
+
+	_, err := Connect(context.Background(), r, ConnectOptions{SpecURL: specPath, Tolerate: true, Name: "hooks"})
+	if err == nil {
+		t.Fatal("connect accepted a spec with no callable operations")
+	}
+
+	var defect *LoadDefect
+	if !errors.As(err, &defect) {
+		t.Fatalf("error is %T (%v), want *LoadDefect", err, err)
+	}
+	if defect.Pointer != "/webhooks" {
+		t.Errorf("defect pointer = %q, want /webhooks", defect.Pointer)
+	}
+	if !strings.Contains(defect.Reason, "webhooks") {
+		t.Errorf("defect reason %q does not mention webhooks", defect.Reason)
+	}
+	if conns := r.List(); len(conns) != 0 {
+		t.Fatalf("%d API(s) registered despite an empty command tree", len(conns))
 	}
 }
 

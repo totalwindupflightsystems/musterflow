@@ -135,6 +135,118 @@ func readFixture(t *testing.T, name string) []byte {
 	return data
 }
 
+// TestConnectTolerateAcceptedSpecsAreCallable is the DF-048 criterion-2
+// regression test: for every spec `connect --tolerate` accepts, `mf <api>
+// --help` lists at least one command and one real operation call succeeds
+// against a stub server; for every spec it cannot load, connect fails loudly
+// naming the defect — it never prints "Try: musterflow <api> --help" for an API
+// with an empty command list.
+func TestConnectTolerateAcceptedSpecsAreCallable(t *testing.T) {
+	stub := newStubAPI(t)
+
+	cases := []struct {
+		name    string
+		fixture string
+		// apiName is the --name used at connect time.
+		apiName string
+		// wantPointer is the JSON pointer connect must report for a spec it
+		// cannot load; empty means the spec must load and be callable.
+		wantPointer string
+		// call is the operation invocation that must succeed for a loaded spec.
+		call []string
+	}{
+		{
+			name:    "repairable defects load and are callable",
+			fixture: "vendor-inventory.yaml",
+			apiName: "vendor",
+			call:    []string{"items", "list-items"},
+		},
+		{
+			name:        "unrepairable parameters mapping is refused",
+			fixture:     "vendor-inventory-blocking.yaml",
+			apiName:     "blocked",
+			wantPointer: "/paths/~1items~1{itemId}/get/parameters",
+		},
+		{
+			name:        "webhooks-only document is refused",
+			fixture:     "vendor-webhooks-only.yaml",
+			apiName:     "hooks",
+			wantPointer: "/webhooks",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataDir := t.TempDir()
+			// Copy the fixture into the data-dir's sibling so the connect error
+			// names a path the test can assert on.
+			specDir := t.TempDir()
+			specPath := filepath.Join(specDir, tc.fixture)
+			if err := os.WriteFile(specPath, readFixture(t, tc.fixture), 0o644); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+
+			connect := runMF(t, dataDir, "connect", specPath,
+				"--tolerate", "--name", tc.apiName, "--base-url", stub.server.URL)
+
+			if tc.wantPointer != "" {
+				if connect.err == nil {
+					t.Fatalf("connect --tolerate accepted %s; it cannot load\n%s", tc.fixture, connect.combined())
+				}
+				msg := connect.err.Error()
+				if !strings.Contains(msg, tc.fixture) {
+					t.Errorf("connect error does not name the spec file:\n%s", msg)
+				}
+				if !strings.Contains(msg, tc.wantPointer) {
+					t.Errorf("connect error does not name the blocking JSON pointer %q:\n%s", tc.wantPointer, msg)
+				}
+				if strings.Contains(connect.stdout, "Try: musterflow") {
+					t.Errorf("connect printed a Try hint for an API it did not load:\n%s", connect.stdout)
+				}
+				// Nothing may be registered: a connection whose command list is
+				// empty is exactly the DF-048 failure mode.
+				list := runMF(t, dataDir, "list")
+				if !strings.Contains(list.stdout, "No APIs connected") {
+					t.Errorf("failed connect left an API registered:\n%s", list.stdout)
+				}
+				return
+			}
+
+			if connect.err != nil {
+				t.Fatalf("connect --tolerate failed on a repairable spec: %v\n%s", connect.err, connect.combined())
+			}
+			if !strings.Contains(connect.stdout, "Try: musterflow "+tc.apiName+" --help") {
+				t.Errorf("connect did not print the Try hint:\n%s", connect.stdout)
+			}
+
+			// `mf <api> --help` must list at least one real command.
+			help := runMF(t, dataDir, tc.apiName, "--help")
+			if help.err != nil {
+				t.Fatalf("api help: %v\n%s", help.err, help.combined())
+			}
+			if !strings.Contains(help.stdout, "Available Commands:") {
+				t.Fatalf("api help lists no commands:\n%s", help.combined())
+			}
+			if !strings.Contains(help.stdout, "items") {
+				t.Errorf("api help does not list the items resource:\n%s", help.stdout)
+			}
+
+			// One real operation call must reach the network and succeed.
+			before := stub.hits.Load()
+			call := runMF(t, dataDir, append([]string{tc.apiName}, tc.call...)...)
+			if call.err != nil {
+				t.Fatalf("operation call failed: %v\n%s", call.err, call.combined())
+			}
+			if stub.hits.Load() == before {
+				t.Fatalf("operation call never reached the API:\n%s", call.combined())
+			}
+			if !strings.Contains(call.stdout, "stub") {
+				t.Errorf("operation call output lacks the stub response:\n%s", call.stdout)
+			}
+		})
+	}
+}
+
 // TestOperationCallNeverReFetchesSpec is the PERF-002 criterion-2 regression
 // test: once an API is connected by URL, operation calls are served from the
 // cached plan and add ZERO GETs to the spec URL.
@@ -193,6 +305,58 @@ func TestOperationCallsSurviveSourceSpecRemoval(t *testing.T) {
 		if !strings.Contains(call.stdout, "stub") {
 			t.Errorf("operation call %d output lacks the stub response:\n%s", i+1, call.stdout)
 		}
+	}
+}
+
+// TestHelpOnUnloadableConnectionReportsErrorInsteadOfEmptyTree proves DF-048's
+// "never print Try/empty help for an API that cannot load" rule at the help
+// surface: with the plan gone and the source spec unloadable, `mf <api> --help`
+// reports the load failure instead of a usage block with no commands.
+func TestHelpOnUnloadableConnectionReportsErrorInsteadOfEmptyTree(t *testing.T) {
+	stub := newStubAPI(t)
+	specDir := t.TempDir()
+	specPath := filepath.Join(specDir, "vendor.yaml")
+	if err := os.WriteFile(specPath, readFixture(t, "vendor-inventory.yaml"), 0o644); err != nil {
+		t.Fatalf("write spec: %v", err)
+	}
+	dataDir := t.TempDir()
+
+	connect := runMF(t, dataDir, "connect", specPath,
+		"--tolerate", "--name", "vendor", "--base-url", stub.server.URL)
+	if connect.err != nil {
+		t.Fatalf("connect: %v\n%s", connect.err, connect.combined())
+	}
+
+	// Destroy the cache, then make the source unloadable: only a loud failure
+	// is acceptable from here on.
+	conn := runMF(t, dataDir, "list")
+	if conn.err != nil {
+		t.Fatalf("list: %v", conn.err)
+	}
+	var connID string
+	for _, line := range strings.Split(conn.stdout, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "vendor (") {
+			connID = strings.TrimSuffix(strings.TrimPrefix(line, "vendor ("), ")")
+		}
+	}
+	if connID == "" {
+		t.Fatalf("could not read the connection id from list output:\n%s", conn.stdout)
+	}
+	if err := app.RemovePlan(dataDir, connID); err != nil {
+		t.Fatalf("remove plan: %v", err)
+	}
+	if err := os.WriteFile(specPath, readFixture(t, "vendor-webhooks-only.yaml"), 0o644); err != nil {
+		t.Fatalf("rewrite spec: %v", err)
+	}
+
+	help := runMF(t, dataDir, "vendor", "--help")
+	combined := help.combined()
+	if !strings.Contains(combined, "cannot be loaded") {
+		t.Fatalf("help did not report the load failure:\n%s", combined)
+	}
+	if strings.Contains(help.stdout, "Available Commands:") {
+		t.Fatalf("help printed a command listing for an API that cannot load:\n%s", help.stdout)
 	}
 }
 

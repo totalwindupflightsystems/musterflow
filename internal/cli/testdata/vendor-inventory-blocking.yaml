@@ -1,0 +1,62 @@
+# Defective 3.1.0 vendor spec used as a DF-048 fixture: UNLOADABLE.
+#
+# Same cosmetic defects as vendor-inventory.yaml (null-type, required-bool,
+# array-missing-items — all repairable), plus one defect the tolerance pass
+# cannot repair: GET /items/{itemId} declares `parameters` as a MAPPING keyed by
+# parameter name instead of an array of parameter objects. The parser rejects
+# the document at `#/paths/~1items~1{itemId}/get/parameters`, so
+#
+#   connect --tolerate must exit NON-ZERO, naming the file, that JSON pointer
+#   and the reason — and must NOT print "Try: musterflow <api> --help".
+#
+# This is the DF-048 failure mode: cosmetic repairs reported, no command tree.
+openapi: 3.1.0
+info:
+  title: Vendor Inventory API
+  version: 1.4.2
+  description: Vendor inventory management endpoints.
+servers:
+  - url: https://api.vendor.example/v1
+paths:
+  /items:
+    get:
+      operationId: list-items
+      summary: List items
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+  /items/{itemId}:
+    get:
+      operationId: get-item
+      summary: Get item
+      parameters:
+        itemId:
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+components:
+  schemas:
+    Item:
+      type: object
+      required: true
+      properties:
+        id:
+          type: string
+        restock_eta:
+          type: "null"
+        tags:
+          type: array
