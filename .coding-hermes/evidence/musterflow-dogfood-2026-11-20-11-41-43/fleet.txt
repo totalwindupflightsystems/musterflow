@@ -1,0 +1,16 @@
+bunker-las-01 :: OFFLINE ::   Error:    server info: deadline_exceeded: Post "http://100.78.165.52:19090/bunker.v1.Bun
+bunker-las-02 :: ONLINE :: 
+bunker-las-03 :: ONLINE :: 
+bunker-las-04 :: OFFLINE ::   Error:    server info: deadline_exceeded: Post "http://100.95.199.98:10001/bunker.v1.Bun
+bunker-mvp :: ONLINE :: 
+cube-las-00 :: ONLINE :: 
+dedi-2 :: ONLINE :: 
+hermes-fleet-01 :: OFFLINE ::   Error:    server info: unavailable: refusing to dial https://100.122.57.93:10001: tls-co
+hermes-fleet-02 :: ONLINE :: 
+hermes-fleet-03 :: ONLINE :: 
+hermes-fleet-04 :: ONLINE :: 
+hermes4friends :: ONLINE :: 
+judgebox :: ONLINE :: 
+karahermes-mde-7840hs :: ONLINE :: 
+hermes-fleet-05 :: ONLINE :: 
+bunker-md-01 :: UNKNOWN :: 

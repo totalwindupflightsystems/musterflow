@@ -1,0 +1,4 @@
+Benchmark 1: big2
+  Time (mean ± σ):      3.423 s ±  0.183 s    [User: 3.618 s, System: 0.282 s]
+  Range (min … max):    3.223 s …  3.624 s    5 runs
+ 

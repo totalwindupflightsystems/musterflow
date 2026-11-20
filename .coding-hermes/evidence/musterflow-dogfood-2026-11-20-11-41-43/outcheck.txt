@@ -1,0 +1,29 @@
+=== files ===
+-rw-rw-r-- 1 kara kara 146 Nov 20 07:11 /home/kara/.hermes/cache/scratch/r8/out.csv
+-rw-rw-r-- 1 kara kara 164 Nov 20 07:11 /home/kara/.hermes/cache/scratch/r8/out.json
+-rw-rw-r-- 1 kara kara 164 Nov 20 07:11 /home/kara/.hermes/cache/scratch/r8/out.txt
+=== out.json first 400 bytes ===
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  
+
+=== out.txt first 200 ===
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  
+
+=== retry json with explicit format? ===
+[90m07:12:08[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+rc=0
+-rw-rw-r-- 1 kara kara 164 Nov 20 07:12 /home/kara/.hermes/cache/scratch/r8/out2.json
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  
+
+=== global help mentions format? ===
+      --output-file string      Output file path (format auto-detected from extension)
+  -v, --version                 version for musterflow
+

@@ -1,0 +1,16 @@
+=== resolve ===
+/home/kara/musterflow
+resolve_rc=0
+=== capacity las-02 ===
+── bunker-las-02 ──
+  Hostname: bunker-las-02
+  URL:      http://100.116.99.35:10001
+  Version:  0.1.4
+  Status:   ONLINE
+  Uptime:   8d 15h 48m
+  Agents:   1/8
+  /tmp:     HOST-SHARED — agent sessions see the host /tmp
+
+  ╔══════════════════════════════════════════════════════════╗
+  ║  ⚠  WARNING: Private /tmp is NOT active on this host.           ║
+  ║  Agent exec sessions share the host /tmp; the README's        ║

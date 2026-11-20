@@ -1,0 +1,4 @@
+1) `mf ... <api> items list-items --output-file out.json` writes a JSON document (array of the returned records) that `jq .` parses; today the file contains the same 164-byte ASCII table as out.txt.
+2) Extension dispatch is explicit and tested for at least .json, .csv, .txt, and an unknown extension: .json -> JSON, .csv -> CSV, .txt -> table, unknown -> non-zero exit naming the supported formats (today an unknown/JSON extension silently falls back to the table).
+3) `--help` for `--output-file` stays truthful: if only .csv is supported, the help text says so instead of "format auto-detected from extension".
+4) A test covers the .json path so the promise in --help cannot drift again.

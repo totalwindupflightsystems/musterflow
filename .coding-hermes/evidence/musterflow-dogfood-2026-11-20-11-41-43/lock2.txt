@@ -1,0 +1,31 @@
+=== listeners ===
+LISTEN 0      5                                   127.0.0.1:19901      0.0.0.0:*    users:(("python3",pid=1286414,fd=3))       
+LISTEN 0      5                                   127.0.0.1:18099      0.0.0.0:*    users:(("python3",pid=817214,fd=3))        
+LISTEN 0      5                                   127.0.0.1:9876       0.0.0.0:*    users:(("python3",pid=1069504,fd=3))       
+LISTEN 0      4096                                        *:19902            *:*    users:(("mf",pid=1290272,fd=7))            
+LISTEN 0      4096                                        *:9877             *:*    users:(("mf",pid=1069869,fd=7))            
+=== daemon pids ===
+1069869 /home/kara/.hermes/cache/scratch/r8/mf --data-dir /home/kara/.hermes/cache/scratch/r8/data start
+1290272 /home/kara/.hermes/cache/scratch/r8/mf --data-dir /home/kara/.hermes/cache/scratch/r8/d4 --dashboard-addr 127.0.0.1:19902 start
+1301247 /usr/bin/bash -c source /mnt/ssd/tmp/hermes-snap-b86bc752a793.sh >/dev/null 2>&1 || true export AI_AGENT="${AI_AGENT:-hermes-agent}" HERMES_AGENT="${HERMES_AGENT:-true}" export GIT_PAGER="${GIT_PAGER:-cat}" PAGER="${PAGER:-cat}" builtin cd -- /home/kara/musterflow || exit 126 eval 'SB=/home/kara/.hermes/cache/scratch/r8; cd /home/kara/musterflow && { echo "=== listeners ==="; ss -ltnp 2>/dev/null | grep -E '\'':(9876|9877|19877|19902|19901|18099) '\'' ; echo "=== daemon pids ==="; pgrep -af '\''r8/mf .*start'\'' ; echo "=== CLI vs busy daemon (fallback port) ==="; /usr/bin/time -f "wall=%e rc=%x" $SB/mf --data-dir $SB/data list 2>&1 | tail -5; echo "=== board rows: lock/cache/parse ==="; jq -r '\''select(.title|test("lock|cache|re-?parse|spec.*(byte|store)|fallback|port";"i"))|"\(.id) \(.status) \(.title[0:90])"'\'' .coding-hermes/board/tasks.jsonl | tail -12; echo "=== PERF rows ==="; jq -r '\''select(.id|startswith("PERF"))|"\(.id) \(.status) \(.title[0:80])"'\'' .coding-hermes/board/tasks.jsonl; } > $SB/lock2.txt 2>&1; echo rc=$?  __hermes_rc=$? __hermes_ps=("${PIPESTATUS[@]}"); (exit $__hermes_rc) && :' __hermes_ec=$? umask 077 __hermes_snap_tmp=$(mktemp /mnt/ssd/tmp/hermes-snap-b86bc752a793.sh.tmp.XXXXXXXXXX) && { { ( unset ${!HERMES_SESSION_*} ${!HERMES_CRON_AUTO_DELIVER_*} AI_AGENT HERMES_AGENT HERMES_DELEGATED_CHILD_CONTEXT HERMES_CRON_SESSION ${!HERMES_RPC_*} HERMES_KERNEL_DIR HERMES_UI_SESSION_ID 2>/dev/null; export -p; ) || true; } > "$__hermes_snap_tmp" && mv -f "$__hermes_snap_tmp" /mnt/ssd/tmp/hermes-snap-b86bc752a793.sh; } 2>/dev/null || rm -f "$__hermes_snap_tmp" 2>/dev/null || true printf '\n__HERMES_PIPE_b86bc752a793__%s__HERMES_PIPE_b86bc752a793__\n' "${__hermes_ps[*]-}" printf '\n__HERMES_CWD_b86bc752a793__%s__HERMES_CWD_b86bc752a793__\n' "$(pwd -P)" exit $__hermes_ec
+=== CLI vs busy daemon (fallback port) ===
+Error: cannot read the API registry: /home/kara/.hermes/cache/scratch/r8/data/musterflow.db is locked by another musterflow process (PID 1069869, /home/kara/.hermes/cache/scratch/r8/mf).
+That process holds DuckDB's single-writer lock — normally the dashboard — so the CLI cannot see the connected APIs and will not report the registry as empty.
+Fix: run `musterflow config set port 9877` (config currently says 9876), or pass `--dashboard-addr 127.0.0.1:9877` to this command to route through the running dashboard.
+Command exited with non-zero status 1
+wall=0.04 rc=1
+=== board rows: lock/cache/parse ===
+DOC-14 pending P4 — config key `auth` (per-API credentials map, internal/config/config.go:19 Auth map[str
+DOC-16 complete P4 — MCP transport claim wrong in three places: README:156 says 'JSON-RPC over SSE', inter
+DOC-17 pending P4 — `musterflow auth login <id>` documented as a bare 'OAuth2 browser flow' (README:119,1
+DOC-20 pending P4 — README data-dir layout omits real artifacts and README:138 'Read-only CLI mode when t
+DOC-21 complete P4 — README Quick Start / hero example (L18) and landing page (landing/index.html:106,127)
+DOC-22 pending P4 — specs/dashboard.md:60 says registerRoutes() registers 'exactly 8 route patterns' and 
+DOC-23 complete P5 — README:117 hero/auth code block formatting: two commands are jammed on one line (`aut
+DOC-26 pending P4 (doc-severity ruling, was P3) — DOC-1: dashboard /api/export+/api/import routes missing
+MUSTERFLOW-OPS-001 complete musterflow dashboard server exports no metrics (ops census metrics P1)
+README-1-LIVE pending [verify] Live AC for README-1 — refresh a relative-server spec and run a generated command
+DF-045 complete P1 — CLI reports 'No APIs connected.' (rc=0) and 'unknown command "<api>"' when a dashboar
+CATALOG-003 complete Catalog pass 2: tolerance path unblocks the cosmetic-spec rejections
+=== PERF rows ===
+PERF-001 pending PERF-001 — A stalled upstream costs 90.4 s per CLI call and SIGINT does not inte

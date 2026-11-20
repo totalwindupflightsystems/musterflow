@@ -1,0 +1,4 @@
+1) `connect --tolerate` on the evidence spec (110-line defective 3.1.0 vendor spec) either loads the spec into a working command tree, or exits NON-ZERO naming the defect that blocks loading (file, JSON pointer, reason). It must never print "Try: musterflow <api> --help" for an API whose command list is empty.
+2) A regression test asserts: for every spec accepted with --tolerate, `mf <api> --help` lists at least one command and one real operation call succeeds against a stub server, or connect fails loudly.
+3) The tolerant validation pass and the command-tree loader share one code path, so a defect that blocks loading cannot be reported as repaired.
+4) The three defects in evidence/inventory.yaml (number used as schema description, null type, required-bool) produce one clear diagnosis each, naming the JSON pointer, and the number-as-description defect is repaired like the others.

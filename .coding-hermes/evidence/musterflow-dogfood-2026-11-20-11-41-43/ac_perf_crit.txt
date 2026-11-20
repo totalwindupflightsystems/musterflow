@@ -1,0 +1,5 @@
+1) `mf --data-dir <store> <api> items list-items` against the 4.3 MB spec reproduced by evidence/gen_big.py + clean.yaml runs at <=150 ms p50 over 10 hyperfine runs on this host (today: min 1266-1383 ms, median 1.55-3.16 s).
+2) For an API connected by URL, an HTTP access log on the spec URL records ZERO GETs while 3 sequential fresh-process operation calls run (today: exactly 1 GET added per call, on top of the connect fetch).
+3) Cost no longer scales with spec bytes: the 11.1 MB/1500-path arm (scale.sh) stays within 2x of the 4.3 MB arm, not ~2.6x as it does today.
+4) Cold `connect` of the 4.3 MB spec stays <=2.0 s, and a connected API still works after its source spec file is moved away (today: every call dies with "parse spec: ...").
+5) `go test ./...` green; CLI, MCP tools/list+tools/call and dashboard /api/apis still resolve connected APIs for local-file and URL specs.

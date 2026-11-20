@@ -1,0 +1,71 @@
+=== loadSpecData ===
+internal/cli/api.go:83:func loadSpecData(specURL string) ([]byte, error) {
+internal/cli/api.go-84-	if strings.HasPrefix(specURL, "http://") || strings.HasPrefix(specURL, "https://") {
+internal/cli/api.go-85-		resp, err := http.Get(specURL)
+internal/cli/api.go-86-		if err != nil {
+internal/cli/api.go-87-			return nil, err
+internal/cli/api.go-88-		}
+internal/cli/api.go-89-		defer func() { _ = resp.Body.Close() }()
+internal/cli/api.go-90-		return io.ReadAll(resp.Body)
+internal/cli/api.go-91-	}
+internal/cli/api.go-92-	return os.ReadFile(specURL)
+internal/cli/api.go-93-}
+internal/cli/api.go-94-
+internal/cli/api.go-95-// createAPISubcommand creates a cobra command that lazily loads subcommands
+internal/cli/api.go-96-// for the given API connection.
+internal/cli/api.go-97-func createAPISubcommand(conn *app.APIConnection) *cobra.Command {
+internal/cli/api.go-98-	cmd := &cobra.Command{
+internal/cli/api.go-99-		Use:   conn.Name,
+internal/cli/api.go-100-		Short: fmt.Sprintf("Commands for %s API", conn.Name),
+internal/cli/api.go-101-		Long:  conn.Description,
+internal/cli/api.go-102-		// Normal flag parsing (replaces the old DisableFlagParsing: true).
+internal/cli/api.go-103-		// Root persistent flags (--data-dir, --dashboard-addr, --output-file)
+internal/cli/api.go-104-		// and --help are inherited via cobra's persistent-flag mechanism and
+internal/cli/api.go-105-		// parsed correctly on the group.  Unknown flags cause a parse error
+internal/cli/api.go-106-		// (exit non-zero, DF-007 preserved).  Leaf-specific flags appear
+internal/cli/api.go-107-		// after the first positional arg (resource/op); SetInterspersed(false)
+internal/cli/api.go-108-		// makes pflag stop parsing at the first non-flag arg so leaf flags
+internal/cli/api.go-109-		// flow into RunE → Find → target re-execution intact (DF-001/DF-002
+internal/cli/api.go-110-		// preserved).  See DF-011.
+internal/cli/api.go-111-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+internal/cli/api.go-112-			return ensureAPILoaded(cmd, conn)
+internal/cli/api.go-113-		},
+=== fetchSpecData ===
+internal/mcp/tools.go:355:func fetchSpecData(specURL string) ([]byte, error) {
+internal/mcp/tools.go-356-	if strings.HasPrefix(specURL, "http://") || strings.HasPrefix(specURL, "https://") {
+internal/mcp/tools.go-357-		resp, err := http.Get(specURL)
+internal/mcp/tools.go-358-		if err != nil {
+internal/mcp/tools.go-359-			return nil, fmt.Errorf("http get: %w", err)
+internal/mcp/tools.go-360-		}
+internal/mcp/tools.go-361-		defer func() { _ = resp.Body.Close() }()
+internal/mcp/tools.go-362-		if resp.StatusCode != http.StatusOK {
+internal/mcp/tools.go-363-			return nil, fmt.Errorf("http status %d", resp.StatusCode)
+internal/mcp/tools.go-364-		}
+internal/mcp/tools.go-365-		return io.ReadAll(resp.Body)
+internal/mcp/tools.go-366-	}
+internal/mcp/tools.go-367-	return os.ReadFile(specURL)
+internal/mcp/tools.go-368-}
+internal/mcp/tools.go-369-
+internal/mcp/tools.go-370-// --- CommandRegistry interface stubs ---
+internal/mcp/tools.go-371-// ToolRegistry implements handlers.CommandRegistry so it can be passed to
+internal/mcp/tools.go-372-// handlers.NewListToolsHandler. The list handler first checks for the
+internal/mcp/tools.go-373-// ToolLister interface (which we implement via ListTools), so these
+internal/mcp/tools.go-374-// methods are only needed for compile-time interface satisfaction.
+internal/mcp/tools.go-375-
+internal/mcp/tools.go-376-// ListCommands returns commands derived from the tool definitions.
+internal/mcp/tools.go-377-func (tr *ToolRegistry) ListCommands() []handlers.Command {
+internal/mcp/tools.go-378-	tools := tr.ListTools()
+internal/mcp/tools.go-379-	commands := make([]handlers.Command, 0, len(tools))
+internal/mcp/tools.go-380-	for _, tool := range tools {
+=== who calls rebuild/Refresh ===
+internal/mcp/tools.go:98:func (tr *ToolRegistry) Refresh() error {
+=== spec storage on connect ===
+internal/app/connect.go:41:	SpecURL  string // file path or http(s) URL
+internal/app/connect.go:55:	data, err := fetchSpec(opts.SpecURL)
+internal/app/connect.go:89:		apiName = deriveName(opts.SpecURL, result.Document)
+internal/app/connect.go:96:	baseURL = NormalizeBaseURL(baseURL, opts.SpecURL)
+internal/app/connect.go:99:	id := generateID(opts.SpecURL)
+internal/app/connect.go:104:		SpecURL:       opts.SpecURL,
+internal/app/store.go:86:	`, conn.ID, conn.Name, conn.SpecURL, conn.BaseURL, conn.Version,
+internal/app/store.go:152:	err := scanner.Scan(&c.ID, &c.Name, &c.SpecURL, &c.BaseURL, &c.Version,
+internal/app/store.go:168:	err := rows.Scan(&c.ID, &c.Name, &c.SpecURL, &c.BaseURL, &c.Version,

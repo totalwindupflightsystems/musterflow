@@ -1,0 +1,161 @@
+=== api.go 180-262 ===
+	// API subcommands. Cobra's V2 bash completion (and built-in fish/zsh
+	// completion) calls the binary with __complete at completion time,
+	// which triggers this function to load and enumerate subcommands.
+	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if err := ensureAPILoaded(cmd, conn); err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+		var names []string
+		for _, sub := range cmd.Commands() {
+			names = append(names, sub.Name())
+		}
+		return names, cobra.ShellCompDirectiveNoFileComp
+	}
+	return cmd
+}
+
+// ensureAPILoaded lazily generates cobra commands for a connected API on first
+// access via sync.Once. Safe to call from multiple paths (PersistentPreRunE,
+// help func). Subsequent calls are no-ops.
+func ensureAPILoaded(cmd *cobra.Command, conn *app.APIConnection) error {
+	connID := conn.ID
+	apiCommandsMu.Lock()
+	state, exists := apiCommands[connID]
+	if !exists {
+		state = &apiCommandState{}
+		apiCommands[connID] = state
+	}
+	apiCommandsMu.Unlock()
+
+	state.once.Do(func() {
+		state.err = loadAPICommands(cmd, conn)
+	})
+	return state.err
+}
+
+func loadAPICommands(parent *cobra.Command, conn *app.APIConnection) error {
+	data, err := loadSpecData(conn.SpecURL)
+	if err != nil {
+		return fmt.Errorf("load spec: %w", err)
+	}
+
+	ctx := context.Background()
+	parser := openapi.NewParser()
+	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
+	if err != nil {
+		return fmt.Errorf("parse spec: %w", err)
+	}
+
+	// Clear per-operation server URLs so the generator falls back to
+	// g.config.BaseURL (which is the fully-resolved base URL from the
+	// connection, including scheme and host). Many specs have relative
+	// server URLs like "/api/v3" that can't be used directly.
+	doc := result.Document
+	if doc != nil {
+		doc.Servers = nil
+		if doc.Paths != nil {
+			for _, pathItem := range doc.Paths.Map() {
+				if pathItem != nil {
+					pathItem.Servers = nil
+					clearOperationServers(pathItem.Get)
+					clearOperationServers(pathItem.Post)
+					clearOperationServers(pathItem.Put)
+					clearOperationServers(pathItem.Patch)
+					clearOperationServers(pathItem.Delete)
+					clearOperationServers(pathItem.Head)
+					clearOperationServers(pathItem.Options)
+				}
+			}
+		}
+	}
+
+	genCfg := app.GenerateCommandConfig(conn)
+	gen, err := generator.NewGenerator(*genCfg)
+	if err != nil {
+		return fmt.Errorf("create generator: %w", err)
+	}
+
+	commands, err := gen.GenerateCommands(doc)
+	if err != nil {
+		return fmt.Errorf("generate commands: %w", err)
+	}
+
+	for _, cmd := range commands {
+=== mcp/tools.go 100-175 ===
+
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+
+	// Reset state for a fresh, non-additive derivation
+	tr.tools = tr.tools[:0]
+	tr.toolConfigs = make(map[string]musterMcp.ExecutionConfig)
+
+	if len(conns) == 0 {
+		return nil
+	}
+
+	// One slug per connection, assigned over the whole set (including APIs
+	// whose spec fails below) so a transient fetch failure cannot renumber
+	// another API's namespace.
+	slugs := assignAPISlugs(conns)
+
+	var allErrors []error
+	apis := make([]convertedAPI, 0, len(conns))
+
+	for i, conn := range conns {
+		// Fetch the OpenAPI spec
+		data, err := fetchSpecData(conn.SpecURL)
+		if err != nil {
+			allErrors = append(allErrors, fmt.Errorf("api %q: fetch spec: %w", conn.Name, err))
+			continue
+		}
+
+		// Parse the spec
+		parser := openapi.NewParser()
+		result, err := parser.Parse(context.Background(), data, openapi.DefaultParseOptions())
+		if err != nil {
+			allErrors = append(allErrors, fmt.Errorf("api %q: parse spec: %w", conn.Name, err))
+			continue
+		}
+
+		// Use the connection's BaseURL, falling back to spec's first server
+		baseURL := conn.BaseURL
+		if baseURL == "" && result.Document != nil && len(result.Document.Servers) > 0 {
+			baseURL = result.Document.Servers[0].URL
+		}
+
+		// Convert OpenAPI operations to MCP tools
+		converter := &musterMcp.Converter{BaseURL: baseURL}
+		openAPITools, configs, err := converter.ConvertToTools(result.Document)
+		if err != nil {
+			allErrors = append(allErrors, fmt.Errorf("api %q: convert to tools: %w", conn.Name, err))
+			continue
+		}
+
+		apis = append(apis, convertedAPI{
+			conn:    conn,
+			slug:    slugs[i],
+			tools:   openAPITools,
+			configs: configs,
+		})
+	}
+
+	// Only return error if ALL APIs failed
+	if len(apis) == 0 && len(allErrors) > 0 {
+		return fmt.Errorf("all APIs failed to load: %v", allErrors)
+	}
+
+	tr.publishTools(apis)
+	return nil
+}
+
+// publishTools fills tr.tools / tr.toolConfigs from the converted APIs.
+// Callers must hold tr.mu for writing.
+//
+// Publication order: every namespaced tool first (connection order, then
+// spec order), then the bare-name aliases of globally unique operations. The
+// alias pass runs last so it can see every namespaced name and refuse to
+// duplicate one.
+func (tr *ToolRegistry) publishTools(apis []convertedAPI) {
+	// How many APIs define each bare operation name.

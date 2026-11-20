@@ -1,0 +1,57 @@
+== loadavg before ==
+22.72 24.41 25.80 9/4232 1223487
+cores=16
+== connect help ==
+Connect an API from an OpenAPI spec URL or file path
+
+Usage:
+  musterflow connect <spec-url> [flags]
+
+Flags:
+      --auth string       Auth type: none, apikey, bearer, oauth2, mtls (default "none")
+  -u, --base-url string   Override base URL for the API
+  -h, --help              help for connect
+  -n, --name string       Human-readable name for the API
+      --tolerate          Repair cosmetic spec defects (bad examples, boolean required, array without items, dangling refs) and connect in a degraded state; off by default
+
+Global Flags:
+      --dashboard-addr string   Dashboard HTTP address (default: port from config)
+      --data-dir string         Data directory (default: ~/.musterflow)
+      --no-dashboard            Force local registry mode (skip dashboard detection)
+      --output-file string      Output file path (format auto-detected from extension)
+== cold connect: small (2.5K) ==
+  Base URL: http://127.0.0.1:18099
+
+Try: musterflow small-inv --help
+wall=0.06 user=0.01 sys=0.01 rc=0
+== cold connect: big (4.3M) ==
+  Base URL: http://127.0.0.1:18099
+
+Try: musterflow big-inv --help
+wall=1.38 user=1.40 sys=0.12 rc=0
+== store ==
+total 16K
+-rw-rw-r-- 1 kara kara  12K Nov 20 06:58 musterflow.db
+-rw-rw-r-- 1 kara kara 1.5K Nov 20 06:58 musterflow.db.wal
+== single run big ==
+rc=0
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  
+
+[90m06:58:48[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+== single run small ==
+rc=0
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  
+
+[90m06:58:48[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+== hyperfine A: big then small ==
+hfA_rc=0
+== hyperfine B: small then big (order swapped) ==
+hfB_rc=0
+== loadavg after ==
+34.64 27.96 26.96 8/4311 1249138

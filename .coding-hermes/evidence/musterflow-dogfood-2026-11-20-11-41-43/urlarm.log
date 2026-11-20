@@ -1,0 +1,24 @@
+== start static spec server :19901 ==
+spec_server_code=200 bytes=4423554
+== connect BY URL ==
+
+Try: musterflow bigurl --help
+connect_url wall=3.33 user=1.94 sys=0.19 rc=0
+Gets after connect: 2
+== 3 operation calls (each one a fresh process) ==
+qty  sku    tags      warehouse         
+qty  sku    tags      warehouse         
+qty  sku    tags      warehouse         
+call2 wall=2.07 user=1.75 sys=0.14 rc=0
+[90m07:01:51[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+call3 wall=1.72 user=1.64 sys=0.12 rc=0
+Gets after 3 calls: 5
+== dashboard on :19902 with this store ==
+{"apis":[{"id":"eb3feb39fc837ddb","name":"bigurl","spec_url":"http://127.0.0.1:19901/big.yaml","base_url":"http://127.0.0.1:18099","version":"9.9.9","description":"Hand-maintained inventory service spec (vendor published, defects included)","auth_type":"none","added_at":"2026-11-20T12:01:44.391258Z"
+== MCP tools/list x3 ==
+session=...
+tools_list_1 time=1.254636s bytes=709450
+tools_list_2 time=0.004447s bytes=709450
+tools_list_3 time=0.005397s bytes=709450
+tool_names_count=1208
+loadavg=45.35 32.41 28.58 23/4339 1290559

@@ -1,0 +1,11 @@
+wrote /home/kara/.hermes/cache/scratch/r8/big2.yaml paths= 1503
+bytes=11057154
+== cold connect 10MB ==
+Try: musterflow big2-inv --help
+wall=3.61 user=3.65 sys=0.35 rc=0
+== warm op, 5 runs ==
+  Time (mean ± σ):      3.423 s ±  0.183 s    [User: 3.618 s, System: 0.282 s]
+  Range (min … max):    3.223 s …  3.624 s    5 runs
+min=3222ms median=3333ms
+== loadavg ==
+27.17 27.07 26.72 20/4289 1270770

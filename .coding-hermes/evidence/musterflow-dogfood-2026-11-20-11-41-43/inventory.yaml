@@ -1,0 +1,109 @@
+openapi: 3.1.0
+info:
+  title: Warehouse Inventory API
+  version: 2.3.0
+  description: Hand-maintained inventory service spec (vendor published, defects included)
+servers:
+  - url: http://127.0.0.1:18099
+paths:
+  /items:
+    get:
+      operationId: listItems
+      summary: List warehouse items
+      responses:
+        '200':
+          description: 200
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+    post:
+      operationId: createItem
+      summary: Create an item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewItem'
+      responses:
+        '201':
+          description: 201
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+  /items/{sku}:
+    get:
+      operationId: getItem
+      summary: Fetch one item
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+  /stock-levels:
+    get:
+      operationId: stockLevels
+      summary: Current stock per warehouse
+      responses:
+        '200':
+          description: 200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockReport'
+components:
+  schemas:
+    Item:
+      type: object
+      required: true
+      properties:
+        sku:
+          type: string
+          example: 4711
+        qty:
+          type: integer
+          description: 12
+          example: "many"
+        tags:
+          type: array
+          description: free-form tags
+        warehouse:
+          $ref: '#/components/schemas/WarehouseRef'
+        discontinued:
+          type: "null"
+    WarehouseRef:
+      type: object
+      properties:
+        code:
+          type: string
+    StockReport:
+      type: object
+      required: [total, asOf]
+      properties:
+        total:
+          type: integer
+        asOf:
+          type: string
+      example:
+        total: 91
+    NewItem:
+      type: object
+      required: [sku]
+      properties:
+        sku:
+          type: string
+        qty:
+          type: integer
+          default: "one"

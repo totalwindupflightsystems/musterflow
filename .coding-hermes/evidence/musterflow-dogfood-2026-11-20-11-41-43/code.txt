@@ -1,0 +1,11 @@
+=== loadAPISubcommands ===
+=== parse sites ===
+internal/workflow/engine.go:174:	ast, err := interp.Parse(string(source), name+".star")
+internal/cli/api.go:222:	parser := openapi.NewParser()
+internal/cli/api.go:223:	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
+internal/app/refresh.go:27:	parser := openapi.NewParser()
+internal/app/refresh.go:28:	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
+internal/app/connect.go:77:	parser := openapi.NewParser()
+internal/app/connect.go:78:	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
+internal/mcp/tools.go:129:		parser := openapi.NewParser()
+internal/mcp/tools.go:130:		result, err := parser.Parse(context.Background(), data, openapi.DefaultParseOptions())

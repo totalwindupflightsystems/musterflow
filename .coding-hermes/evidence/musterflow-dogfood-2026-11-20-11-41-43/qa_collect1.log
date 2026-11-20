@@ -1,0 +1,4 @@
+COLLECT-ADOPT reason=recent tick-death-orphan agent=064c9f1f new_tick_pid=1511756
+→ synced 5 evidence row(s) from agent=064c9f1f (battery still running)
+→ battery still running on agent=064c9f1f (bunker-mvp) — agent left intact
+RUNNING agent=064c9f1f evidence=/tmp/bunker-qa-evidence-20261120T120823Z-1478554.jsonl

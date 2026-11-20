@@ -1,0 +1,8 @@
+QA-HEAD=8508c2cc48be0be3ba448ee2d9eca6e5da75afaa pull=clone dirty — pull skipped, testing recorded sha
+→ QA HEAD: 8508c2cc48be0be3ba448ee2d9eca6e5da75afaa (clone dirty — pull skipped, testing recorded sha)
+→ QA LAUNCH project: musterflow — detached battery on bunker-mvp (ttl 4h)
+→ agent=064c9f1f @ bunker-mvp (tailscale)
+→ CELL fresh-install: sync repo → ~/qa-musterflow
+→ QA launch complete — no cells waited on locally (phase B: collect --evidence /tmp/bunker-qa-evidence-20261120T120823Z-1478554.jsonl)
+Total time: ? | Passed: 1 | Failed: 0 | Audited: 1 | Findings: 0 | NotVerified: 0
+LAUNCHED agent=064c9f1f evidence=/tmp/bunker-qa-evidence-20261120T120823Z-1478554.jsonl

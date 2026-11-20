@@ -1,0 +1,4 @@
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  

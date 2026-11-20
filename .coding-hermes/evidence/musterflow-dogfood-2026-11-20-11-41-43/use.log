@@ -1,0 +1,66 @@
+== A. connect --tolerate on the defective vendor spec ==
+  null-type                ×1  (#/components/schemas/Item/properties/discontinued/type)
+  required-bool            ×1  (#/components/schemas/Item/required)
+
+Try: musterflow vendor --help
+tolerate_rc=0
+-- help surface --
+Usage:
+  musterflow vendor [flags]
+
+Flags:
+  -h, --help   help for vendor
+
+Global Flags:
+      --dashboard-addr string   Dashboard HTTP address (default: port from config)
+      --data-dir string         Data directory (default: ~/.musterflow)
+      --no-dashboard            Force local registry mode (skip dashboard detection)
+      --output-file string      Output file path (format auto-detected from extension)
+-- list-items --
+Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal number into field Schema.description of type string
+list_rc=0
+-- get-item A-100 --
+Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal number into field Schema.description of type string
+get_rc=0
+-- stock-levels --
+Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal number into field Schema.description of type string
+stock_rc=0
+
+== B. refresh: does a spec change reach the CLI? ==
+
+Try: musterflow live --help
+before: warehouse op present? -> 0
+addpath: /warehouse appended
+✓ Refreshed live
+  Version: 2.3.0 → 2.3.0
+  Endpoints: 4 → 5
+refresh_rc=0
+after: warehouse op present? -> 1
+-- call the new op --
+Usage:
+  musterflow live warehouse [command]
+
+Available Commands:
+  get-warehouse Warehouse info (added AFTER connect)
+newop_rc=0
+
+== C. output-file formats ==
+[90m07:11:35[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+csv_rc=0
+qty,sku,tags,warehouse
+41,A-100,"[""fast""]","{""code"":""MAD-1""}"
+7,B-200,[],"{""code"":""BCN-2""}"
+[90m07:11:35[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+json_rc=0
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  
+
+[90m07:11:35[0m [32mINF[0m [1mHTTP response received[0m [36mstatus=[0m"200 OK" [36mstatus_code=[0m200
+txt_rc=0
+qty  sku    tags      warehouse         
+41   A-100  ["fast"]  {"code":"MAD-1"}  
+7    B-200  []        {"code":"BCN-2"}  
+0    C-300  ["cold"]  {"code":"MAD-1"}  
+loadavg=13.93 22.57 25.95 11/4134 1569857

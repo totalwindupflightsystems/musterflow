@@ -1,0 +1,11 @@
+=== status ===
+── bunker-las-01 ──
+  URL:      http://100.78.165.52:19090
+  Status:   OFFLINE
+  Error:    server info: deadline_exceeded: Post "http://100.78.165.52:19090/bunker.v1.Bunkerd/ServerInfo": dial tcp 100.78.165.52:19090: i/o timeout
+=== metrics ===
+bunker: reading server "bunker-las-01"
+bunker: server metrics: deadline_exceeded: context deadline exceeded
+=== list ===
+bunker: reading server "bunker-las-01"
+bunker: server "bunker-las-01" is offline: cannot reach http://100.78.165.52:19090 within the 3s connect bound (tailnet: offline, last seen 11d ago): deadline_exceeded: Post "http://100.78.165.52:19090/bunker.v1.Bunkerd/ListAgents": dial tcp 100.78.165.52:19090: i/o timeout (a reachable server still gets the full 30s request deadline)

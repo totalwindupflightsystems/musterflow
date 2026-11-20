@@ -1,0 +1,13 @@
+=== log -5 ===
+d1a665e (HEAD -> master) e2e(musterflow): full battery 28/28 at tick 233 window opener — merged tree 8508c2c, artifact committed (GAP-017 window evidence)
+8508c2c (origin/master, origin/HEAD) merge: DOC-2 dashboard write-routing semantics (wt/DOC-2 @ 2f4ccf9)
+b0d2143 board(musterflow): tick 233 reconciliation — premise-dead rows deferred on live evidence, README-1-LIVE closed with RED-GREEN proof, wave manifest filed
+2f4ccf9 docs: replace stale read-only CLI claim with dashboard write-routing semantics. Addresses DOC-2.
+9ada37b (wt/CATALOG-004) board(musterflow): re-point PERF-001 deferral with review date 2026-12-01
+=== status ===
+=== branch/ahead ===
+master
+1	0
+=== who committed ===
+d1a665e totalwindupflightsystems <totalwindupflightsystems@gmail.com> 10 seconds ago e2e(musterflow): full battery 28/28 at tick 233 window opener — merged tree 8508c2c, artifact committed (GAP-017 window evidence)
+8508c2c totalwindupflightsystems <totalwindupflightsystems@gmail.com> 5 minutes ago merge: DOC-2 dashboard write-routing semantics (wt/DOC-2 @ 2f4ccf9)

@@ -1,0 +1,10 @@
+=== evidence rows ===
+{"cell":"repo-head","status":"OK","detail":"tested HEAD=8508c2cc48be0be3ba448ee2d9eca6e5da75afaa at launch=2026-11-20T12:08:54Z (pull=clone dirty — pull skipped, testing recorded sha)"}
+{"cell":"launch","status":"OK","detail":"agent=064c9f1f server=bunker-mvp ttl=4h cpu=4.0 memory=default script_bytes=154121 — battery started detached (qa-run.sh); phase B: bunker-qa.sh collect --evidence /tmp/bunker-qa-evidence-20261120T120823Z-1478554.jsonl"}
+{"cell":"repo-head","status":"OK","detail":"tested HEAD=8508c2cc48be0be3ba448ee2d9eca6e5da75afaa (pull: clone dirty — pull skipped, testing recorded sha)"}
+{"cell":"toolchain-bootstrap","status":"OK","detail":"go 1.27.4 installed (discovered; ~/tools/go; floor=1.26.11 ambient=1.22.2 installed=1.27.4)"}
+{"cell":"toolchain-bootstrap","status":"OK","detail":"system gcc/g++ toolchain (~/tools/bin wrappers -> gcc/g++) — preferred over zig-cc for C++ cgo deps (MCP-008)"}
+{"cell":"toolchain-bootstrap","status":"OK","detail":"make available (preinstalled) — GNU Make 4.3"}
+{"cell":"toolchain-bootstrap","status":"OK","detail":"jq installed (static jq-linux64 -> jq-1.8.2 at /home/bunker-064c9f1f/tools/bin/jq)"}
+=== repo HEAD now ===
+d1a665e5105e133fd7b5a39fd6a17d53ec7be88c

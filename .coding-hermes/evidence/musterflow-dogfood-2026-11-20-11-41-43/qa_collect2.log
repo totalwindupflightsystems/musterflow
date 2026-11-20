@@ -1,0 +1,2 @@
+COLLECT-ADOPT reason=recent tick-death-orphan agent=064c9f1f new_tick_pid=1820130
+AGENT-GONE agent=064c9f1f rows=5 ts=2026-11-20T12:09:46Z evidence=/tmp/bunker-qa-evidence-20261120T120823Z-1478554.jsonl
