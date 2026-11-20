@@ -1,0 +1,25 @@
+{
+  "wave_id": "musterflow-foreman-2026-11-20-16-08-00",
+  "scheduler_tick_id": "musterflow-foreman-2026-11-20-16-08-00",
+  "composed_at": "2026-11-20T16:15:00-05:00",
+  "workdir": "/home/kara/musterflow",
+  "wave_budget": 8,
+  "wave_size": 6,
+  "worker_model": "openai/gpt-6.1-terra",
+  "worker_provider": "xkiro",
+  "base_sha_recorded_at_compose": "65620e324bfc43b7a3764ddd747402eccbd8b951",
+  "workers": [
+    {"task_ids": ["DOC-17", "DOC-20", "DOC-27", "DF-MUSTERFLOW-5-R5"], "batch": "docs", "seam": "README.md + docs/integration-guide.md", "branch": "wt/DOC-17"},
+    {"task_ids": ["CATALOG-002"], "batch": null, "seam": "catalog/staging/pass2/ + evidence", "branch": "wt/CATALOG-002"},
+    {"task_ids": ["DF-038", "DF-049"], "batch": "output", "seam": "output rendering (--output-file detection, table truncation)", "branch": "wt/DF-038"},
+    {"task_ids": ["DF-048", "PERF-002"], "batch": "spec-handling", "seam": "spec load/tolerate path", "branch": "wt/DF-048"},
+    {"task_ids": ["CONSENSUS-INT-002"], "batch": null, "seam": "internal/workflow + integration", "branch": "wt/CONSENSUS-INT-002"},
+    {"task_ids": ["SUP-DEPS-20261004"], "batch": null, "seam": "go.mod/go.sum", "branch": "wt/SUP-DEPS-20261004"}
+  ],
+  "not_dispatched": [
+    {"task_id": "DF-050", "reason": "routes to bunker-qa lane (clean-machine install battery leg; QA-harness defect class, support-agent routing)"},
+    {"task_id": "REVIEW-MUSTERFLOW-20261111", "reason": "AC3/AC4 depend on CONSENSUS-INT-002 outcome — not independent this tick"}
+  ],
+  "plan_review": {"card": "t_c54add61", "posted": "2026-11-20T16:12:00-05:00", "status": "plan-unreviewed (request-review judge requires goal acceptance evidence; no plan co-sign channel — executing as drafted per foreman skill Step 0.5 'never stall')"},
+  "prior_tick_completion": {"commits_pushed": ["b2adcdb", "bb0834c", "65620e3"], "note": "finished crashed 11:41 tick closeout before wave: committed board residue (CATALOG-004 complete + event 520), pushed to origin/master, gates re-verified green"}
+}
