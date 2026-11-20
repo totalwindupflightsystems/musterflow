@@ -218,11 +218,24 @@ func loadAPICommands(parent *cobra.Command, conn *app.APIConnection) error {
 		return fmt.Errorf("load spec: %w", err)
 	}
 
+	// Parse under the connection's tolerance opt-in, exactly as connect and
+	// refresh do. Without this, a connection made with --tolerate would
+	// connect and refresh, then fail to build its own CLI commands — the
+	// flag's effect has to hold at every parse of the same document.
+	fixed, tolerated, _, err := app.ApplyTolerance(data, conn.Tolerate)
+	if err != nil {
+		return err
+	}
+	data = fixed
+
 	ctx := context.Background()
 	parser := openapi.NewParser()
 	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
 	if err != nil {
 		return fmt.Errorf("parse spec: %w", err)
+	}
+	if len(tolerated) > 0 {
+		fmt.Fprintf(os.Stderr, "⚠ %s: %d cosmetic spec defect(s) tolerated while generating commands\n", conn.Name, len(tolerated))
 	}
 
 	// Clear per-operation server URLs so the generator falls back to

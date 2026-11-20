@@ -125,12 +125,25 @@ func (tr *ToolRegistry) Refresh() error {
 			continue
 		}
 
-		// Parse the spec
+		// Parse the spec under this connection's tolerance opt-in, the same
+		// path connect/refresh/CLI-command generation use. A tolerated
+		// connection whose spec fails a strict parse would otherwise vanish
+		// from tools/list while its CLI commands still worked.
+		fixed, tolerated, _, fixErr := app.ApplyTolerance(data, conn.Tolerate)
+		if fixErr != nil {
+			allErrors = append(allErrors, fmt.Errorf("api %q: %w", conn.Name, fixErr))
+			continue
+		}
+		data = fixed
+
 		parser := openapi.NewParser()
 		result, err := parser.Parse(context.Background(), data, openapi.DefaultParseOptions())
 		if err != nil {
 			allErrors = append(allErrors, fmt.Errorf("api %q: parse spec: %w", conn.Name, err))
 			continue
+		}
+		if len(tolerated) > 0 {
+			fmt.Fprintf(os.Stderr, "⚠ %s: %d cosmetic spec defect(s) tolerated while loading MCP tools\n", conn.Name, len(tolerated))
 		}
 
 		// Use the connection's BaseURL, falling back to spec's first server

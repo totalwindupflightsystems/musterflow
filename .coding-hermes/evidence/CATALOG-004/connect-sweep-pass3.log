@@ -1,0 +1,173 @@
+CATALOG-004 — catalog pass 3 sweep (tolerance path)
+========================================================================
+
+Board rows: CATALOG-003 (tolerance path introduced, commit f227cff),
+            CATALOG-004 (this pass: tolerance wired through the other three
+            parse sites + the remaining public-spec defect classes).
+
+Harness: /tmp/mf-cat004-bin (go build ./cmd/musterflow at the CATALOG-004 HEAD),
+one scratch --data-dir per spec per arm, --no-dashboard so the direct
+connect path runs (the dashboard route has no tolerance knob).
+  strict   : connect <spec>
+  tolerant : connect <spec> --tolerate
+Local copies of the eight documents: /tmp/mf-cat003-specs/ (pass-2 fetch).
+
+Outcome
+------------------------------------------------------------------------
+spec          strict rc  tolerant rc  tolerated defects
+algolia       1          1            -
+digitalocean  1          0            918
+docker        1          0            20
+gitlab        1          0            194
+pagerduty     1          0            103
+spotify       1          0            33
+square        1          0            62
+weaviate      1          0            13
+
+strict:   8/8 rejected (unchanged — strict stays the default)
+tolerant: 1/8 rejected (pass 2: 5/8 rejected). Four of the five pass-2
+          failures (docker, gitlab, pagerduty, weaviate) now load; algolia
+          remains blocked for the document-level reason recorded below.
+
+Per-spec detail
+------------------------------------------------------------------------
+
+### algolia
+source: https://raw.githubusercontent.com/algolia/api-clients-automation/main/specs/search/spec.yml
+strict rc=1  error: Error: parse spec: encountered disallowed external reference: "paths/objects/common/schemas.yml#/attributeToUpdate"
+tolerant rc=1  error: Error: parse spec (tolerance applied, 63 cosmetic defect(s) repaired, document still rejected): encountered disallowed external reference: "paths/objects/common/schemas.yml#/attributeToUpdate"
+
+### digitalocean
+source: https://raw.githubusercontent.com/digitalocean/openapi/main/specification/DigitalOcean-public.v2.yaml
+strict rc=1  error: Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal object into field Tag.description of type string
+tolerant rc=0  error: (none)
+tolerated defects: 918
+
+### docker
+source: https://raw.githubusercontent.com/moby/moby/master/api/swagger.yaml
+strict rc=1  error: Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "ClusterInfo": invalid example: value must be a string
+tolerant rc=0  error: (none)
+tolerated defects: 20
+
+### gitlab
+source: https://gitlab.com/gitlab-org/gitlab/-/raw/master/doc/api/openapi/openapi_v2.yaml
+strict rc=1  error: Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "API_Entities_Application": when schema type is 'array', schema 'items' must be non-null
+tolerant rc=0  error: (none)
+tolerated defects: 194
+
+### pagerduty
+source: https://raw.githubusercontent.com/PagerDuty/api-schema/main/reference/REST/openapiv3.json
+strict rc=1  error: Error: parse spec: bad data in "#/components/requestBodies/OrchestrationCacheVariableDataPutResponse" (expecting ref to response object)
+tolerant rc=0  error: (none)
+tolerated defects: 103
+
+### spotify
+source: https://raw.githubusercontent.com/sonallux/spotify-web-api/main/official-spotify-open-api.yml
+strict rc=1  error: Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal bool into field Schema.required of type []string
+tolerant rc=0  error: (none)
+tolerated defects: 33
+
+### square
+source: https://raw.githubusercontent.com/square/connect-api-specification/master/api.json
+strict rc=1  error: Error: parse spec: failed to resolve "AppFeeAllocation" in fragment in URI: "#/components/schemas/AppFeeAllocation": map key "AppFeeAllocation" not found
+tolerant rc=0  error: (none)
+tolerated defects: 62
+
+### weaviate
+source: https://raw.githubusercontent.com/weaviate/weaviate/main/openapi-specs/schema.json
+strict rc=1  error: Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "AggregateRequest": invalid example: value must be an array
+tolerant rc=0  error: (none)
+tolerated defects: 13
+
+Rules added in pass 3 (all metadata-only; internal/specfix)
+------------------------------------------------------------------------
+  null-type-in-array       Swagger 2.0 `type: [...]` containing "null" (3.1 spelling)
+                           rewritten to the single real type + x-nullable, so the
+                           2.0->3.0 conversion no longer copies an illegal 3.0 type
+                           name. (weaviate)
+  example-null-value       a null in an example where the owning schema declares a
+                           concrete type and no nullability; a null on a REQUIRED
+                           property drops the whole example (dropping the entry would
+                           leave the required property absent). (docker)
+  example-type-mismatch    generalised: the example is validated against its own
+                           schema (references inlined) through kin-openapi; an
+                           example the schema rejects is dropped. Covers out-of-enum,
+                           out-of-format-range and string-vs-array element classes.
+                           (docker, gitlab)
+  example-missing-required array-level examples validated element-by-element against
+                           the items schema (was object-level only). (gitlab)
+  unknown-type             a `type` outside the Swagger 2.0 set ("text" from a
+                           database/DTO leak) drops the type keyword and keeps every
+                           other constraint; no type is invented. (gitlab)
+  invalid-component-name   components/*/definitions names outside [a-zA-Z0-9._-]
+                           (path-derived names) renamed and every $ref repointed.
+                           (gitlab)
+  wrong-bucket-ref         a response position referencing components/requestBodies
+                           gets the referenced object copied into components/responses
+                           under the same name (content byte-identical) and the
+                           reference repointed. (pagerduty)
+  default-type-mismatch    a schema-level or Swagger 2.0 parameter-level default the
+                           schema rejects is dropped. (gitlab)
+  non-schema scopes        security schemes (securityDefinitions /
+                           components/securitySchemes), non-schema component buckets
+                           and specification extensions (x-go-type) are never treated
+                           as schemas — a regression guard found in this pass
+                           (weaviate's security scheme lost its `type` before it).
+
+algolia — why it stays rejected under tolerance
+------------------------------------------------------------------------
+The published entrypoint is not self-contained: its paths, schemas and
+security schemes all live in sibling files (63 external $refs, e.g.
+"paths/objects/common/schemas.yml#/attributeToUpdate"). The engine rejects any
+external reference (openapi.DefaultParseOptions disallows them), and the
+tolerance path must never fetch or invent target content:
+  - fetching is out of scope (the opt-in repairs the document it was given),
+  - dropping the referencing path/operation entries would delete API surface
+    the author declared, which the metadata-only law forbids,
+  - replacing them with empty path items would fabricate an API with zero
+    endpoints.
+So algolia is recorded as DOCUMENT-BLOCKED, not engine-blocked: the defect is
+outside the document (it has no local content to repair), and specfix records
+every external reference as an external-ref warning rather than rewriting it.
+Loading it needs the multi-file bundle to be resolved by the caller first.
+
+Live proof — refresh of a tolerated connection (acceptance criterion 1)
+------------------------------------------------------------------------
+### connect with --tolerate
+✓ Connected: docker-engine-api
+  ID: da29d99bd38f17fb
+  Version: 1.57
+  Endpoints: 108
+  Base URL: 
+
+⚠ tolerated 20 cosmetic spec defect(s) — connected in a degraded state:
+  example-null-value       ×2  (#/definitions/PortMap/example/2377~1tcp, #/definitions/Plugin/properties/Config/properties/Env/example/0/Settable)
+  example-type-mismatch    ×17  (#/definitions/ClusterInfo/properties/DefaultAddrPool/items/example, #/definitions/EndpointSettings/properties/GwPriority/example, #/definitions/SystemInfo/properties/DefaultAddressPools/items/properties/Size/example)
+  non-string-text          ×1  (#/paths/~1images~1search/get/responses/200/schema/items/properties/description)
+
+Try: musterflow docker-engine-api --help
+rc=0
+
+### refresh the tolerated connection (no flags)
+✓ Refreshed docker-engine-api
+  Version: 1.57 → 1.57
+  Endpoints: 108 → 108
+
+⚠ tolerated 20 cosmetic spec defect(s) — refreshed in a degraded state:
+  example-null-value       ×2  (#/definitions/PortMap/example/2377~1tcp, #/definitions/Plugin/properties/Config/properties/Env/example/0/Settable)
+  example-type-mismatch    ×17  (#/definitions/ContainerBlkioStats/example, #/definitions/SystemInfo/properties/DefaultAddressPools/items/properties/Size/example, #/definitions/ClusterInfo/properties/DefaultAddrPool/items/example)
+  non-string-text          ×1  (#/paths/~1images~1search/get/responses/200/schema/items/properties/description)
+rc=0
+
+### refresh --strict (opt-in turned off for one run)
+Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "ClusterInfo": invalid example: value must be a string
+Schema:
+  {
+rc=1
+
+Reading of the live proof: connect --tolerate loads docker with 20 tolerated
+defects; `refresh` with no flags succeeds against the same document and reports
+the same 20-defect summary (the opt-in is persisted on the connection, so no
+flag is needed); `refresh --strict` fails, which proves the repair pass is what
+makes the parse succeed rather than the document becoming parseable by itself.
+

@@ -23,6 +23,13 @@ type APIConnection struct {
 	AddedAt       time.Time `json:"added_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	EndpointCount int       `json:"endpoint_count"`
+
+	// Tolerate records the opt-in this API was connected with: every later
+	// parse of its spec (refresh, generated commands, MCP tools) runs the same
+	// cosmetic-defect repair pass instead of failing on a document a strict
+	// parse rejects. Persisted so the opt-in survives across processes; false
+	// means strict, which is the default.
+	Tolerate bool `json:"tolerate,omitempty"`
 }
 
 // Registry stores connected APIs and manages persistence.

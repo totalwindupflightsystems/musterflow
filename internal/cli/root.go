@@ -193,7 +193,7 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 			fmt.Printf("  Version: %s\n", result.SpecVersion)
 			fmt.Printf("  Endpoints: %d\n", result.EndpointCount)
 			fmt.Printf("  Base URL: %s\n", result.Connection.BaseURL)
-			printToleratedDefects(result.Tolerated)
+			printToleratedDefects(result.Tolerated, "connected")
 			fmt.Printf("\nTry: musterflow %s --help\n", result.Connection.Name)
 
 			return nil
@@ -209,11 +209,11 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 	return cmd
 }
 
-// printToleratedDefects reports what a tolerant connect repaired or recorded so
-// a degraded connection is never silent. Codes are aggregated with counts and a
+// printToleratedDefects reports what a tolerant parse repaired or recorded so a
+// degraded connection is never silent. Codes are aggregated with counts and a
 // handful of representative paths, so a spec with hundreds of defects still
-// produces bounded output.
-func printToleratedDefects(warnings []app.ToleratedDefect) {
+// produces bounded output. verb names the operation that ran the repair pass.
+func printToleratedDefects(warnings []app.ToleratedDefect, verb string) {
 	if len(warnings) == 0 {
 		return
 	}
@@ -231,7 +231,7 @@ func printToleratedDefects(warnings []app.ToleratedDefect) {
 	}
 	sort.Strings(order)
 
-	fmt.Printf("\n⚠ tolerated %d cosmetic spec defect(s) — this API is connected in a degraded state:\n", len(warnings))
+	fmt.Printf("\n⚠ tolerated %d cosmetic spec defect(s) — %s in a degraded state:\n", len(warnings), verb)
 	for _, code := range order {
 		fmt.Printf("  %-24s ×%d  (%s)\n", code, counts[code], strings.Join(paths[code], ", "))
 	}

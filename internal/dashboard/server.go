@@ -257,6 +257,8 @@ func (s *Server) handleRefreshAPI(w http.ResponseWriter, r *http.Request, apiID 
 		"version_changed": result.VersionChanged,
 		"old_endpoints":   result.OldEndpoints,
 		"new_endpoints":   result.NewEndpoints,
+		"tolerated":       result.Tolerated,
+		"repaired":        result.Repaired,
 	})
 }
 
