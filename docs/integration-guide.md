@@ -98,11 +98,34 @@ When the dashboard is running on the configured port, CLI commands route through
 | `musterflow catalog pull <id>` | Install a community API |
 | `musterflow auth add <id>` | Add credentials (apikey, bearer, oauth2, mtls) |
 | `musterflow auth list` | List configured credentials (keys masked) |
-| `musterflow auth login <id>` | OAuth2 browser flow |
+| `musterflow auth login <id>` | OAuth2 browser flow (requires `--client-id`, `--client-secret`, `--auth-url`, `--token-url`) |
 | `musterflow config show` | Print active configuration |
 | `musterflow transform list` | List `.wasm` transforms installed in `~/.musterflow/transforms/` |
 | `musterflow transform install <entry>` | Install a transform from the catalog — placeholder, errors today (see WASM Transforms below) |
 | `musterflow export` / `import` | JSONL export/import of the API registry |
+
+### OAuth2 Login (`auth login`)
+
+`auth login` runs the OAuth2 authorization-code flow (no PKCE) and stores the resulting access token as that API's credential. **All four of the following flags are required**: omit any one and the command fails with `Error: --client-id is required for OAuth2 login` (or the matching flag name) before a browser is opened.
+
+```bash
+musterflow auth login slack \
+  --client-id <id> \
+  --client-secret <secret> \
+  --auth-url https://slack.com/oauth/v2/authorize \
+  --token-url https://slack.com/api/oauth.v2.access
+```
+
+| Flag | Required | Default | Meaning |
+|------|----------|---------|---------|
+| `--client-id` | yes | — | OAuth2 client ID |
+| `--client-secret` | yes | — | OAuth2 client secret |
+| `--auth-url` | yes | — | Authorization endpoint the browser is sent to |
+| `--token-url` | yes | — | Token endpoint the authorization code is exchanged at |
+| `--scopes` | no | none | Comma-separated scopes |
+| `--redirect-port` | no | `19876` | Port for the local callback server |
+
+The command prints the auth URL, opens the browser (printing the URL for manual use if it cannot launch one), waits for the callback on the redirect port, exchanges the code, and stores the credential as `type=oauth2` in the config `auth:` map keyed by the API id (see [Ports & Configuration](#ports--configuration)). The raw token is additionally cached at `~/.musterflow/tokens/<client-id>.yaml` (mode `0600`; the cache is always written under the default `~/.musterflow`, even when `--data-dir` points elsewhere).
 
 ### Raw Request Bodies (`--body`)
 
@@ -668,10 +691,12 @@ Open `http://localhost:9876` in a browser to see the dark-themed dashboard: conn
 
 ```yaml
 port: 9876
-data_dir: ~/.musterflow/
+data_dir: /home/<user>/.musterflow
 default_format: table
 auto_completion: true
 ```
+
+`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path.
 
 **Data directory** (`~/.musterflow/` by default, overridable with `--data-dir`):
 
@@ -679,9 +704,14 @@ auto_completion: true
 ~/.musterflow/
 ├── config.yaml            # User configuration — also holds API credentials (see below)
 ├── musterflow.db          # DuckDB registry (API connections)
-├── flows/                 # Starlark workflow scripts
-└── transforms/            # WASM transforms (.wasm files, created by `transform list`)
+├── flows/                 # Starlark workflow scripts + <name>.star.json metadata sidecars
+├── transforms/            # WASM transforms (.wasm files, created by `transform list`)
+└── tokens/                # OAuth2 token cache from `auth login` (<client-id>.yaml, mode 0600)
 ```
+
+`flows/<name>.star` is the Starlark source; the `<name>.star.json` sidecar beside it carries the flow's `description` and `webhook` flag (`internal/workflow/engine.go` `writeMeta`), which `flow list` reads back. A missing sidecar is not an error — the flow reads as description-less and non-webhook, which covers flows created before sidecars existed. `transforms/` and `tokens/` resolve under the default `~/.musterflow` even when `--data-dir` points elsewhere.
+
+**CLI writes route through the dashboard.** When a dashboard answers on the configured port the CLI does not open `musterflow.db` at all — it goes over the dashboard's HTTP API, so reads and writes coexist with the running server (see [Operational Pitfalls](#operational-pitfalls) for the lock error this avoids and the two sanctioned ways forward).
 
 There is no separate credentials file: per-API credentials live in `config.yaml` under a top-level `auth:` map, keyed by API id:
 
@@ -692,7 +722,9 @@ auth:
     key: <secret>       # API key or bearer token
 ```
 
-Because that file carries plaintext keys and tokens, it is written with mode `0600`. `musterflow auth list` prints the configured entries with the secret masked: keys longer than 8 characters show only their first and last four characters (`<api-id>: type=apikey key=ghp_…3456`), and keys of 8 characters or fewer print as `key=****`. `musterflow auth get <api-id>` prints the raw value.
+Because that file carries plaintext keys and tokens, it is written with mode `0600`. The `auth:` map is file-only — `config set` rejects it (`unknown config key: auth (valid: port, default_format, auto_completion, data_dir)`), so entries are managed with `auth add`, `auth login` and `auth remove`.
+
+Both display surfaces mask the secret. `musterflow auth list` prints the configured entries with the secret masked: keys longer than 8 characters show only their first and last four characters (`<api-id>: type=apikey key=ghp_…3456`), a key of 8 characters or fewer prints `****`, and an empty key prints `(not set)`. `musterflow config show` prints the same entries under an `Auth:` heading as first four + `****` + last four (`****` alone for short or empty keys). `musterflow auth get <api-id>` prints the raw value.
 
 **Port auto-discovery:** if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing the port it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :<port>` or the `port` config key.
 

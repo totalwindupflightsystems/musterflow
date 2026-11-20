@@ -76,6 +76,15 @@ $ musterflow <api-name> <resource> <operation> --flag1 value --flag2 value
 
 Output formats: **table** (default), **JSON**, **YAML**, **CSV**, **JSONL**, and **Parquet**.
 
+POST/PUT/PATCH operations that take a JSON body also accept `-b/--body <json>` as an alternative to the per-property flags. The value is sent **verbatim as the entire request body**: when `--body` is set the per-property flags are ignored (nothing is merged in, and required properties are not checked client-side), and a value that is not valid JSON fails before any request is sent (`Error: invalid JSON for --body`, exit 1).
+
+```bash
+# The raw body replaces the whole payload — --title is ignored here
+musterflow swagger-petstore-openapi-3-0 pet add-pet --title ignored -b '{"name":"body wins"}'
+```
+
+Details: [Raw Request Bodies (`--body`)](docs/integration-guide.md#raw-request-bodies---body).
+
 ### 🤖 MCP Server — AI Agent Integration
 
 Every connected API is registered as an MCP tool served over HTTP. AI agents discover and call them via JSON-RPC:
@@ -225,7 +234,39 @@ auto_completion: true
 
 `data_dir` is stored as the **resolved absolute path** (no trailing slash): the first-run default is written that way. A `~` you set yourself is NOT expanded — `config set data_dir '~/.musterflow'` stores the literal `~`, and the app then creates a `~` directory relative to the current working directory. Always pass an absolute path. Scripts should read the resolved value.
 
+The data directory holds everything MusterFlow writes:
+
+```
+~/.musterflow/
+├── config.yaml            # User config — also holds per-API credentials (auth: map)
+├── musterflow.db          # DuckDB registry (API connections)
+├── flows/                 # Starlark flows: <name>.star + <name>.star.json metadata sidecar
+├── transforms/            # WASM transforms, read by `transform list`
+└── tokens/                # OAuth2 token cache from `auth login` (<client-id>.yaml, mode 0600)
+```
+
+`flows/<name>.star` holds only Starlark source; the `<name>.star.json` sidecar next to it holds the flow's `description` and `webhook` flag, which is what `flow list` and the webhook route read back. A flow whose sidecar is missing (created by an older MusterFlow) lists with an empty description and as non-webhook — that is a fallback, not an error. `transforms/` and `tokens/` always resolve under the default `~/.musterflow`, even when `--data-dir` points elsewhere.
+
+**The dashboard is the writer.** `musterflow start` serves the registry and holds the single-writer DuckDB lock on `<data_dir>/musterflow.db`. When a dashboard answers on the configured port, CLI commands go over its HTTP API instead of opening the file, so they mix with a running server without a lock conflict; if it serves a different port, `--dashboard-addr 127.0.0.1:<port>` (or the `port` config key) restores routing. A separate `--data-dir` gives you its own `musterflow.db` and lock for offline work.
+
 Port auto-discovery: if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing which one it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :9999` or by setting `port` in config.
+
+### Per-API credentials (`auth:`)
+
+There is no separate credentials file. `musterflow auth add` / `musterflow auth login` write into `config.yaml` itself, under a top-level `auth:` map keyed by API id:
+
+```yaml
+auth:
+  <api-id>:
+    type: apikey         # none, apikey, bearer, oauth2, mtls
+    key: <secret>        # API key, bearer token, or OAuth2 access token
+    cert: client.pem     # mtls only
+    key_path: key.pem    # mtls only
+```
+
+The key is **file-only**: `config set` does not accept `auth` (`Error: unknown config key: auth (valid: port, default_format, auto_completion, data_dir)`), so entries are managed with `auth add`, `auth login` and `auth remove`. The file is written mode `0600` because these values are plaintext secrets.
+
+Both display surfaces mask the secret. `musterflow auth list` shows keys longer than 8 characters as first four characters + `…` + last four (`<api-id>: type=apikey key=ghp_…3456`), four asterisks (`****`) for a key of 8 characters or fewer, and `(not set)` for an empty key. `musterflow config show` prints the same entries under an `Auth:` heading using first four + `****` + last four, and `****` alone for short or empty keys. `musterflow auth get <api-id>` prints the raw value.
 
 ## Shell Completion
 
