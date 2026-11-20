@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -151,6 +152,7 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 	var baseURL string
 	var nameInput string
 	var authType string
+	var tolerate bool
 
 	cmd := &cobra.Command{
 		Use:   "connect <spec-url>",
@@ -161,6 +163,12 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 
 			// If the dashboard is running, route through its API to avoid lock conflicts.
 			if dashboardBaseURL != "" {
+				if tolerate {
+					// The dashboard's connect endpoint has no tolerance knob, so
+					// honoring the flag silently is impossible — refuse instead of
+					// pretending the spec was repaired.
+					return fmt.Errorf("--tolerate requires a direct connection: stop the dashboard (it is routing connects through %s) and retry", dashboardBaseURL)
+				}
 				return connectViaDashboard(specURL, baseURL, nameInput, authType)
 			}
 			// DF-045: connecting writes to the registry, so a locked store must
@@ -174,6 +182,7 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 				BaseURL:  baseURL,
 				Name:     nameInput,
 				AuthType: authType,
+				Tolerate: tolerate,
 			})
 			if err != nil {
 				return err
@@ -184,6 +193,7 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 			fmt.Printf("  Version: %s\n", result.SpecVersion)
 			fmt.Printf("  Endpoints: %d\n", result.EndpointCount)
 			fmt.Printf("  Base URL: %s\n", result.Connection.BaseURL)
+			printToleratedDefects(result.Tolerated)
 			fmt.Printf("\nTry: musterflow %s --help\n", result.Connection.Name)
 
 			return nil
@@ -193,8 +203,38 @@ func newConnectCommand(registry *app.Registry) *cobra.Command {
 	cmd.Flags().StringVarP(&baseURL, "base-url", "u", "", "Override base URL for the API")
 	cmd.Flags().StringVarP(&nameInput, "name", "n", "", "Human-readable name for the API")
 	cmd.Flags().StringVar(&authType, "auth", "none", "Auth type: none, apikey, bearer, oauth2, mtls")
+	cmd.Flags().BoolVar(&tolerate, "tolerate", false,
+		"Repair cosmetic spec defects (bad examples, boolean required, array without items, dangling refs) and connect in a degraded state; off by default")
 
 	return cmd
+}
+
+// printToleratedDefects reports what a tolerant connect repaired or recorded so
+// a degraded connection is never silent. Codes are aggregated with counts and a
+// handful of representative paths, so a spec with hundreds of defects still
+// produces bounded output.
+func printToleratedDefects(warnings []app.ToleratedDefect) {
+	if len(warnings) == 0 {
+		return
+	}
+	counts := map[string]int{}
+	paths := map[string][]string{}
+	order := make([]string, 0, len(warnings))
+	for _, w := range warnings {
+		if counts[w.Code] == 0 {
+			order = append(order, w.Code)
+		}
+		counts[w.Code]++
+		if len(paths[w.Code]) < 3 {
+			paths[w.Code] = append(paths[w.Code], w.Path)
+		}
+	}
+	sort.Strings(order)
+
+	fmt.Printf("\n⚠ tolerated %d cosmetic spec defect(s) — this API is connected in a degraded state:\n", len(warnings))
+	for _, code := range order {
+		fmt.Printf("  %-24s ×%d  (%s)\n", code, counts[code], strings.Join(paths[code], ", "))
+	}
 }
 
 func newListCommand(registry *app.Registry) *cobra.Command {

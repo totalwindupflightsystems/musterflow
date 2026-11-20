@@ -11,9 +11,14 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/totalwindupflightsystems/musterflow/internal/specfix"
 	"github.com/wojons/muster/pkg/generator"
 	"github.com/wojons/muster/pkg/openapi"
 )
+
+// ToleratedDefect is one cosmetic defect a tolerant connect repaired or
+// recorded. It is an alias so callers do not have to import internal/specfix.
+type ToleratedDefect = specfix.Warning
 
 // ConnectResult holds the result of connecting an API.
 type ConnectResult struct {
@@ -21,6 +26,14 @@ type ConnectResult struct {
 	EndpointCount int
 	SpecVersion   string
 	SpecTitle     string
+
+	// Tolerated lists the cosmetic defects a tolerant connect repaired or
+	// recorded before the document was parsed. Non-empty means the API was
+	// connected in a degraded state and the caller must say so.
+	Tolerated []specfix.Warning
+	// Repaired reports whether the spec bytes handed to the parser differed
+	// from the fetched document.
+	Repaired bool
 }
 
 // ConnectOptions configures API connection.
@@ -29,6 +42,12 @@ type ConnectOptions struct {
 	BaseURL  string // override base URL from spec
 	Name     string // human-readable name (auto-detected if empty)
 	AuthType string // "none", "apikey", "bearer", "oauth2", "mtls"
+
+	// Tolerate enables the cosmetic-defect tolerance path: before parsing,
+	// the document is passed through specfix and every repair is recorded on
+	// ConnectResult.Tolerated. It is off by default, so the strict behaviour
+	// (refuse the document unchanged) stays the default.
+	Tolerate bool
 }
 
 // Connect loads an OpenAPI spec, validates it, generates commands, and registers the API.
@@ -38,9 +57,30 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 		return nil, fmt.Errorf("fetch spec: %w", err)
 	}
 
+	var tolerated []specfix.Warning
+	repaired := false
+	if opts.Tolerate {
+		// Cosmetic-defect tolerance: repair or record every known defect class
+		// before the parser sees the document. Strict by default — this block
+		// only runs when the operator asked for it.
+		fix, fixErr := specfix.Repair(data)
+		if fixErr != nil {
+			return nil, fmt.Errorf("tolerate spec: %w", fixErr)
+		}
+		tolerated = fix.Warnings
+		repaired = fix.Changed
+		if fix.Changed {
+			data = fix.Data
+		}
+	}
+
 	parser := openapi.NewParser()
 	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
 	if err != nil {
+		if opts.Tolerate {
+			return nil, fmt.Errorf("parse spec (tolerance applied, %d cosmetic defect(s) repaired, document still rejected): %w",
+				len(tolerated), err)
+		}
 		return nil, fmt.Errorf("parse spec: %w", err)
 	}
 
@@ -78,6 +118,8 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 		EndpointCount: endpointCount,
 		SpecVersion:   result.Version,
 		SpecTitle:     apiName,
+		Tolerated:     tolerated,
+		Repaired:      repaired,
 	}, nil
 }
 

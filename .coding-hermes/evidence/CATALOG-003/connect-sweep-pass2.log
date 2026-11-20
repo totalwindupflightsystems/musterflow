@@ -1,0 +1,460 @@
+CATALOG-003 tolerance sweep — utc=2026-11-20T06:49:43Z
+strict  binary=/tmp/mf-cat003-base sha256=29095aa929a7624459018ee99097e4011ffbc17803d3e1a6c52d81fbdf3959ca
+tolerant binary=/tmp/mf-cat003 sha256=554db9be5653a114c677217d1f8436bfd73e01ebc8d87d617b0f5aeff2eb3b5f
+scratch: specs=/tmp/mf-cat003-specs data=/tmp/mf-cat003-verify (canonical ~/.musterflow and port 9876 untouched)
+
+### docker  https://raw.githubusercontent.com/moby/moby/master/api/swagger.yaml
+    local: /tmp/mf-cat003-specs/docker.yaml (474129 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "ClusterInfo": invalid example: value must be a string
+    Schema:
+      {
+        "example": [
+          "10.10.0.0/16",
+          "20.20.0.0/16"
+        ],
+        "format": "CIDR",
+        "type": "string"
+      }
+    
+    Value:
+      [
+        "10.10.0.0/16",
+        "20.20.0.0/16"
+      ]
+--- pass-2 tolerant (rc=1)
+    Error: parse spec (tolerance applied, 14 cosmetic defect(s) repaired, document still rejected): validate converted Swagger 2.0 document: invalid components: schema "ContainerInspectResponse": invalid allOf element: invalid example: Error at "/2377/tcp": Value is not nullable
+    Schema:
+      {
+        "items": {
+          "$ref": "#/components/schemas/PortBinding"
+        },
+        "type": "array",
+        "x-nullable": true
+      }
+    
+    Value:
+      null
+
+### gitlab  https://gitlab.com/gitlab-org/gitlab/-/raw/master/doc/api/openapi/openapi_v2.yaml
+    local: /tmp/mf-cat003-specs/gitlab.yaml (2452083 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "API_Entities_Application": when schema type is 'array', schema 'items' must be non-null
+--- pass-2 tolerant (rc=1)
+    Error: parse spec (tolerance applied, 168 cosmetic defect(s) repaired, document still rejected): validate converted Swagger 2.0 document: invalid components: schema "API_Entities_Ci_Lint_Result": invalid example: Error at "/0/type": property "type" is missing
+    Schema:
+      {
+        "properties": {
+          "blob": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/blob/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "context_project": {
+            "example": "gitlab-org/gitlab",
+            "type": "string"
+          },
+          "context_sha": {
+            "example": "e52d6d0246d7375291850e61f0abc101fbda9dc2",
+            "type": "string"
+          },
+          "extra": {
+            "example": {
+              "job_name": "test",
+              "project": "gitlab-org/gitlab",
+              "ref": "master"
+            },
+            "type": "object"
+          },
+          "location": {
+            "example": ".gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "raw": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/raw/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "type": {
+            "example": "local",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "location",
+          "blob",
+          "raw",
+          "extra",
+          "context_project",
+          "context_sha"
+        ],
+        "type": "object"
+      }
+    
+    Value:
+      {
+        "blob": "https://gitlab.com/root/example-project/-/blob/..."
+      }
+     | Error at "/0/location": property "location" is missing
+    Schema:
+      {
+        "properties": {
+          "blob": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/blob/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "context_project": {
+            "example": "gitlab-org/gitlab",
+            "type": "string"
+          },
+          "context_sha": {
+            "example": "e52d6d0246d7375291850e61f0abc101fbda9dc2",
+            "type": "string"
+          },
+          "extra": {
+            "example": {
+              "job_name": "test",
+              "project": "gitlab-org/gitlab",
+              "ref": "master"
+            },
+            "type": "object"
+          },
+          "location": {
+            "example": ".gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "raw": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/raw/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "type": {
+            "example": "local",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "location",
+          "blob",
+          "raw",
+          "extra",
+          "context_project",
+          "context_sha"
+        ],
+        "type": "object"
+      }
+    
+    Value:
+      {
+        "blob": "https://gitlab.com/root/example-project/-/blob/..."
+      }
+     | Error at "/0/raw": property "raw" is missing
+    Schema:
+      {
+        "properties": {
+          "blob": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/blob/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "context_project": {
+            "example": "gitlab-org/gitlab",
+            "type": "string"
+          },
+          "context_sha": {
+            "example": "e52d6d0246d7375291850e61f0abc101fbda9dc2",
+            "type": "string"
+          },
+          "extra": {
+            "example": {
+              "job_name": "test",
+              "project": "gitlab-org/gitlab",
+              "ref": "master"
+            },
+            "type": "object"
+          },
+          "location": {
+            "example": ".gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "raw": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/raw/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "type": {
+            "example": "local",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "location",
+          "blob",
+          "raw",
+          "extra",
+          "context_project",
+          "context_sha"
+        ],
+        "type": "object"
+      }
+    
+    Value:
+      {
+        "blob": "https://gitlab.com/root/example-project/-/blob/..."
+      }
+     | Error at "/0/extra": property "extra" is missing
+    Schema:
+      {
+        "properties": {
+          "blob": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/blob/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "context_project": {
+            "example": "gitlab-org/gitlab",
+            "type": "string"
+          },
+          "context_sha": {
+            "example": "e52d6d0246d7375291850e61f0abc101fbda9dc2",
+            "type": "string"
+          },
+          "extra": {
+            "example": {
+              "job_name": "test",
+              "project": "gitlab-org/gitlab",
+              "ref": "master"
+            },
+            "type": "object"
+          },
+          "location": {
+            "example": ".gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "raw": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/raw/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "type": {
+            "example": "local",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "location",
+          "blob",
+          "raw",
+          "extra",
+          "context_project",
+          "context_sha"
+        ],
+        "type": "object"
+      }
+    
+    Value:
+      {
+        "blob": "https://gitlab.com/root/example-project/-/blob/..."
+      }
+     | Error at "/0/context_project": property "context_project" is missing
+    Schema:
+      {
+        "properties": {
+          "blob": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/blob/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "context_project": {
+            "example": "gitlab-org/gitlab",
+            "type": "string"
+          },
+          "context_sha": {
+            "example": "e52d6d0246d7375291850e61f0abc101fbda9dc2",
+            "type": "string"
+          },
+          "extra": {
+            "example": {
+              "job_name": "test",
+              "project": "gitlab-org/gitlab",
+              "ref": "master"
+            },
+            "type": "object"
+          },
+          "location": {
+            "example": ".gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "raw": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/raw/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "type": {
+            "example": "local",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "location",
+          "blob",
+          "raw",
+          "extra",
+          "context_project",
+          "context_sha"
+        ],
+        "type": "object"
+      }
+    
+    Value:
+      {
+        "blob": "https://gitlab.com/root/example-project/-/blob/..."
+      }
+     | Error at "/0/context_sha": property "context_sha" is missing
+    Schema:
+      {
+        "properties": {
+          "blob": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/blob/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "context_project": {
+            "example": "gitlab-org/gitlab",
+            "type": "string"
+          },
+          "context_sha": {
+            "example": "e52d6d0246d7375291850e61f0abc101fbda9dc2",
+            "type": "string"
+          },
+          "extra": {
+            "example": {
+              "job_name": "test",
+              "project": "gitlab-org/gitlab",
+              "ref": "master"
+            },
+            "type": "object"
+          },
+          "location": {
+            "example": ".gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "raw": {
+            "example": "https://gitlab.com/gitlab-org/gitlab/-/raw/e52d6d0246d7375291850e61f0abc101fbda9dc2/.gitlab/ci/build-images.gitlab-ci.yml",
+            "type": "string"
+          },
+          "type": {
+            "example": "local",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "location",
+          "blob",
+          "raw",
+          "extra",
+          "context_project",
+          "context_sha"
+        ],
+        "type": "object"
+      }
+    
+    Value:
+      {
+        "blob": "https://gitlab.com/root/example-project/-/blob/..."
+      }
+
+### spotify  https://raw.githubusercontent.com/sonallux/spotify-web-api/main/official-spotify-open-api.yml
+    local: /tmp/mf-cat003-specs/spotify.yml (289721 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal bool into field Schema.required of type []string
+--- pass-2 tolerant (rc=0)
+    ✓ Connected: spotify
+      ID: 3721a481549d4cdd
+      Version: 1.0.0
+      Endpoints: 96
+      Base URL: https://api.spotify.com/v1
+    
+    ⚠ tolerated 33 cosmetic spec defect(s) — this API is connected in a degraded state:
+      dangling-local-ref       ×22  (#/paths/~1browse~1new-releases/get/x-spotify-policy-list/0/$ref, #/paths/~1recommendations/get/x-spotify-policy-list/0/$ref, #/paths/~1browse~1featured-playlists/get/x-spotify-policy-list/0/$ref)
+      external-ref             ×1  (#/components/x-spotify-policy/policies/$ref)
+      non-string-text          ×9  (#/paths/~1playlists~1{playlist_id}/put/requestBody/content/application~1json/schema/properties/description, #/paths/~1me~1playlists/post/requestBody/content/application~1json/schema/properties/description, #/paths/~1users~1{user_id}~1playlists/post/requestBody/content/application~1json/schema/properties/description)
+      required-bool            ×1  (#/paths/~1playlists~1{playlist_id}~1images/put/requestBody/content/image~1jpeg/schema/required)
+    
+    Try: musterflow spotify --help
+
+### square  https://raw.githubusercontent.com/square/connect-api-specification/master/api.json
+    local: /tmp/mf-cat003-specs/square.json (3279383 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: failed to resolve "AppFeeAllocation" in fragment in URI: "#/components/schemas/AppFeeAllocation": map key "AppFeeAllocation" not found
+--- pass-2 tolerant (rc=0)
+    ✓ Connected: square
+      ID: a8890caf4be13d97
+      Version: 2.0
+      Endpoints: 332
+      Base URL: https://connect.squareup.com
+    
+    ⚠ tolerated 40 cosmetic spec defect(s) — this API is connected in a degraded state:
+      dangling-local-ref       ×5  (#/components/schemas/RefundPaymentRequest/properties/app_fee_allocations/items/$ref, #/components/schemas/Payment/properties/buyer_currency_exchange/$ref, #/components/schemas/Payment/properties/app_fee_allocations/items/$ref)
+      example-missing-required ×3  (#/components/schemas/CatalogObject/example, #/components/schemas/UpdateInventoryAdjustmentRequest/example, #/components/schemas/BulkPublishScheduledShiftsRequest/example)
+      non-string-text          ×32  (#/components/schemas/CashDrawerShiftEvent/properties/description, #/components/schemas/Location/properties/description, #/components/schemas/ConfirmationOptions/properties/title)
+    
+    Try: musterflow square --help
+
+### digitalocean  https://raw.githubusercontent.com/digitalocean/openapi/main/specification/DigitalOcean-public.v2.yaml
+    local: /tmp/mf-cat003-specs/digitalocean.yaml (147998 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: failed to unmarshal data: json error: invalid character 'o' looking for beginning of value, yaml error: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal object into field Tag.description of type string
+--- pass-2 tolerant (rc=0)
+    ✓ Connected: digitalocean
+      ID: 5421791aead02239
+      Version: 2.0
+      Endpoints: 916
+      Base URL: https://api.digitalocean.com
+    
+    ⚠ tolerated 918 cosmetic spec defect(s) — this API is connected in a degraded state:
+      external-ref             ×916  (#/paths/~1v2~1apps~1{app_id}~1alerts/get/$ref, #/paths/~1v2~1apps~1{app_id}~1rollback~1revert/post/$ref, #/paths/~1v1~1signals~1sessions~1{session_id}~1dialogues/get/$ref)
+      non-string-text          ×2  (#/tags/0/description, #/tags/63/description)
+    
+    Try: musterflow digitalocean --help
+
+### pagerduty  https://raw.githubusercontent.com/PagerDuty/api-schema/main/reference/REST/openapiv3.json
+    local: /tmp/mf-cat003-specs/pagerduty.json (2843566 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: bad data in "#/components/requestBodies/OrchestrationCacheVariableDataPutResponse" (expecting ref to response object)
+--- pass-2 tolerant (rc=1)
+    Error: parse spec (tolerance applied, 96 cosmetic defect(s) repaired, document still rejected): bad data in "#/components/requestBodies/OrchestrationCacheVariableDataPutResponse" (expecting ref to response object)
+
+### algolia  https://raw.githubusercontent.com/algolia/api-clients-automation/main/specs/search/spec.yml
+    local: /tmp/mf-cat003-specs/algolia.yml (14197 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: encountered disallowed external reference: "paths/objects/common/schemas.yml#/attributeToUpdate"
+--- pass-2 tolerant (rc=1)
+    Error: parse spec (tolerance applied, 63 cosmetic defect(s) repaired, document still rejected): encountered disallowed external reference: "paths/objects/common/schemas.yml#/attributeToUpdate"
+
+### weaviate  https://raw.githubusercontent.com/weaviate/weaviate/main/openapi-specs/schema.json
+    local: /tmp/mf-cat003-specs/weaviate.json (493197 bytes)
+--- pass-1 strict (rc=1)
+    Error: parse spec: validate converted Swagger 2.0 document: invalid components: schema "AggregateRequest": invalid example: value must be an array
+    Schema:
+      {
+        "description": "value as date (as string)",
+        "example": "TODO",
+        "items": {
+          "type": "string"
+        },
+        "nullable": true,
+        "type": "array",
+        "x-omitempty": true
+      }
+    
+    Value:
+      "TODO"
+--- pass-2 tolerant (rc=1)
+    Error: parse spec (tolerance applied, 6 cosmetic defect(s) repaired, document still rejected): validate converted Swagger 2.0 document: invalid components: schema "DBUserCredential": unsupported 'type' value "null"
+
+=== SUMMARY (pass-1 strict rc -> pass-2 tolerant rc) ===
+algolia        1 -> 1
+digitalocean   1 -> 0
+docker         1 -> 1
+gitlab         1 -> 1
+pagerduty      1 -> 1
+spotify        1 -> 0
+square         1 -> 0
+weaviate       1 -> 1
