@@ -16,6 +16,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -120,6 +121,36 @@ func forceEngineOutputFormat(target *cobra.Command, args []string, format string
 	return cleanArgs, func() { target.PreRunE = originalPreRunE }
 }
 
+// tableTruncationHint is appended to a rendered table when any cell hit the
+// engine's width cap.  The default table silently cuts wide values at 80
+// columns, which hides the tail of e.g. a long JSON answer; naming the escape
+// hatches beats leaving the user to guess why the value stops mid-token.
+const tableTruncationHint = "… output truncated — use --output json or --raw for full values"
+
+// engineTableCellLimit mirrors the engine's per-cell cap: table values longer
+// than this are rendered as value[:limit-3] + "...".
+const engineTableCellLimit = 80
+
+// tableCellSeparator splits a rendered table row into cells.  The engine's
+// tabwriter pads every column with at least two spaces, so runs of two or more
+// spaces separate cells, while single spaces stay inside a cell (prose, JSON).
+var tableCellSeparator = regexp.MustCompile(`\s{2,}`)
+
+// tableOutputTruncated reports whether a rendered table carries the engine's
+// truncation marker: a cell that ends in "..." and is at least as wide as the
+// engine's cell cap.  Requiring both keeps genuine data that merely ends in an
+// ellipsis from triggering the hint.
+func tableOutputTruncated(output string) bool {
+	for _, line := range strings.Split(output, "\n") {
+		for _, cell := range tableCellSeparator.Split(strings.TrimRight(line, " 	"), -1) {
+			if len(cell) >= engineTableCellLimit && strings.HasSuffix(cell, "...") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // createOutputFile creates the output file and its parent directories.
 func createOutputFile(path string) (*os.File, error) {
 	dir := filepath.Dir(path)
@@ -152,6 +183,9 @@ func createOutputFile(path string) (*os.File, error) {
 // (.json/.yaml) and no explicit -o was given, the engine is told to render that
 // format instead of its default table (DF-049).
 //
+// Default table to stdout: the render is captured so that truncated cells can
+// be flagged with a footer naming --output json / --raw (DF-038).
+//
 // Format resolution order: explicit -o flag > --output-file extension > default "table".
 // Destination: --output-file wins for the destination; stdout otherwise.
 func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
@@ -183,7 +217,15 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 	extendedFmt := isExtendedFormat(format)
 	hasOutFile := outputFile != ""
 
-	// 6. No interception needed: engine handles table/json/yaml to stdout.
+	// 6a. Table to stdout: capture the render so a truncated cell can be
+	//     flagged with the escape hatches (DF-038).  --raw dumps the body
+	//     untouched and the machine-readable formats are excluded, so both
+	//     fall through to direct execution below.
+	if !extendedFmt && !hasOutFile && !isRaw && format == "table" {
+		return executeTableWithTruncationHint(target, remaining)
+	}
+
+	// 7. No interception needed: engine handles table/json/yaml to stdout.
 	if !extendedFmt && !hasOutFile {
 		return false, nil
 	}
@@ -290,4 +332,31 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// executeTableWithTruncationHint runs the leaf with its table output captured,
+// writes that output through unchanged, and appends tableTruncationHint when
+// any cell was cut short by the engine's width cap.  Only the stdout
+// destination gets the hint: a table written to --output-file stays byte-clean.
+func executeTableWithTruncationHint(target *cobra.Command, remaining []string) (bool, error) {
+	originalOut := target.OutOrStdout()
+	defer target.SetOut(originalOut)
+
+	var buf bytes.Buffer
+	target.SetOut(&buf)
+	target.SetArgs(remaining)
+
+	execErr := target.Execute()
+
+	out := originalOut
+	if out == nil {
+		out = os.Stdout
+	}
+	rendered := buf.String()
+	_, _ = io.WriteString(out, rendered)
+	if tableOutputTruncated(rendered) {
+		_, _ = fmt.Fprintf(out, "\n%s\n", tableTruncationHint)
+	}
+
+	return true, execErr
 }
