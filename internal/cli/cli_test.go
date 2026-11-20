@@ -494,17 +494,39 @@ func TestLoadSpecData_FileNotFound(t *testing.T) {
 
 func TestClearOperationServers_Nil(t *testing.T) {
 	// Should not panic
-	clearOperationServers(nil)
+	app.ClearDocumentServers(nil)
 }
 
 func TestClearOperationServers_WithServers(t *testing.T) {
-	op := &openapi3.Operation{}
-	// Servers requires a pointer to openapi3.Servers, not a slice.
-	// Just verify nil doesn't panic — the clear function checks op != nil then sets nil.
-	clearOperationServers(op)
-	// Already nil, just verify it's still nil
-	if op.Servers != nil {
-		t.Error("expected Servers to still be nil")
+	// Since PERF-002 the server-clearing step lives in app.ClearDocumentServers
+	// (the plan builder calls it before extraction). Root, path-item and
+	// operation servers must all be dropped so generated commands use the
+	// connection's resolved base URL.
+	servers := openapi3.Servers{{URL: "http://spec.example/v1"}}
+	opServers := openapi3.Servers{{URL: "http://op.example/v1"}}
+	op := &openapi3.Operation{Servers: &opServers}
+	doc := &openapi3.T{
+		Servers: servers,
+		Paths: openapi3.NewPaths(openapi3.WithPath("/items", &openapi3.PathItem{
+			Servers: servers,
+			Get:     op,
+		})),
+	}
+
+	app.ClearDocumentServers(doc)
+
+	if doc.Servers != nil {
+		t.Error("root servers were not cleared")
+	}
+	item := doc.Paths.Find("/items")
+	if item == nil {
+		t.Fatal("path item missing after clear")
+	}
+	if item.Servers != nil {
+		t.Error("path-item servers were not cleared")
+	}
+	if item.Get == nil || item.Get.Servers != nil {
+		t.Error("operation servers were not cleared")
 	}
 }
 
@@ -787,7 +809,7 @@ func TestCreateAPISubcommand(t *testing.T) {
 		EndpointCount: 5,
 	}
 
-	cmd := createAPISubcommand(conn)
+	cmd := createAPISubcommand(conn, t.TempDir())
 	if cmd.Use != "test-api" {
 		t.Errorf("expected Use='test-api', got %q", cmd.Use)
 	}
@@ -815,7 +837,9 @@ func TestCreateAPISubcommand(t *testing.T) {
 
 // df011TestSpec is a minimal OpenAPI 3.0 spec used by DF-011 tests so that
 // ensureAPILoaded can successfully parse the spec from a local file path.
-const df011TestSpec = `{"openapi":"3.0.3","info":{"title":"Test","version":"1.0"},"servers":[{"url":"http://localhost:9999"}],"paths":{}}`
+// df011TestSpec declares one operation so the connection builds a real command
+// tree (an API with no operations is now refused at connect — DF-048).
+const df011TestSpec = `{"openapi":"3.0.3","info":{"title":"Test","version":"1.0"},"servers":[{"url":"http://localhost:9999"}],"paths":{"/items":{"get":{"operationId":"listItems","summary":"List items","responses":{"200":{"description":"ok"}}}}}}`
 
 // df011Setup creates a registry with a single connected API backed by a local
 // spec file, and returns a root command with the same persistent flags that
@@ -2434,8 +2458,9 @@ func TestCatalogCommand_PushExec(t *testing.T) {
 	home := t.TempDir()
 	defer setHome(t, home)()
 
-	// httptest spec server
-	specJSON := `{"openapi":"3.0.3","info":{"title":"Push Test API","version":"1.0"},"paths":{}}`
+	// httptest spec server (one operation: an API with no operations is refused
+	// at connect — DF-048)
+	specJSON := `{"openapi":"3.0.3","info":{"title":"Push Test API","version":"1.0"},"servers":[{"url":"http://localhost:9999"}],"paths":{"/items":{"get":{"operationId":"listItems","summary":"List items","responses":{"200":{"description":"ok"}}}}}}`
 	specServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(specJSON))
@@ -3139,7 +3164,7 @@ func TestLoadAPICommands_NoStderrNoise(t *testing.T) {
 	parent := &cobra.Command{Use: "parent"}
 
 	stderr := captureStderr(func() {
-		err := loadAPICommands(parent, conn)
+		err := loadAPICommands(parent, conn, t.TempDir(), "")
 		if err != nil {
 			t.Logf("loadAPICommands error (expected for unreachable server): %v", err)
 		}

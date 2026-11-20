@@ -53,7 +53,7 @@ func TestLoadAPICommandsToleranceOptIn(t *testing.T) {
 	}
 
 	strictParent := &cobra.Command{Use: "musterflow"}
-	if err := loadAPICommands(strictParent, newConn(false)); err == nil {
+	if err := loadAPICommands(strictParent, newConn(false), t.TempDir(), ""); err == nil {
 		t.Fatal("strict command generation accepted a document only tolerance can parse")
 	}
 	if len(strictParent.Commands()) != 0 {
@@ -61,7 +61,7 @@ func TestLoadAPICommandsToleranceOptIn(t *testing.T) {
 	}
 
 	tolerantParent := &cobra.Command{Use: "musterflow"}
-	if err := loadAPICommands(tolerantParent, newConn(true)); err != nil {
+	if err := loadAPICommands(tolerantParent, newConn(true), t.TempDir(), ""); err != nil {
 		t.Fatalf("tolerant command generation: %v", err)
 	}
 	if len(tolerantParent.Commands()) == 0 {

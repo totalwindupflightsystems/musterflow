@@ -1,0 +1,39 @@
+# Defective 3.1.0 vendor spec used as a DF-048 fixture: NO CALLABLE OPERATIONS.
+#
+# The document is valid 3.1.0 — the parser accepts it — but every operation
+# lives under `webhooks`, which are not callable operations. Before DF-048 a
+# tolerant connect reported success ("Try: musterflow hooks --help") while the
+# command list was empty and every call failed.
+#
+# It also carries the repairable cosmetic defects (null-type, required-bool) so
+# the tolerance pass has something to report before the loadability check runs.
+openapi: 3.1.0
+info:
+  title: Vendor Webhook API
+  version: 2.0.0
+  description: Vendor event delivery endpoints.
+servers:
+  - url: https://api.vendor.example/v2
+webhooks:
+  item-updated:
+    post:
+      operationId: item-updated
+      summary: Item updated event
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Item"
+      responses:
+        "200":
+          description: ok
+components:
+  schemas:
+    Item:
+      type: object
+      required: true
+      properties:
+        id:
+          type: string
+        restock_eta:
+          type: "null"

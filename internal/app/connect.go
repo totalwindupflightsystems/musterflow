@@ -75,6 +75,13 @@ type ConnectOptions struct {
 }
 
 // Connect loads an OpenAPI spec, validates it, generates commands, and registers the API.
+//
+// A connection is only reported as successful once the command tree the CLI
+// will actually build from it exists: the spec is parsed, derived into a
+// cached SpecPlan, and that plan is run through the same command generator
+// every later operation call uses. A document that parses but yields no
+// callable operations (DF-048) is refused with a LoadDefect naming the file,
+// the JSON pointer and the reason — never reported as connected.
 func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*ConnectResult, error) {
 	data, err := fetchSpec(opts.SpecURL)
 	if err != nil {
@@ -99,11 +106,7 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 	parser := openapi.NewParser()
 	result, err := parser.Parse(ctx, data, openapi.DefaultParseOptions())
 	if err != nil {
-		if opts.Tolerate {
-			return nil, fmt.Errorf("parse spec (tolerance applied, %d cosmetic defect(s) repaired, document still rejected): %w",
-				len(tolerated), err)
-		}
-		return nil, fmt.Errorf("parse spec: %w", err)
+		return nil, parseDefect(opts, data, tolerated, err)
 	}
 
 	apiName := opts.Name
@@ -132,7 +135,48 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 		Tolerate:      opts.Tolerate,
 	}
 
+	// Derive the command plan — the same artifact every operation call loads —
+	// and prove it produces a command tree before anything is registered.
+	plan, err := BuildPlan(result.Document, tolerated, repaired)
+	if err != nil {
+		return nil, fmt.Errorf("derive command plan for %s: %w", opts.SpecURL, err)
+	}
+	plan.ConnectionID = id
+	plan.SpecURL = opts.SpecURL
+	plan.Title = apiName
+	plan.BaseURL = baseURL
+	plan.EndpointCount = endpointCount
+	plan.ContentSHA256 = ContentHash(data)
+
+	commands, genErr := CommandsFromPlan(plan, conn)
+	if genErr != nil || len(commands) == 0 {
+		defect := DiagnoseLoadFailure(data)
+		if defect == nil {
+			defect = &LoadDefect{Pointer: "/paths", Reason: "the generated command tree is empty"}
+		}
+		defect.Spec = opts.SpecURL
+		if genErr != nil {
+			defect.Cause = genErr
+		}
+		if opts.Tolerate {
+			defect.Reason += fmt.Sprintf(" (tolerance pass: %d cosmetic defect(s) repaired or recorded)", len(tolerated))
+		}
+		return nil, defect
+	}
+	// Index the tree so later operation calls build only the resource group
+	// they invoke instead of the whole command tree (PERF-002).
+	IndexPlanResources(plan, commands)
+
+	// Persist the plan BEFORE registering: an API whose cached plan could not
+	// be written would silently fall back to re-reading its source on every
+	// call, which is the behaviour this cache exists to remove.
+	if err := WritePlan(registry.DataDir(), plan); err != nil {
+		return nil, fmt.Errorf("cache parsed spec for %s: %w", opts.SpecURL, err)
+	}
+
 	if err := registry.Add(conn); err != nil {
+		// Do not leave an orphan plan behind for an API that was not registered.
+		_ = RemovePlan(registry.DataDir(), id)
 		return nil, fmt.Errorf("register api: %w", err)
 	}
 
@@ -146,17 +190,80 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 	}, nil
 }
 
-// Disconnect removes a connected API from the registry.
-func Disconnect(registry *Registry, id string) error {
-	return registry.Remove(id)
+// parseDefect turns a parser rejection into a LoadDefect: the file the operator
+// named, the JSON pointer of the blocking construct when it can be localised,
+// and both the operator-facing reason and the parser's own error.
+//
+// Localisation has two sources: the document-shape diagnosis (structural
+// defects, e.g. parameters written as a mapping) and, when that finds nothing,
+// the tolerance pass's own walk — a strict parse that fails on a defect the
+// tolerant pass would repair is named by that defect's pointer and code, so the
+// operator learns both what is wrong and that --tolerate addresses it.
+func parseDefect(opts ConnectOptions, data []byte, tolerated []specfix.Warning, parseErr error) error {
+	reason := "document was rejected by the parser"
+	if opts.Tolerate {
+		reason = fmt.Sprintf("document was rejected by the parser even after the tolerance pass (%d cosmetic defect(s) repaired or recorded)",
+			len(tolerated))
+	}
+
+	defect := DiagnoseLoadFailure(data)
+	if defect == nil {
+		defect = repairableDefect(data)
+	}
+	if defect == nil {
+		defect = &LoadDefect{Reason: reason}
+	} else if opts.Tolerate {
+		defect.Reason += fmt.Sprintf(" (%d cosmetic defect(s) repaired or recorded)", len(tolerated))
+	}
+	defect.Spec = opts.SpecURL
+	defect.Cause = parseErr
+	return defect
 }
+
+// repairableDefect names the first defect the tolerance pass recognises (and
+// would repair) in a document a strict parse rejected. It is diagnostic only:
+// the repaired bytes are discarded, so the strict path keeps its strictness.
+func repairableDefect(data []byte) *LoadDefect {
+	fix, err := specfix.Repair(data)
+	if err != nil || len(fix.Warnings) == 0 {
+		return nil
+	}
+	w := fix.Warnings[0]
+	return &LoadDefect{
+		Pointer: w.Path,
+		Reason:  fmt.Sprintf("%s: %s — a strict parse rejects this; re-run with --tolerate to repair it", w.Code, w.Detail),
+	}
+}
+
+// Disconnect removes a connected API from the registry and drops its cached
+// command plan (so a later connect starts from the source, never from a stale
+// plan).
+func Disconnect(registry *Registry, id string) error {
+	if err := registry.Remove(id); err != nil {
+		return err
+	}
+	return RemovePlan(registry.DataDir(), id)
+}
+
+// PlaceholderBaseURL is the base URL the generator is given for a connection
+// that declares none. A spec with no servers[] URL and no --base-url override
+// cannot address a real host, but it can still define operations: building its
+// command tree with a placeholder keeps every operation visible and callable
+// with an explicit --base-url (or MUSTER_BASE_URL) at call time, instead of
+// failing to load with "base URL is required". Connect prints a warning when a
+// connection ends up without a base URL.
+const PlaceholderBaseURL = "http://localhost"
 
 // GenerateCommandConfig creates a generator config for a connected API.
 func GenerateCommandConfig(conn *APIConnection) *generator.Config {
+	baseURL := conn.BaseURL
+	if baseURL == "" {
+		baseURL = PlaceholderBaseURL
+	}
 	return &generator.Config{
 		AppName:          "musterflow",
 		AppDescription:   fmt.Sprintf("MusterFlow CLI for %s", conn.Name),
-		BaseURL:          conn.BaseURL,
+		BaseURL:          baseURL,
 		DefaultFormat:    "table",
 		SupportedFormats: []string{"table", "json", "yaml"},
 		APIName:          conn.Name,

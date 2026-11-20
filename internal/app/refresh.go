@@ -89,8 +89,41 @@ func RefreshWithOptions(ctx context.Context, registry *Registry, id string, opts
 		conn.BaseURL = newBaseURL
 	}
 
+	// Re-derive the cached command plan from the refreshed document and prove
+	// it still produces a command tree — the same path connect validates
+	// through. A refresh that produced no callable commands must fail loudly
+	// (keeping the previous plan in place) instead of leaving the API with an
+	// empty command list.
+	plan, err := BuildPlan(result.Document, tolerated, repaired)
+	if err != nil {
+		return nil, fmt.Errorf("derive command plan for %s: %w", conn.SpecURL, err)
+	}
+	plan.ConnectionID = conn.ID
+	plan.SpecURL = conn.SpecURL
+	plan.Title = conn.Name
+	plan.BaseURL = conn.BaseURL
+	plan.EndpointCount = conn.EndpointCount
+	plan.ContentSHA256 = ContentHash(data)
+
+	commands, genErr := CommandsFromPlan(plan, conn)
+	if genErr != nil || len(commands) == 0 {
+		defect := DiagnoseLoadFailure(data)
+		if defect == nil {
+			defect = &LoadDefect{Pointer: "/paths", Reason: "the refreshed spec yields an empty command tree; the previous plan is kept"}
+		}
+		defect.Spec = conn.SpecURL
+		if genErr != nil {
+			defect.Cause = genErr
+		}
+		return nil, defect
+	}
+	IndexPlanResources(plan, commands)
+
 	if err := registry.Add(conn); err != nil {
 		return nil, fmt.Errorf("update registry: %w", err)
+	}
+	if err := WritePlan(registry.DataDir(), plan); err != nil {
+		return nil, fmt.Errorf("cache refreshed spec for %s: %w", conn.SpecURL, err)
 	}
 
 	return &RefreshResult{

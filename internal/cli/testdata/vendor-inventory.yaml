@@ -1,0 +1,155 @@
+# Defective 3.1.0 vendor spec used as a DF-048 fixture.
+#
+# It carries the defect classes observed in the field evidence:
+#   * a property whose `type` is the literal "null"  → null-type (repairable)
+#   * a schema whose `required` is a boolean         → required-bool (repairable)
+#   * an array property with no `items` schema       → array-missing-items (repairable)
+#
+# Every defect is cosmetic: repairing them yields a fully callable API. A strict
+# connect must refuse the document; `connect --tolerate` must repair it, load it
+# into a working command tree, and make real operation calls possible.
+openapi: 3.1.0
+info:
+  title: Vendor Inventory API
+  version: 1.4.2
+  description: Vendor inventory management endpoints.
+servers:
+  - url: https://api.vendor.example/v1
+paths:
+  /items:
+    get:
+      operationId: list-items
+      summary: List items
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+    post:
+      operationId: create-item
+      summary: Create item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemDraft"
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+  /items/{itemId}:
+    get:
+      operationId: get-item
+      summary: Get item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+  /items/{itemId}/stock:
+    put:
+      operationId: update-stock
+      summary: Update stock level
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockUpdate"
+      responses:
+        "200":
+          description: ok
+  /vendors:
+    get:
+      operationId: list-vendors
+      summary: List vendors
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vendor"
+  /vendors/{vendorId}:
+    get:
+      operationId: get-vendor
+      summary: Get vendor
+      parameters:
+        - name: vendorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+components:
+  schemas:
+    Vendor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Item:
+      type: object
+      required: true
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        restock_eta:
+          type: "null"
+        tags:
+          type: array
+    ItemDraft:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        restock_eta:
+          type: "null"
+    StockUpdate:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
