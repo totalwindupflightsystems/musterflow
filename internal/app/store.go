@@ -67,7 +67,16 @@ func (s *Store) migrate() error {
 			updated_at TIMESTAMP NOT NULL
 		)
 	`)
-	return err
+	if err != nil {
+		return err
+	}
+	// Databases created before the tolerance opt-in existed need the column
+	// added; CREATE TABLE IF NOT EXISTS does not touch an existing table.
+	// Existing rows default to strict, which is the pre-existing behaviour.
+	if _, err := s.db.Exec(`ALTER TABLE api_connections ADD COLUMN IF NOT EXISTS tolerate BOOLEAN DEFAULT FALSE`); err != nil {
+		return fmt.Errorf("add tolerate column: %w", err)
+	}
+	return nil
 }
 
 // Close closes the database connection.
@@ -81,11 +90,12 @@ func (s *Store) Add(conn *APIConnection) error {
 	conn.UpdatedAt = time.Now()
 	_, err := s.db.Exec(`
 		INSERT OR REPLACE INTO api_connections
-		(id, name, spec_url, base_url, version, description, auth_type, endpoint_count, added_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		(id, name, spec_url, base_url, version, description, auth_type, endpoint_count, added_at, updated_at, tolerate)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, conn.ID, conn.Name, conn.SpecURL, conn.BaseURL, conn.Version,
 		conn.Description, conn.AuthType, conn.EndpointCount,
-		conn.AddedAt, conn.UpdatedAt)
+		conn.AddedAt, conn.UpdatedAt, conn.Tolerate)
+
 	if err != nil {
 		return fmt.Errorf("insert connection: %w", err)
 	}
@@ -95,7 +105,7 @@ func (s *Store) Add(conn *APIConnection) error {
 // Get retrieves an API connection by ID.
 func (s *Store) Get(id string) (*APIConnection, error) {
 	row := s.db.QueryRow(`
-		SELECT id, name, spec_url, base_url, version, description, auth_type, endpoint_count, added_at, updated_at
+		SELECT id, name, spec_url, base_url, version, description, auth_type, endpoint_count, added_at, updated_at, COALESCE(tolerate, FALSE)
 		FROM api_connections WHERE id = ?
 	`, id)
 	return scanConnection(row)
@@ -104,7 +114,7 @@ func (s *Store) Get(id string) (*APIConnection, error) {
 // List returns all API connections.
 func (s *Store) List() ([]*APIConnection, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, spec_url, base_url, version, description, auth_type, endpoint_count, added_at, updated_at
+		SELECT id, name, spec_url, base_url, version, description, auth_type, endpoint_count, added_at, updated_at, COALESCE(tolerate, FALSE)
 		FROM api_connections ORDER BY name
 	`)
 	if err != nil {
@@ -150,7 +160,7 @@ func scanConnection(scanner interface{ Scan(...interface{}) error }) (*APIConnec
 	var c APIConnection
 	var addedAt, updatedAt time.Time
 	err := scanner.Scan(&c.ID, &c.Name, &c.SpecURL, &c.BaseURL, &c.Version,
-		&c.Description, &c.AuthType, &c.EndpointCount, &addedAt, &updatedAt)
+		&c.Description, &c.AuthType, &c.EndpointCount, &addedAt, &updatedAt, &c.Tolerate)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("not found")
 	}
@@ -166,7 +176,7 @@ func scanConnectionRow(rows *sql.Rows) (*APIConnection, error) {
 	var c APIConnection
 	var addedAt, updatedAt time.Time
 	err := rows.Scan(&c.ID, &c.Name, &c.SpecURL, &c.BaseURL, &c.Version,
-		&c.Description, &c.AuthType, &c.EndpointCount, &addedAt, &updatedAt)
+		&c.Description, &c.AuthType, &c.EndpointCount, &addedAt, &updatedAt, &c.Tolerate)
 	if err != nil {
 		return nil, fmt.Errorf("scan row: %w", err)
 	}

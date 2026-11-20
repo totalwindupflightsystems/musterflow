@@ -20,6 +20,30 @@ import (
 // recorded. It is an alias so callers do not have to import internal/specfix.
 type ToleratedDefect = specfix.Warning
 
+// ApplyTolerance runs the cosmetic-defect repair pass over a fetched spec when
+// tolerate is set. It returns the bytes the parser should see, the defects that
+// were repaired or recorded, and whether the bytes changed.
+//
+// Strict (tolerate == false) returns the document untouched and no warnings:
+// every caller's default behaviour is unchanged.
+//
+// This is the single entry point for all four parse sites (connect, refresh,
+// generated CLI commands, MCP tools) so a connection's opt-in means the same
+// thing everywhere it is parsed.
+func ApplyTolerance(data []byte, tolerate bool) ([]byte, []specfix.Warning, bool, error) {
+	if !tolerate {
+		return data, nil, false, nil
+	}
+	fix, err := specfix.Repair(data)
+	if err != nil {
+		return nil, nil, false, fmt.Errorf("tolerate spec: %w", err)
+	}
+	if !fix.Changed {
+		return data, fix.Warnings, false, nil
+	}
+	return fix.Data, fix.Warnings, true, nil
+}
+
 // ConnectResult holds the result of connecting an API.
 type ConnectResult struct {
 	Connection    *APIConnection
@@ -63,15 +87,13 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 		// Cosmetic-defect tolerance: repair or record every known defect class
 		// before the parser sees the document. Strict by default — this block
 		// only runs when the operator asked for it.
-		fix, fixErr := specfix.Repair(data)
+		fixed, warnings, changed, fixErr := ApplyTolerance(data, true)
 		if fixErr != nil {
-			return nil, fmt.Errorf("tolerate spec: %w", fixErr)
+			return nil, fixErr
 		}
-		tolerated = fix.Warnings
-		repaired = fix.Changed
-		if fix.Changed {
-			data = fix.Data
-		}
+		tolerated = warnings
+		repaired = changed
+		data = fixed
 	}
 
 	parser := openapi.NewParser()
@@ -107,6 +129,7 @@ func Connect(ctx context.Context, registry *Registry, opts ConnectOptions) (*Con
 		Description:   deriveDescription(result.Document),
 		AuthType:      opts.AuthType,
 		EndpointCount: endpointCount,
+		Tolerate:      opts.Tolerate,
 	}
 
 	if err := registry.Add(conn); err != nil {

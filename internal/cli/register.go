@@ -214,13 +214,15 @@ func refreshViaDashboard(apiID string) error {
 	}
 
 	var result struct {
-		Name           string `json:"name"`
-		OldVersion     string `json:"old_version"`
-		NewVersion     string `json:"new_version"`
-		VersionChanged bool   `json:"version_changed"`
-		OldEndpoints   int    `json:"old_endpoints"`
-		NewEndpoints   int    `json:"new_endpoints"`
-		Error          string `json:"error"`
+		Name           string                `json:"name"`
+		OldVersion     string                `json:"old_version"`
+		NewVersion     string                `json:"new_version"`
+		VersionChanged bool                  `json:"version_changed"`
+		OldEndpoints   int                   `json:"old_endpoints"`
+		NewEndpoints   int                   `json:"new_endpoints"`
+		Tolerated      []app.ToleratedDefect `json:"tolerated"`
+		Repaired       bool                  `json:"repaired"`
+		Error          string                `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return fmt.Errorf("decode dashboard response: %w", err)
@@ -233,6 +235,7 @@ func refreshViaDashboard(apiID string) error {
 	}
 	fmt.Println()
 	fmt.Printf("  Endpoints: %d → %d\n", result.OldEndpoints, result.NewEndpoints)
+	printToleratedDefects(result.Tolerated, "refreshed")
 	return nil
 }
 

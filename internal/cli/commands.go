@@ -131,14 +131,26 @@ func newImportCommand(registry *app.Registry) *cobra.Command {
 }
 
 func newRefreshCommand(registry *app.Registry) *cobra.Command {
-	return &cobra.Command{
+	var tolerate bool
+	var strict bool
+
+	cmd := &cobra.Command{
 		Use:   "refresh <api-id|name>",
 		Short: "Refresh API spec and regenerate commands",
 		Long: "Re-fetch the OpenAPI spec for a connected API and update its version and endpoint count.\n" +
-			"The API may be given by id (as shown by 'musterflow list') or by its name.",
+			"The API may be given by id (as shown by 'musterflow list') or by its name.\n\n" +
+			"A connection made with --tolerate keeps that opt-in: refresh runs the same\n" +
+			"cosmetic-defect repair pass and reports the same tolerated-defect summary.\n" +
+			"Use --tolerate / --strict to change the opt-in for this run and every run after.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if tolerate && strict {
+				return fmt.Errorf("--tolerate and --strict are mutually exclusive")
+			}
 			if dashboardBaseURL != "" {
+				if tolerate || strict {
+					return fmt.Errorf("--tolerate/--strict require a direct refresh: stop the dashboard (it is routing refreshes through %s) and retry", dashboardBaseURL)
+				}
 				return refreshViaDashboard(args[0])
 			}
 			// DF-045: an unreadable store is not "get api: not found".
@@ -152,7 +164,18 @@ func newRefreshCommand(registry *app.Registry) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			result, err := app.Refresh(cmd.Context(), registry, conn.ID)
+
+			opts := app.RefreshOptions{}
+			switch {
+			case tolerate:
+				on := true
+				opts.Tolerate = &on
+			case strict:
+				off := false
+				opts.Tolerate = &off
+			}
+
+			result, err := app.RefreshWithOptions(cmd.Context(), registry, conn.ID, opts)
 			if err != nil {
 				return err
 			}
@@ -163,9 +186,16 @@ func newRefreshCommand(registry *app.Registry) *cobra.Command {
 			}
 			fmt.Println()
 			fmt.Printf("  Endpoints: %d → %d\n", result.OldEndpoints, result.NewEndpoints)
+			printToleratedDefects(result.Tolerated, "refreshed")
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&tolerate, "tolerate", false,
+		"Repair cosmetic spec defects before parsing and keep that opt-in for later refreshes")
+	cmd.Flags().BoolVar(&strict, "strict", false,
+		"Parse strictly from now on, clearing a previous --tolerate opt-in")
+	return cmd
 }
 
 func newTransformCommand() *cobra.Command {

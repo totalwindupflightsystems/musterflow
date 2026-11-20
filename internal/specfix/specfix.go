@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,6 +58,28 @@ const (
 	// CodeExternalRef reports an external (non-#) reference. It is recorded
 	// but deliberately NOT fetched or rewritten.
 	CodeExternalRef = "external-ref"
+	// CodeInvalidComponentName reports a components/* entry whose name contains
+	// characters OpenAPI 3 rejects. The entry is renamed to a legal name and
+	// every reference to it is rewritten, so nothing is dropped.
+	CodeInvalidComponentName = "invalid-component-name"
+	// CodeUnknownType reports a `type` value outside the Swagger 2.0 type set.
+	// The keyword is dropped; the rest of the schema is kept verbatim.
+	CodeUnknownType = "unknown-type"
+	// CodeNullTypeInArray reports a Swagger 2.0 schema whose `type` is a list
+	// containing "null". That spelling is OpenAPI 3.1 syntax; the Swagger 2.0
+	// -> 3.0 conversion copies it verbatim, where "null" is not a legal type
+	// name. The null alternative is re-expressed through the conversion's own
+	// nullability channel (x-nullable).
+	CodeNullTypeInArray = "null-type-in-array"
+	// CodeExampleNullValue reports a null inside an example where the sibling
+	// schema cannot hold null. An example is documentation, so the offending
+	// entry is dropped rather than the whole example.
+	CodeExampleNullValue = "example-null-value"
+	// CodeWrongBucketRef reports a response position that references a
+	// components/requestBodies entry. The referenced object is copied into
+	// components/responses under the same name and the reference repointed, so
+	// the media types the author wrote are preserved exactly.
+	CodeWrongBucketRef = "wrong-bucket-ref"
 )
 
 // Warning is one repaired (or recorded) defect.
@@ -137,9 +160,16 @@ func RepairWithOptions(raw []byte, opts Options) (Result, error) {
 
 	r := &repairer{
 		targets:      map[string]bool{},
+		nodes:        map[string]any{},
+		root:         root,
+		swagger2:     isSwagger2Document(root),
 		maxWarnings:  opts.MaxWarnings,
 		schemaScopes: schemaScopePointers(root),
 	}
+	// Component names are renamed before anything indexes the document, so
+	// every pointer rule below sees the names the parser will validate.
+	r.normalizeComponentNames()
+	r.nonSchemaScopes = nonSchemaScopePointers(root)
 	r.collectTargets(root, "#")
 	r.fix(root, "#", "")
 
@@ -157,12 +187,26 @@ func RepairWithOptions(raw []byte, opts Options) (Result, error) {
 }
 
 type repairer struct {
-	targets      map[string]bool
+	targets  map[string]bool
+	nodes    map[string]any
+	root     map[string]any
+	swagger2 bool
+
 	warnings     []Warning
 	changed      bool
 	suppressed   int
 	maxWarnings  int
 	schemaScopes map[string]bool
+
+	// nonSchemaScopes lists component pointers whose objects are not schemas.
+	nonSchemaScopes map[string]bool
+
+	// exampleInvalid is set while pruning one example when a null lands on a
+	// property its schema marks required; the example cannot be salvaged.
+	exampleInvalid bool
+
+	// budget bounds the nodes one reference-inlining walk may visit.
+	budget int
 }
 
 func (r *repairer) warn(code, path, detail string) {
@@ -175,20 +219,32 @@ func (r *repairer) warn(code, path, detail string) {
 }
 
 // collectTargets records every JSON pointer that exists in the document, so a
-// later pass can tell a resolvable local $ref from a dangling one.
+// later pass can tell a resolvable local $ref from a dangling one, and keeps
+// the node behind each pointer so a rule can resolve a $ref to the object it
+// names.
 func (r *repairer) collectTargets(node any, ptr string) {
 	switch v := node.(type) {
 	case map[string]any:
 		r.targets[ptr] = true
+		r.nodes[ptr] = v
 		for k, child := range v {
 			r.collectTargets(child, ptr+"/"+escapePointer(k))
 		}
 	case []any:
 		r.targets[ptr] = true
+		r.nodes[ptr] = v
 		for i, child := range v {
 			r.collectTargets(child, fmt.Sprintf("%s/%d", ptr, i))
 		}
 	}
+}
+
+// isSwagger2Document reports whether the document root declares Swagger 2.0,
+// which the engine converts to OpenAPI 3.0 before validating. Rules that exist
+// only because of that conversion are gated on it.
+func isSwagger2Document(root map[string]any) bool {
+	version, _ := root["swagger"].(string)
+	return version == "2.0"
 }
 
 // fix applies every rule to node and returns the (possibly replaced) node.
@@ -215,12 +271,20 @@ func (r *repairer) fix(node any, ptr, parentKey string) any {
 			}
 		}
 
-		if r.isSchemaNode(v) {
+		if r.isSchemaNode(v, ptr) {
 			r.fixNullType(v, ptr)
+			r.fixNullTypeInArray(v, ptr)
+			r.fixUnknownType(v, ptr)
 			r.fixRequired(v, ptr)
 			r.fixArrayItems(v, ptr)
 			r.fixValues(v, ptr)
 			r.fixExampleShape(v, ptr)
+			r.fixExampleNulls(v, ptr)
+			r.fixExampleValidation(v, ptr)
+			r.fixDefaultValidation(v, ptr)
+		} else if _, isParameter := v["in"]; isParameter {
+			// Swagger 2.0 non-body parameters carry their schema inline.
+			r.fixParameterDefault(v, ptr)
 		}
 
 		for k, child := range v {
@@ -254,6 +318,24 @@ func (r *repairer) fixReference(v map[string]any, ptr, parentKey string) (any, b
 		r.warn(CodeExternalRef, ptr+"/$ref", "external reference is not fetched: "+ref)
 		return nil, false
 	}
+
+	// A response position that references the requestBodies bucket cannot
+	// resolve: the bucket holds request-body objects. The author's content is
+	// preserved exactly — it is copied into components/responses under the
+	// same name and the reference repointed — so no media type or schema is
+	// invented or dropped.
+	if name, ok := requestBodyClaimedAsResponse(ref, ptr); ok {
+		if r.promoteRequestBodyToResponse(name) {
+			promoted := "#/components/responses/" + name
+			v["$ref"] = promoted
+			r.changed = true
+			r.warn(CodeWrongBucketRef, ptr+"/$ref",
+				"response position referenced components/requestBodies/"+name+"; repointed to "+promoted+
+					" (same name, content copied unchanged)")
+			return nil, false
+		}
+	}
+
 	if r.targets[ref] {
 		return nil, false
 	}
@@ -320,11 +402,57 @@ func schemaScopePointers(root map[string]any) map[string]bool {
 	return scopes
 }
 
+// nonSchemaScopePointers lists the component objects that are NOT JSON Schemas:
+// a security scheme, response, parameter, example, requestBody, header, link or
+// callback object legitimately carries its own `type`/`required` keys with
+// non-schema meanings (a security scheme's `type` is "oauth2"/"openIdConnect",
+// a response's `required` is "required"; a header's is boolean). The schema
+// rules must never touch those.
+func nonSchemaScopePointers(root map[string]any) map[string]bool {
+	scopes := map[string]bool{}
+	if comps, ok := root["components"].(map[string]any); ok {
+		for bucket, raw := range comps {
+			if bucket == "schemas" {
+				continue
+			}
+			entries, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			for name := range entries {
+				scopes["#/components/"+escapePointer(bucket)+"/"+escapePointer(name)] = true
+			}
+		}
+	}
+	if defs, ok := root["securityDefinitions"].(map[string]any); ok {
+		for name := range defs {
+			scopes["#/securityDefinitions/"+escapePointer(name)] = true
+		}
+	}
+	return scopes
+}
+
+// underExtension reports whether a pointer lies inside a specification
+// extension (`x-go-type`, `x-nullable`, …). Extension values are vendor
+// metadata, not schema objects: a `type` key inside `x-go-type` is a Go type
+// name, and the schema rules must not read it as a JSON Schema type.
+func underExtension(ptr string) bool {
+	for _, segment := range strings.Split(ptr, "/") {
+		if strings.HasPrefix(segment, "x-") {
+			return true
+		}
+	}
+	return false
+}
+
 // isSchemaNode reports whether v looks like a JSON Schema object rather than a
 // parameter, request body, response or operation object. Parameter and
 // request-body objects legitimately carry a boolean `required`, so the rules
 // below must not touch them.
-func (r *repairer) isSchemaNode(v map[string]any) bool {
+func (r *repairer) isSchemaNode(v map[string]any, ptr string) bool {
+	if r.nonSchemaScopes[ptr] || underExtension(ptr) {
+		return false
+	}
 	if _, ok := v["in"]; ok {
 		return false // parameter object
 	}
@@ -357,36 +485,798 @@ func (r *repairer) fixNullType(v map[string]any, ptr string) {
 		`"null" is not a legal OpenAPI type name; removed so the schema keeps its other constraints`)
 }
 
-// fixExampleShape drops an object example that omits a property its own schema
-// marks required — the example fails the schema it is attached to, which is a
-// documentation defect and never a contract change.
+// fixNullTypeInArray rewrites a Swagger 2.0 `type` list that includes "null".
+// A type list is OpenAPI 3.1 spelling; the engine's 2.0 -> 3.0 conversion
+// copies the list verbatim, where "null" is not a legal 3.0 type name and the
+// whole document is rejected. Nullability is preserved through the channel the
+// conversion does translate (x-nullable -> nullable), so the schema keeps the
+// same meaning.
+func (r *repairer) fixNullTypeInArray(v map[string]any, ptr string) {
+	if !r.swagger2 {
+		return
+	}
+	list, ok := v["type"].([]any)
+	if !ok {
+		return
+	}
+	kept := make([]string, 0, len(list))
+	found := false
+	for _, raw := range list {
+		name, isString := raw.(string)
+		if !isString {
+			return // not a shape this rule understands; leave it alone
+		}
+		if strings.EqualFold(name, "null") {
+			found = true
+			continue
+		}
+		kept = append(kept, name)
+	}
+	if !found {
+		return
+	}
+	switch len(kept) {
+	case 0:
+		delete(v, "type")
+	case 1:
+		v["type"] = kept[0]
+	default:
+		// More than one real type is a different defect (3.0 has no type
+		// unions). Picking a winner would change what the API accepts, so the
+		// document is left for the strict error to report.
+		return
+	}
+	if _, hasNullable := v["nullable"]; !hasNullable {
+		if _, hasXNullable := v["x-nullable"]; !hasXNullable {
+			v["x-nullable"] = true
+		}
+	}
+	r.changed = true
+	r.warn(CodeNullTypeInArray, ptr+"/type",
+		`"null" in a Swagger 2.0 type list is not a legal 3.0 type name; removed and expressed as x-nullable`)
+}
+
+// fixExampleNulls drops null entries from an example where the schema that
+// owns them cannot hold null once the document reaches validation.
+//
+// Examples are documentation: removing a null that the schema rejects never
+// changes what the API accepts, and it is the only repair that keeps the rest
+// of the example (the alternative — dropping the whole example — loses more).
+func (r *repairer) fixExampleNulls(v map[string]any, ptr string) {
+	example, ok := v["example"]
+	if !ok || example == nil {
+		return
+	}
+	switch example.(type) {
+	case map[string]any, []any:
+	default:
+		return
+	}
+	r.exampleInvalid = false
+	fixed, removed := r.pruneExampleNulls(v, example, ptr+"/example", false)
+	if r.exampleInvalid {
+		// A null on a REQUIRED property cannot be repaired by dropping the
+		// entry: the example would then be missing a property the schema
+		// demands. The example is the only thing that can go.
+		delete(v, "example")
+		r.changed = true
+		return
+	}
+	if removed {
+		v["example"] = fixed
+	}
+}
+
+// pruneExampleNulls walks one example value against the schema that owns it,
+// returning the value to store and whether anything was dropped. The schema is
+// followed through local $ref so a referenced property schema is honoured.
+func (r *repairer) pruneExampleNulls(schema map[string]any, val any, ptr string, viaAdditional bool) (any, bool) {
+	switch example := val.(type) {
+	case map[string]any:
+		removed := false
+		for key, child := range example {
+			sub, subViaAdditional, ok := r.exampleSubschema(schema, key)
+			if !ok {
+				continue
+			}
+			if child == nil {
+				if !r.exampleNullRejected(sub, subViaAdditional) {
+					continue
+				}
+				if schemaRequires(schema, key) {
+					r.exampleInvalid = true
+					r.changed = true
+					r.warn(CodeExampleNullValue, ptr+"/"+escapePointer(key),
+						"example value is null for a required property the schema declares "+declaredTypeLabel(sub)+
+							"; the whole example is dropped rather than leaving the required property absent")
+					return example, removed
+				}
+				delete(example, key)
+				removed = true
+				r.changed = true
+				r.warn(CodeExampleNullValue, ptr+"/"+escapePointer(key),
+					"example value is null but the schema declares "+declaredTypeLabel(sub))
+				continue
+			}
+			fixed, childRemoved := r.pruneExampleNulls(sub, child, ptr+"/"+escapePointer(key), subViaAdditional)
+			if childRemoved {
+				example[key] = fixed
+				removed = true
+			}
+		}
+		return example, removed
+	case []any:
+		items, ok := r.resolveSchema(schema["items"])
+		if !ok {
+			return example, false
+		}
+		kept := make([]any, 0, len(example))
+		removed := false
+		for i, child := range example {
+			at := fmt.Sprintf("%s/%d", ptr, i)
+			if child == nil {
+				if !r.exampleNullRejected(items, false) {
+					kept = append(kept, child)
+					continue
+				}
+				removed = true
+				r.changed = true
+				r.warn(CodeExampleNullValue, at,
+					"example element is null but the schema declares "+declaredTypeLabel(items))
+				continue
+			}
+			fixed, childRemoved := r.pruneExampleNulls(items, child, at, false)
+			if childRemoved {
+				removed = true
+			}
+			kept = append(kept, fixed)
+		}
+		if !removed {
+			return example, false
+		}
+		return kept, true
+	default:
+		return val, false
+	}
+}
+
+// exampleNullRejected reports whether a null at this position is certainly
+// rejected: the schema declares a concrete type and no nullability flag covers
+// it. An untyped schema constrains nothing locally, so the example is left
+// alone rather than guessed about.
+func (r *repairer) exampleNullRejected(schema map[string]any, viaAdditional bool) bool {
+	if _, typed := concreteType(schema); !typed {
+		return false
+	}
+	return !permitsNull(schema, viaAdditional)
+}
+
+// exampleSubschema returns the schema that governs property key of an object
+// schema, and whether it was reached through additionalProperties.
+func (r *repairer) exampleSubschema(schema map[string]any, key string) (map[string]any, bool, bool) {
+	if properties, ok := schema["properties"].(map[string]any); ok {
+		if child, exists := properties[key]; exists {
+			if sub, ok := r.resolveSchema(child); ok {
+				return sub, false, true
+			}
+			return nil, false, false
+		}
+	}
+	if additional, exists := schema["additionalProperties"]; exists {
+		if sub, ok := r.resolveSchema(additional); ok {
+			return sub, true, true
+		}
+	}
+	return nil, false, false
+}
+
+// resolveSchema follows local $ref hops to the schema object they name. The
+// hop count is bounded so a reference cycle cannot hang the repair pass.
+func (r *repairer) resolveSchema(node any) (map[string]any, bool) {
+	v, ok := node.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	for hops := 0; hops < 8; hops++ {
+		ref, hasRef := v["$ref"].(string)
+		if !hasRef {
+			return v, true
+		}
+		if !strings.HasPrefix(ref, "#") {
+			return nil, false
+		}
+		target, exists := r.nodes[ref]
+		if !exists {
+			return nil, false
+		}
+		next, isMap := target.(map[string]any)
+		if !isMap {
+			return nil, false
+		}
+		v = next
+	}
+	return nil, false
+}
+
+// concreteType reports the single non-null type a schema declares.
+func concreteType(schema map[string]any) (string, bool) {
+	switch types := schema["type"].(type) {
+	case string:
+		if types != "" && !strings.EqualFold(types, "null") {
+			return types, true
+		}
+	case []any:
+		for _, raw := range types {
+			name, ok := raw.(string)
+			if ok && name != "" && !strings.EqualFold(name, "null") {
+				return name, true
+			}
+		}
+	}
+	return "", false
+}
+
+// permitsNull reports whether the converted schema can hold a JSON null.
+//
+// The conversion translates x-nullable into `nullable` only for schemas it
+// walks through openapi2conv.ToV3SchemaRef (definitions, properties, items,
+// allOf). A schema reached through additionalProperties is copied by
+// toV3AdditionalProperties, which leaves x-nullable as an extension and never
+// sets nullable — so a null there is rejected by validation even though the
+// source says x-nullable. That asymmetry is why viaAdditional matters.
+func permitsNull(schema map[string]any, viaAdditional bool) bool {
+	if nullable, _ := schema["nullable"].(bool); nullable {
+		return true
+	}
+	if !viaAdditional {
+		if xNullable, _ := schema["x-nullable"].(bool); xNullable {
+			return true
+		}
+	}
+	switch types := schema["type"].(type) {
+	case string:
+		return strings.EqualFold(types, "null")
+	case []any:
+		for _, raw := range types {
+			if name, ok := raw.(string); ok && strings.EqualFold(name, "null") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// declaredTypeLabel names the type in a warning so the audit line says what the
+// example violated.
+func declaredTypeLabel(schema map[string]any) string {
+	if typ, ok := concreteType(schema); ok {
+		return "type " + typ
+	}
+	return "a typed schema"
+}
+
+// requestBodyClaimedAsResponse reports the component name when a $ref sitting
+// in a response position points into components/requestBodies.
+func requestBodyClaimedAsResponse(ref, ptr string) (string, bool) {
+	const prefix = "#/components/requestBodies/"
+	if !strings.HasPrefix(ref, prefix) {
+		return "", false
+	}
+	// components/responses/<name> is itself a response object, not a response
+	// position; only a slot inside a responses map qualifies.
+	if strings.HasPrefix(ptr, "#/components/") {
+		return "", false
+	}
+	segments := strings.Split(ptr, "/")
+	if len(segments) < 2 || segments[len(segments)-2] != "responses" {
+		return "", false
+	}
+	return strings.TrimPrefix(ref, prefix), true
+}
+
+// promoteRequestBodyToResponse makes the referenced request-body object
+// available as a response of the same name. The content is copied unchanged;
+// when the response already exists the copy is skipped and the reference is
+// simply repointed.
+func (r *repairer) promoteRequestBodyToResponse(name string) bool {
+	body, ok := r.nodes["#/components/requestBodies/"+name].(map[string]any)
+	if !ok {
+		return false
+	}
+	responsePtr := "#/components/responses/" + name
+	if _, exists := r.nodes[responsePtr]; exists {
+		return true
+	}
+	components, ok := r.root["components"].(map[string]any)
+	if !ok {
+		return false
+	}
+	responses, ok := components["responses"].(map[string]any)
+	if !ok {
+		if _, present := components["responses"]; present {
+			return false // unexpected shape; leave the document alone
+		}
+		responses = map[string]any{}
+		components["responses"] = responses
+		r.nodes["#/components/responses"] = responses
+		r.targets["#/components/responses"] = true
+	}
+	response := map[string]any{"description": ""}
+	if description, isString := body["description"].(string); isString && description != "" {
+		response["description"] = description
+	}
+	if content, present := body["content"]; present {
+		response["content"] = content
+	}
+	responses[unescapePointer(name)] = response
+	r.nodes[responsePtr] = response
+	r.targets[responsePtr] = true
+	return true
+}
+
+// normalizeComponentNames renames components/* entries whose names OpenAPI 3
+// rejects (the spec allows only [a-zA-Z0-9._-]) and rewrites every reference to
+// them, so a document whose generator derived a name from a path template
+// (GitLab's "postApiV4ProjectsId(refRef)triggerPipeline") still loads.
+//
+// Renaming is metadata-only: the entry keeps its content, and every $ref that
+// pointed at it points at the new name.
+func (r *repairer) normalizeComponentNames() {
+	type bucketRef struct {
+		entries map[string]any
+		prefix  string // reference prefix, e.g. "#/definitions/"
+		path    string // warning path of the bucket
+	}
+	var buckets []bucketRef
+	if components, ok := r.root["components"].(map[string]any); ok {
+		for bucket, raw := range components {
+			if entries, ok := raw.(map[string]any); ok {
+				buckets = append(buckets, bucketRef{
+					entries: entries,
+					prefix:  "#/components/" + escapePointer(bucket) + "/",
+					path:    "#/components/" + escapePointer(bucket),
+				})
+			}
+		}
+	}
+	// Swagger 2.0 has no components: its definitions become components/schemas
+	// after the engine's conversion, so an illegal name there is rejected at
+	// exactly the same validation step.
+	if r.swagger2 {
+		if defs, ok := r.root["definitions"].(map[string]any); ok {
+			buckets = append(buckets, bucketRef{entries: defs, prefix: "#/definitions/", path: "#/definitions"})
+		}
+	}
+
+	renames := map[string]map[string]string{} // prefix -> escaped old -> new
+	for _, bucket := range buckets {
+		for name := range bucket.entries {
+			if validComponentName(name) {
+				continue
+			}
+			newName := sanitizeComponentName(name, bucket.entries)
+			renames[bucket.prefix] = orNewMap(renames[bucket.prefix])
+			renames[bucket.prefix][escapePointer(name)] = newName
+		}
+	}
+	if len(renames) == 0 {
+		return
+	}
+
+	// Rename the keys first, then repoint every reference in the document.
+	for _, bucket := range buckets {
+		mapping, ok := renames[bucket.prefix]
+		if !ok {
+			continue
+		}
+		for oldEscaped, newName := range mapping {
+			oldName := unescapePointer(oldEscaped)
+			entry := bucket.entries[oldName]
+			delete(bucket.entries, oldName)
+			bucket.entries[newName] = entry
+			r.changed = true
+			r.warn(CodeInvalidComponentName, bucket.path+"/"+oldEscaped,
+				"component name is not valid OpenAPI 3 ("+oldName+"); renamed to "+newName+" and references repointed")
+		}
+	}
+	r.repointRefs(renames)
+}
+
+// repointRefs rewrites $ref values that name a renamed component.
+func (r *repairer) repointRefs(renames map[string]map[string]string) {
+	var walk func(node any)
+	walk = func(node any) {
+		switch v := node.(type) {
+		case map[string]any:
+			if ref, ok := v["$ref"].(string); ok && strings.HasPrefix(ref, "#") {
+				for prefix, mapping := range renames {
+					if !strings.HasPrefix(ref, prefix) {
+						continue
+					}
+					if newName, hit := mapping[strings.TrimPrefix(ref, prefix)]; hit {
+						v["$ref"] = prefix + newName
+						r.changed = true
+					}
+				}
+			}
+			for _, child := range v {
+				walk(child)
+			}
+		case []any:
+			for _, child := range v {
+				walk(child)
+			}
+		}
+	}
+	walk(r.root)
+}
+
+// validComponentName reports whether name is legal for a components/* key.
+func validComponentName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, c := range name {
+		switch {
+		case c >= 'a' && c <= 'z':
+		case c >= 'A' && c <= 'Z':
+		case c >= '0' && c <= '9':
+		case c == '.' || c == '_' || c == '-':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// sanitizeComponentName maps every invalid character to '_' and, on a
+// collision, appends a numeric suffix so two entries never collapse.
+func sanitizeComponentName(name string, taken map[string]any) string {
+	var b strings.Builder
+	for _, c := range name {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '.', c == '_', c == '-':
+			b.WriteRune(c)
+		default:
+			b.WriteRune('_')
+		}
+	}
+	base := b.String()
+	if base == "" {
+		base = "component"
+	}
+	if _, clash := taken[base]; !clash {
+		return base
+	}
+	for i := 2; ; i++ {
+		candidate := fmt.Sprintf("%s_%d", base, i)
+		if _, clash := taken[candidate]; !clash {
+			return candidate
+		}
+	}
+}
+
+func orNewMap(m map[string]string) map[string]string {
+	if m == nil {
+		return map[string]string{}
+	}
+	return m
+}
+
+// schemaRequires reports whether the object schema lists key in `required`.
+func schemaRequires(schema map[string]any, key string) bool {
+	required, ok := schema["required"].([]any)
+	if !ok {
+		return false
+	}
+	for _, raw := range required {
+		if name, isString := raw.(string); isString && name == key {
+			return true
+		}
+	}
+	return false
+}
+
+// fixUnknownType drops a `type` value that is not part of the Swagger 2.0 type
+// set on a document the engine validates after conversion.
+//
+// A value like "text" (a database/DTO type that leaked into the spec) is not a
+// legal type at all, so nothing is lost that the conversion could honour; the
+// key is dropped instead of guessed at ("text" is most likely string, but
+// picking a type would be a contract change the author never wrote). Every other
+// constraint on the schema — properties, items, format, enum — is untouched.
+func (r *repairer) fixUnknownType(v map[string]any, ptr string) {
+	if !r.swagger2 {
+		return
+	}
+	name, ok := v["type"].(string)
+	if !ok {
+		return
+	}
+	if swagger2Types[strings.ToLower(name)] {
+		return
+	}
+	delete(v, "type")
+	r.changed = true
+	r.warn(CodeUnknownType, ptr+"/type",
+		`"`+name+`" is not a Swagger 2.0 type; the type keyword is dropped and the rest of the schema is kept`)
+}
+
+// swagger2Types is the Swagger 2.0 type set (JSON Schema draft 4 plus the
+// Swagger-specific "file").
+var swagger2Types = map[string]bool{
+	"array":   true,
+	"boolean": true,
+	"integer": true,
+	"number":  true,
+	"object":  true,
+	"string":  true,
+	"file":    true,
+}
+
+// fixExampleValidation drops an example that its own schema rejects — an enum
+// value outside the enumeration, an integer outside its format's range, a
+// string that is not a date-time, and so on.
+//
+// This is the general form of the example rules above: an example is
+// documentation, so an example that contradicts the schema it documents is
+// removed rather than the schema being loosened. The schema itself is never
+// changed, and a schema this rule cannot evaluate (it contains a $ref, which
+// cannot be resolved from the node alone, or a shape kin-openapi refuses to
+// unmarshal) is left entirely alone — a repair is only made when the verdict
+// is certain.
+func (r *repairer) fixExampleValidation(v map[string]any, ptr string) {
+	example, ok := v["example"]
+	if !ok || example == nil {
+		return
+	}
+	verr, judged := r.validateValue(v, example)
+	if !judged || verr == nil {
+		return
+	}
+	delete(v, "example")
+	r.changed = true
+	r.warn(CodeExampleTypeMismatch, ptr+"/example",
+		"example does not satisfy its own schema: "+firstLine(verr.Error()))
+}
+
+// fixDefaultValidation drops a default value the schema would reject. A default
+// is the author's suggested value, so one that fails its own schema cannot be
+// honoured by the generated client anyway; the schema is never loosened.
+func (r *repairer) fixDefaultValidation(v map[string]any, ptr string) {
+	if _, present := v["default"]; !present {
+		return
+	}
+	def := v["default"]
+	if def == nil {
+		return
+	}
+	verr, judged := r.validateValue(v, def)
+	if !judged || verr == nil {
+		return
+	}
+	delete(v, "default")
+	r.changed = true
+	r.warn(CodeDefaultTypeMismatch, ptr+"/default",
+		"default does not satisfy its own schema: "+firstLine(verr.Error()))
+}
+
+// validateValue checks value against the schema at v, with local references
+// inlined so a $ref-heavy schema is judged as the parser will judge it. It
+// reports judged=false when the verdict cannot be trusted: the tree could not
+// be fully inlined (cycle, external target, budget) or kin-openapi refuses the
+// shape. A repair is only made on a certain verdict.
+func (r *repairer) validateValue(v map[string]any, value any) (error, bool) {
+	schemaCopy := make(map[string]any, len(v))
+	for key, val := range v {
+		switch key {
+		case "example", "examples", "default":
+			continue
+		}
+		schemaCopy[key] = val
+	}
+	r.budget = resolveBudget
+	resolved := r.resolveDeep(schemaCopy, 0)
+	if hasRefDeep(resolved, 0) {
+		return nil, false
+	}
+	return visitJSONSchema(resolved, value)
+}
+
+// fixParameterDefault drops a parameter-level default the parameter's own type
+// would reject (Swagger 2.0 keeps a non-body parameter's schema inline, so
+// `type`/`items`/`enum` sit beside `name` and `in` rather than under `schema`).
+func (r *repairer) fixParameterDefault(v map[string]any, ptr string) {
+	if _, hasIn := v["in"]; !hasIn {
+		return
+	}
+	def, present := v["default"]
+	if !present || def == nil {
+		return
+	}
+	schema := make(map[string]any, len(v))
+	for key, val := range v {
+		switch key {
+		case "name", "in", "required", "description", "collectionFormat",
+			"allowEmptyValue", "example", "examples", "default":
+			continue
+		}
+		schema[key] = val
+	}
+	if len(schema) == 0 {
+		return
+	}
+	verr, judged := visitJSONSchema(schema, def)
+	if !judged || verr == nil {
+		return
+	}
+	delete(v, "default")
+	r.changed = true
+	r.warn(CodeDefaultTypeMismatch, ptr+"/default",
+		"parameter default does not satisfy the parameter's own type: "+firstLine(verr.Error()))
+}
+
+// visitJSONSchema validates value against a plain schema document through the
+// same library the parser validates with.
+func visitJSONSchema(schemaDoc any, value any) (error, bool) {
+	raw, err := json.Marshal(schemaDoc)
+	if err != nil {
+		return nil, false
+	}
+	var schema openapi3.Schema
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		return nil, false
+	}
+	return schema.VisitJSON(value), true
+}
+
+// resolveBudget bounds the work one example check may spend inlining
+// references, so a pathological document cannot turn a repair pass quadratic.
+const resolveBudget = 200000
+
+// resolveDeep returns a copy of node with every local $ref replaced by the
+// object it names. refDepth counts only the references inlined along one path
+// — the cycle guard — so an ordinary deep property chain is never truncated.
+// When the reference chain is too long or the node budget is spent, the node is
+// returned unchanged (still holding its reference), which the caller detects
+// and treats as unverifiable.
+func (r *repairer) resolveDeep(node any, refDepth int) any {
+	switch v := node.(type) {
+	case map[string]any:
+		if ref, hasRef := v["$ref"].(string); hasRef {
+			if refDepth >= 8 || r.budget <= 0 || !strings.HasPrefix(ref, "#") {
+				return v
+			}
+			target, exists := r.nodes[ref]
+			if !exists {
+				return v
+			}
+			r.budget--
+			return r.resolveDeep(target, refDepth+1)
+		}
+		r.budget--
+		out := make(map[string]any, len(v))
+		for key, child := range v {
+			if key == "example" || key == "examples" {
+				out[key] = child
+				continue
+			}
+			out[key] = r.resolveDeep(child, refDepth)
+		}
+		return out
+	case []any:
+		out := make([]any, len(v))
+		for i, child := range v {
+			out[i] = r.resolveDeep(child, refDepth)
+		}
+		return out
+	default:
+		return node
+	}
+}
+
+// hasRefDeep reports whether any node in the tree still carries a $ref.
+func hasRefDeep(node any, depth int) bool {
+	if depth > 64 {
+		return true
+	}
+	switch v := node.(type) {
+	case map[string]any:
+		if _, hasRef := v["$ref"]; hasRef {
+			return true
+		}
+		for _, child := range v {
+			if hasRefDeep(child, depth+1) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range v {
+			if hasRefDeep(child, depth+1) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// firstLine trims a validation error to its first line so a warning stays one
+// audit-friendly line.
+func firstLine(s string) string {
+	if idx := strings.IndexByte(s, '\n'); idx >= 0 {
+		return s[:idx]
+	}
+	return s
+}
+
+// fixExampleShape drops an example that fails the schema it is attached to:
+// an object example omitting a required property, or an array example whose
+// elements omit one required by the items schema.
 func (r *repairer) fixExampleShape(v map[string]any, ptr string) {
-	example, ok := v["example"].(map[string]any)
+	if example, ok := v["example"].(map[string]any); ok {
+		required, ok := v["required"].([]any)
+		if !ok {
+			return
+		}
+		missing := missingRequired(example, required)
+		if len(missing) == 0 {
+			return
+		}
+		delete(v, "example")
+		r.changed = true
+		r.warn(CodeExampleMissingRequired, ptr+"/example",
+			"example omits required propert(y/ies) "+strings.Join(missing, ", "))
+		return
+	}
+
+	// An array-level example is validated element by element against the items
+	// schema, which may itself carry `required`. The example is the author's
+	// documentation, so an element that omits a required property drops the
+	// example — no schema or operation is touched.
+	if typ, _ := v["type"].(string); typ != "array" {
+		return
+	}
+	elements, ok := v["example"].([]any)
 	if !ok {
 		return
 	}
-	required, ok := v["required"].([]any)
+	items, ok := r.resolveSchema(v["items"])
 	if !ok {
 		return
 	}
+	required, ok := items["required"].([]any)
+	if !ok {
+		return
+	}
+	for _, element := range elements {
+		object, isObject := element.(map[string]any)
+		if !isObject {
+			continue
+		}
+		if missing := missingRequired(object, required); len(missing) > 0 {
+			delete(v, "example")
+			r.changed = true
+			r.warn(CodeExampleMissingRequired, ptr+"/example",
+				"array example element omits required propert(y/ies) "+strings.Join(missing, ", "))
+			return
+		}
+	}
+}
+
+// missingRequired lists the required property names object omits, sorted.
+func missingRequired(object map[string]any, required []any) []string {
 	var missing []string
 	for _, raw := range required {
 		name, isString := raw.(string)
 		if !isString {
 			continue
 		}
-		if _, present := example[name]; !present {
+		if _, present := object[name]; !present {
 			missing = append(missing, name)
 		}
 	}
-	if len(missing) == 0 {
-		return
-	}
 	sort.Strings(missing)
-	delete(v, "example")
-	r.changed = true
-	r.warn(CodeExampleMissingRequired, ptr+"/example",
-		"example omits required propert(y/ies) "+strings.Join(missing, ", "))
+	return missing
 }
 
 func (r *repairer) fixRequired(v map[string]any, ptr string) {
@@ -545,4 +1435,10 @@ func asFloat(v any) (float64, bool) {
 func escapePointer(s string) string {
 	s = strings.ReplaceAll(s, "~", "~0")
 	return strings.ReplaceAll(s, "/", "~1")
+}
+
+// unescapePointer reverses escapePointer.
+func unescapePointer(s string) string {
+	s = strings.ReplaceAll(s, "~1", "/")
+	return strings.ReplaceAll(s, "~0", "~")
 }
