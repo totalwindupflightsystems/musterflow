@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 )
@@ -48,19 +49,32 @@ const df020TestSpec = `{
   }
 }`
 
+// df020Widgets is the default fixture returned by the df020 test server: two
+// short rows that fit in the engine's table cells without truncation.
+func df020Widgets() []map[string]interface{} {
+	return []map[string]interface{}{
+		{"id": 1.0, "name": "alpha"},
+		{"id": 2.0, "name": "beta"},
+	}
+}
+
 // df020Setup creates a test HTTP server, writes a spec file pointing at it,
 // connects an API to a registry, and returns a root command ready to execute
 // generated leaf commands.
 func df020Setup(t *testing.T) (*cobra.Command, *httptest.Server) {
 	t.Helper()
+	return df020SetupWith(t, df020Widgets())
+}
+
+// df020SetupWith is df020Setup with a caller-supplied response body, so tests
+// can serve rows that are wide enough to hit the engine's table truncation
+// (DF-038) or that carry non-JSON payloads.
+func df020SetupWith(t *testing.T, widgets []map[string]interface{}) (*cobra.Command, *httptest.Server) {
+	t.Helper()
 
 	// Test server that returns a JSON array of widgets.
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		widgets := []map[string]interface{}{
-			{"id": 1.0, "name": "alpha"},
-			{"id": 2.0, "name": "beta"},
-		}
 		var buf bytes.Buffer
 		_ = json.NewEncoder(&buf).Encode(widgets)
 		_, _ = w.Write(buf.Bytes())
@@ -304,6 +318,149 @@ func TestDF020_OutputFileJSON(t *testing.T) {
 	var v interface{}
 	if err := json.Unmarshal(data, &v); err != nil {
 		t.Errorf("output file is not valid JSON: %v (content: %q)", err, string(data))
+	}
+}
+
+// --- DF-049: --output-file extension detection ---
+
+// TestDF049_OutputFileJSONIsJSON covers DF-049: with no explicit -o, a
+// --output-file path ending in .json must receive the JSON rendering (the same
+// bytes `--output json` produces), not the engine's default ASCII table.
+func TestDF049_OutputFileJSONIsJSON(t *testing.T) {
+	root, ts := df020Setup(t)
+	defer ts.Close()
+
+	outPath := filepath.Join(t.TempDir(), "widgets.json")
+	if _, err := runLeaf(root, []string{
+		"df020-test-api", "widgets", "list-widgets",
+		"--output-file", outPath,
+	}); err != nil {
+		t.Fatalf("list-widgets --output-file x.json: %v", err)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+
+	var rows []map[string]interface{}
+	if err := json.Unmarshal(data, &rows); err != nil {
+		t.Fatalf("DF-049: --output-file x.json did not write JSON: %v (content: %q)", err, string(data))
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 JSON rows, got %d (content: %q)", len(rows), string(data))
+	}
+	if rows[0]["name"] != "alpha" || rows[1]["name"] != "beta" {
+		t.Errorf("JSON rows did not round-trip: %q", string(data))
+	}
+}
+
+// TestDF049_OutputFileYAMLIsYAML: .yaml/.yml are part of the same promise.
+func TestDF049_OutputFileYAMLIsYAML(t *testing.T) {
+	root, ts := df020Setup(t)
+	defer ts.Close()
+
+	outPath := filepath.Join(t.TempDir(), "widgets.yaml")
+	if _, err := runLeaf(root, []string{
+		"df020-test-api", "widgets", "list-widgets",
+		"--output-file", outPath,
+	}); err != nil {
+		t.Fatalf("list-widgets --output-file x.yaml: %v", err)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+
+	var rows []map[string]interface{}
+	if err := yaml.Unmarshal(data, &rows); err != nil {
+		t.Fatalf("DF-049: --output-file x.yaml did not write YAML: %v (content: %q)", err, string(data))
+	}
+	if len(rows) != 2 || rows[0]["name"] != "alpha" {
+		t.Errorf("YAML rows did not round-trip: %q", string(data))
+	}
+}
+
+// TestDF049_ExplicitFormatWinsOverExtension pins the documented resolution
+// order (explicit -o > extension): `-o table --output-file x.json` keeps the
+// table, because the user asked for it.
+func TestDF049_ExplicitFormatWinsOverExtension(t *testing.T) {
+	root, ts := df020Setup(t)
+	defer ts.Close()
+
+	outPath := filepath.Join(t.TempDir(), "widgets.json")
+	if _, err := runLeaf(root, []string{
+		"df020-test-api", "widgets", "list-widgets",
+		"-o", "table", "--output-file", outPath,
+	}); err != nil {
+		t.Fatalf("list-widgets -o table --output-file x.json: %v", err)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+	if !strings.Contains(string(data), "alpha") {
+		t.Errorf("explicit -o table should still write the table, got: %q", string(data))
+	}
+	var v interface{}
+	if err := json.Unmarshal(data, &v); err == nil {
+		t.Errorf("explicit -o table should win over the .json extension, got JSON: %q", string(data))
+	}
+}
+
+// TestDF049_UnknownExtensionKeepsTable documents the fallback for extensions
+// we cannot honour (e.g. .txt): the engine's native default, the table.
+func TestDF049_UnknownExtensionKeepsTable(t *testing.T) {
+	root, ts := df020Setup(t)
+	defer ts.Close()
+
+	outPath := filepath.Join(t.TempDir(), "widgets.txt")
+	if _, err := runLeaf(root, []string{
+		"df020-test-api", "widgets", "list-widgets",
+		"--output-file", outPath,
+	}); err != nil {
+		t.Fatalf("list-widgets --output-file x.txt: %v", err)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+	if !strings.Contains(string(data), "alpha") {
+		t.Errorf("unknown extension should fall back to the table, got: %q", string(data))
+	}
+	var v interface{}
+	if err := json.Unmarshal(data, &v); err == nil {
+		t.Errorf("unknown extension should not silently write JSON, got: %q", string(data))
+	}
+}
+
+// TestDF049_RawWinsOverExtension: --raw dumps the body untouched even when the
+// file extension names a transformed format, and the engine is never asked to
+// render csv/parquet itself.
+func TestDF049_RawWinsOverExtension(t *testing.T) {
+	root, ts := df020Setup(t)
+	defer ts.Close()
+
+	outPath := filepath.Join(t.TempDir(), "widgets.csv")
+	if _, err := runLeaf(root, []string{
+		"df020-test-api", "widgets", "list-widgets",
+		"--raw", "--output-file", outPath,
+	}); err != nil {
+		t.Fatalf("list-widgets --raw --output-file x.csv: %v", err)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+	if !strings.Contains(string(data), `"name":"alpha"`) {
+		t.Errorf("--raw should write the untouched body, got: %q", string(data))
+	}
+	if strings.Contains(string(data), "id,name") {
+		t.Errorf("--raw should not be transformed into CSV, got: %q", string(data))
 	}
 }
 

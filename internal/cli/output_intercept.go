@@ -16,6 +16,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -95,6 +96,61 @@ func isExtendedFormat(format string) bool {
 	return format == "csv" || format == "jsonl" || format == "parquet"
 }
 
+// isEngineNativeFormat returns true for formats the engine renders itself, so
+// a --output-file extension match only needs -o <format> passed through
+// (table is the engine's default and needs no flag at all).
+func isEngineNativeFormat(format string) bool {
+	return format == "json" || format == "yaml"
+}
+
+// forceEngineOutputFormat makes the generated leaf render format: it prepends
+// -o <format> to args and pins the leaf's "output" flag after cobra parses
+// flags, because flag state from the outer parse can bleed through cobra's
+// caching.  The returned restore func must be deferred by the caller.
+func forceEngineOutputFormat(target *cobra.Command, args []string, format string) ([]string, func()) {
+	cleanArgs := append([]string{"-o", format}, args...)
+
+	originalPreRunE := target.PreRunE
+	target.PreRunE = func(cmd *cobra.Command, a []string) error {
+		_ = cmd.Flags().Set("output", format)
+		if originalPreRunE != nil {
+			return originalPreRunE(cmd, a)
+		}
+		return nil
+	}
+	return cleanArgs, func() { target.PreRunE = originalPreRunE }
+}
+
+// tableTruncationHint is appended to a rendered table when any cell hit the
+// engine's width cap.  The default table silently cuts wide values at 80
+// columns, which hides the tail of e.g. a long JSON answer; naming the escape
+// hatches beats leaving the user to guess why the value stops mid-token.
+const tableTruncationHint = "… output truncated — use --output json or --raw for full values"
+
+// engineTableCellLimit mirrors the engine's per-cell cap: table values longer
+// than this are rendered as value[:limit-3] + "...".
+const engineTableCellLimit = 80
+
+// tableCellSeparator splits a rendered table row into cells.  The engine's
+// tabwriter pads every column with at least two spaces, so runs of two or more
+// spaces separate cells, while single spaces stay inside a cell (prose, JSON).
+var tableCellSeparator = regexp.MustCompile(`\s{2,}`)
+
+// tableOutputTruncated reports whether a rendered table carries the engine's
+// truncation marker: a cell that ends in "..." and is at least as wide as the
+// engine's cell cap.  Requiring both keeps genuine data that merely ends in an
+// ellipsis from triggering the hint.
+func tableOutputTruncated(output string) bool {
+	for _, line := range strings.Split(output, "\n") {
+		for _, cell := range tableCellSeparator.Split(strings.TrimRight(line, " 	"), -1) {
+			if len(cell) >= engineTableCellLimit && strings.HasSuffix(cell, "...") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // createOutputFile creates the output file and its parent directories.
 func createOutputFile(path string) (*os.File, error) {
 	dir := filepath.Dir(path)
@@ -123,7 +179,12 @@ func createOutputFile(path string) (*os.File, error) {
 //
 // --output-file with a non-extended format (table, json, yaml) or --raw:
 // redirect the engine's stdout to the file so the engine's native output goes
-// directly to the file.
+// directly to the file.  When the format came from the file extension
+// (.json/.yaml) and no explicit -o was given, the engine is told to render that
+// format instead of its default table (DF-049).
+//
+// Default table to stdout: the render is captured so that truncated cells can
+// be flagged with a footer naming --output json / --raw (DF-038).
 //
 // Format resolution order: explicit -o flag > --output-file extension > default "table".
 // Destination: --output-file wins for the destination; stdout otherwise.
@@ -156,7 +217,15 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 	extendedFmt := isExtendedFormat(format)
 	hasOutFile := outputFile != ""
 
-	// 6. No interception needed: engine handles table/json/yaml to stdout.
+	// 6a. Table to stdout: capture the render so a truncated cell can be
+	//     flagged with the escape hatches (DF-038).  --raw dumps the body
+	//     untouched and the machine-readable formats are excluded, so both
+	//     fall through to direct execution below.
+	if !extendedFmt && !hasOutFile && !isRaw && format == "table" {
+		return executeTableWithTruncationHint(target, remaining)
+	}
+
+	// 7. No interception needed: engine handles table/json/yaml to stdout.
 	if !extendedFmt && !hasOutFile {
 		return false, nil
 	}
@@ -189,25 +258,10 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 		// Also strip --output-file since we've already handled it.
 		cleanArgs := stripFlagFromArgs(remaining, "output", "o")
 		cleanArgs = stripFlagFromArgs(cleanArgs, "output-file", "")
-		// Prepend -o json to force JSON output from the engine.
-		cleanArgs = append([]string{"-o", "json"}, cleanArgs...)
+		// Prepend -o json and pin the flag after cobra parses it.
+		cleanArgs, restorePreRun := forceEngineOutputFormat(target, cleanArgs, "json")
+		defer restorePreRun()
 		target.SetArgs(cleanArgs)
-
-		// Install a PreRunE that forces the output flag to "json" AFTER
-		// cobra's flag parsing but BEFORE the engine's RunE fires. This
-		// is necessary because target.Execute() re-parses flags from
-		// SetArgs, and the previous flag state (csv) can bleed through
-		// cobra's internal caching. PreRunE runs after ParseFlags, so
-		// setting the flag here guarantees the engine sees "json".
-		originalPreRunE := target.PreRunE
-		target.PreRunE = func(cmd *cobra.Command, args []string) error {
-			_ = cmd.Flags().Set("output", "json")
-			if originalPreRunE != nil {
-				return originalPreRunE(cmd, args)
-			}
-			return nil
-		}
-		defer func() { target.PreRunE = originalPreRunE }()
 
 		// Capture the engine's JSON output.
 		var buf bytes.Buffer
@@ -255,6 +309,18 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 	//     engine's stdout to the file and let it execute normally.
 	//     Strip --output-file from args since we've already handled it.
 	cleanArgs := stripFlagFromArgs(remaining, "output-file", "")
+
+	// When the format came from the file extension (no explicit -o), the engine
+	// still has to be told what to render: otherwise --output-file out.json
+	// receives the engine's default table, which contradicts the flag's
+	// "format auto-detected from extension" promise (DF-049).  --raw and the
+	// extended formats settled their own paths above.
+	restorePreRun := func() {}
+	if !hasFormat && !isRaw && isEngineNativeFormat(format) && target.Flags().Lookup("output") != nil {
+		cleanArgs, restorePreRun = forceEngineOutputFormat(target, cleanArgs, format)
+	}
+	defer restorePreRun()
+
 	target.SetArgs(cleanArgs)
 
 	if fileOut != nil {
@@ -266,4 +332,31 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// executeTableWithTruncationHint runs the leaf with its table output captured,
+// writes that output through unchanged, and appends tableTruncationHint when
+// any cell was cut short by the engine's width cap.  Only the stdout
+// destination gets the hint: a table written to --output-file stays byte-clean.
+func executeTableWithTruncationHint(target *cobra.Command, remaining []string) (bool, error) {
+	originalOut := target.OutOrStdout()
+	defer target.SetOut(originalOut)
+
+	var buf bytes.Buffer
+	target.SetOut(&buf)
+	target.SetArgs(remaining)
+
+	execErr := target.Execute()
+
+	out := originalOut
+	if out == nil {
+		out = os.Stdout
+	}
+	rendered := buf.String()
+	_, _ = io.WriteString(out, rendered)
+	if tableOutputTruncated(rendered) {
+		_, _ = fmt.Fprintf(out, "\n%s\n", tableTruncationHint)
+	}
+
+	return true, execErr
 }
