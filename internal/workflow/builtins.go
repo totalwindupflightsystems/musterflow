@@ -8,24 +8,38 @@ import (
 	"strings"
 	"time"
 
+	"go.starlark.net/lib/json"
 	"go.starlark.net/starlark"
 )
 
 // HTTP builtins available to every flow.
 //
-// The engine predeclares three globals so a flow can chain API calls without
+// The engine predeclares these globals so a flow can chain API calls without
 // shelling out:
 //
 //	http_get(url, headers=None)                       -> response dict
 //	http_post(url, body=None, headers=None)           -> response dict
 //	http_request(method, url, headers=None, body=None) -> response dict
+//	sleep(seconds)                                    -> None
+//	json                                              -> module(encode, decode, ...)
 //
-// Every builtin returns the same response dict with exactly three keys:
+// Every HTTP builtin returns the same response dict with exactly three keys:
 // "status" (int), "body" (string) and "headers" (dict of str -> str holding the
 // first value of each canonical header name). HTTP status codes are data, not
 // errors: a 404 or 500 returns a normal dict so flows can branch on
 // resp["status"]. Only transport-level failures (DNS, dial, TLS, timeout) raise
 // a Starlark error, prefixed with the failing builtin name.
+//
+// sleep(seconds) is what makes a polling flow possible: Starlark has no
+// clock, so without it a poll loop becomes a busy loop that hammers the
+// upstream (consensus, for one, rate-limits at 100 session requests/minute).
+// The argument is a number of seconds (int or float) and is capped at
+// flowMaxSleep; a negative or non-finite value raises.
+//
+// json is the standard go.starlark.net/lib/json module, so a flow can decode a
+// response body into dicts/lists instead of substring-matching raw JSON. That
+// is what lets an integration flow ASSERT on a field (e.g. the assistant reply
+// is present and non-empty) rather than merely prove the call returned 200.
 const (
 	// flowHTTPTimeout bounds a single builtin HTTP request.
 	flowHTTPTimeout = 10 * time.Second
@@ -33,6 +47,10 @@ const (
 	// Larger bodies are truncated (the flow still gets a usable dict) so a
 	// misbehaving upstream cannot make the daemon read an unbounded body.
 	flowMaxResponseBody = 1 << 20 // 1 MiB
+	// flowMaxSleep caps one sleep() call. A flow runs inside the dashboard
+	// daemon, so an unbounded sleep would pin a request handler indefinitely;
+	// 30s is long enough for any poll interval a flow should use.
+	flowMaxSleep = 30 * time.Second
 )
 
 // flowHTTPMethods is the closed set of methods http_request accepts. The method
@@ -53,7 +71,43 @@ func flowBuiltins() starlark.StringDict {
 		"http_get":     starlark.NewBuiltin("http_get", httpGetBuiltin),
 		"http_post":    starlark.NewBuiltin("http_post", httpPostBuiltin),
 		"http_request": starlark.NewBuiltin("http_request", httpRequestBuiltin),
+		"sleep":        starlark.NewBuiltin("sleep", sleepBuiltin),
+		"json":         json.Module,
 	}
+}
+
+// sleepBuiltin implements sleep(seconds). It blocks the calling flow for the
+// requested duration so a poll loop can wait between attempts; see the
+// flowMaxSleep cap for why the duration is bounded.
+func sleepBuiltin(_ *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var seconds starlark.Value
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "seconds", &seconds); err != nil {
+		return nil, err
+	}
+
+	var d time.Duration
+	switch v := seconds.(type) {
+	case starlark.Int:
+		n, ok := v.Int64()
+		if !ok {
+			return nil, fmt.Errorf("%s: seconds %s is out of range", b.Name(), v.String())
+		}
+		d = time.Duration(n) * time.Second
+	case starlark.Float:
+		d = time.Duration(float64(v) * float64(time.Second))
+	default:
+		return nil, fmt.Errorf("%s: seconds must be a number, got %s", b.Name(), seconds.Type())
+	}
+	if d < 0 {
+		return nil, fmt.Errorf("%s: seconds must not be negative, got %s", b.Name(), seconds.String())
+	}
+	if d > flowMaxSleep {
+		return nil, fmt.Errorf("%s: seconds must be at most %s, got %s",
+			b.Name(), flowMaxSleep, seconds.String())
+	}
+
+	time.Sleep(d)
+	return starlark.None, nil
 }
 
 // httpGetBuiltin implements http_get(url, headers=None).
