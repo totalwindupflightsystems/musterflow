@@ -45,17 +45,84 @@ func TestConnectionToCatalogEntry(t *testing.T) {
 	if entry.Version != conn.Version {
 		t.Errorf("Version: got %q, want %q", entry.Version, conn.Version)
 	}
-	if entry.QualityTier != "community-inferred" {
-		t.Errorf("QualityTier: got %q, want \"community-inferred\"", entry.QualityTier)
-	}
 	if !entry.AddedAt.Equal(conn.AddedAt) {
 		t.Errorf("AddedAt: got %v, want %v", entry.AddedAt, conn.AddedAt)
 	}
 	if entry.Downloads != 0 {
 		t.Errorf("Downloads: got %d, want 0", entry.Downloads)
 	}
-	if entry.Score != 0 {
-		t.Errorf("Score: got %d, want 0", entry.Score)
+	// The tier and score come from the catalog scoring function (CATALOG-002),
+	// not from a hardcoded constant: this fixture has a description (>20 chars)
+	// and a version but neither an official spec host nor an "openapi" type,
+	// so Score() lands on 2 — below scoreToTier's 3 threshold.
+	if entry.Score != 2 {
+		t.Errorf("Score: got %d, want 2", entry.Score)
+	}
+	if entry.QualityTier != "untested" {
+		t.Errorf("QualityTier: got %q, want %q", entry.QualityTier, scoreToTier(2))
+	}
+}
+
+func TestConnectionToCatalogEntryScoreIsComputed(t *testing.T) {
+	tests := []struct {
+		name      string
+		conn      *app.APIConnection
+		wantScore int
+		wantTier  string
+	}{
+		{
+			name: "official host plus metadata",
+			conn: &app.APIConnection{
+				ID:          "gh",
+				Name:        "GitHub",
+				SpecURL:     "https://api.github.com/openapi.json",
+				Version:     "1.0.0",
+				Description: "The GitHub REST API for repos, issues and PRs",
+			},
+			wantScore: 7,
+			wantTier:  "official",
+		},
+		{
+			name: "short fallback description scores only on the version",
+			conn: &app.APIConnection{
+				ID:   "bare",
+				Name: "A", // "API connector for A" is exactly 20 chars: no bonus
+			},
+			wantScore: 1,
+			wantTier:  "untested",
+		},
+		{
+			name: "community host with description and version",
+			conn: &app.APIConnection{
+				ID:          "community",
+				Name:        "Community",
+				SpecURL:     "https://example.com/spec.json",
+				Version:     "2.1.0",
+				Description: "A test API for unit testing",
+			},
+			wantScore: 2,
+			wantTier:  "untested",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry := ConnectionToCatalogEntry(tt.conn)
+			if entry.Score != tt.wantScore {
+				t.Errorf("Score: got %d, want %d", entry.Score, tt.wantScore)
+			}
+			if entry.QualityTier != tt.wantTier {
+				t.Errorf("QualityTier: got %q, want %q", entry.QualityTier, tt.wantTier)
+			}
+			// A pushed entry must never carry the old unscored placeholder, and
+			// its tier must be the one its own score maps to.
+			if entry.Score == 0 && entry.Type != "" && entry.Version == "" && entry.QualityTier == "community-inferred" {
+				t.Errorf("entry kept the pre-CATALOG-002 placeholder score/tier: %+v", entry)
+			}
+			if want := scoreToTier(entry.Score); entry.QualityTier != want {
+				t.Errorf("tier/score disagree: score %d maps to %q, entry says %q", entry.Score, want, entry.QualityTier)
+			}
+		})
 	}
 }
 

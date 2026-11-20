@@ -1,0 +1,68 @@
+=== CATALOG-002 pass-2 — candidate nws ===
+binary:      /tmp/mf-cat002
+data dir:    /tmp/mf-cat002-verify/nws (scratch; canonical ~/.musterflow untouched)
+dashboard:   127.0.0.1:19884 (canonical 9876 deliberately NOT used)
+spec:        https://api.weather.gov/openapi.json
+
+⚡ MusterFlow 0.1.0
+
+Dashboard:    http://localhost:19884
+API:          http://localhost:19884/api/
+MCP endpoint: http://localhost:19884/mcp
+
+Connected APIs: 0
+
+Press Ctrl+C to stop.
+$ curl http://127.0.0.1:19884/api/health -> ready=1
+
+$ /tmp/mf-cat002 --data-dir /tmp/mf-cat002-verify/nws --dashboard-addr 127.0.0.1:19884 connect https://api.weather.gov/openapi.json --name nws
+note: --data-dir /tmp/mf-cat002-verify/nws is served by the running dashboard at http://127.0.0.1:19884; routing this command through it
+✓ Connected: nws
+  ID: 70b5bf949a656585
+  Version: 3.12.2
+  Endpoints: 69
+  Base URL: https://api.weather.gov
+
+Try: musterflow nws --help
+exit=0
+
+$ /tmp/mf-cat002 --data-dir /tmp/mf-cat002-verify/nws --dashboard-addr 127.0.0.1:19884 list
+note: --data-dir /tmp/mf-cat002-verify/nws is served by the running dashboard at http://127.0.0.1:19884; routing this command through it
+Connected APIs (1):
+
+  nws (70b5bf949a656585)
+    Spec: https://api.weather.gov/openapi.json
+    Base: https://api.weather.gov
+    Endpoints: 69
+    Auth: none
+
+exit=0
+
+$ /tmp/mf-cat002 --data-dir /tmp/mf-cat002-verify/nws --dashboard-addr 127.0.0.1:19884 catalog push 70b5bf949a656585
+note: --data-dir /tmp/mf-cat002-verify/nws is served by the running dashboard at http://127.0.0.1:19884; routing this command through it
+Catalog entry JSON for 70b5bf949a656585:
+
+{
+  "id": "70b5bf949a656585",
+  "name": "nws",
+  "type": "api",
+  "description": "weather.gov API",
+  "spec_url": "https://api.weather.gov/openapi.json",
+  "author": "community",
+  "version": "3.12.2",
+  "score": 1,
+  "quality_tier": "untested",
+  "added_at": "2026-11-20T16:37:23.849498Z",
+  "downloads": 0
+}
+
+Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/70b5bf949a656585.json and add it to index.json
+exit=0
+
+staged: /tmp/mf-cat002-stage/nws.json (310 bytes)
+validated: parses as JSON with id, spec_url, score
+
+Shutting down...
+Goodbye.
+dashboard on :19884 stopped
+

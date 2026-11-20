@@ -1,0 +1,68 @@
+=== CATALOG-002 pass-2 — candidate vercel ===
+binary:      /tmp/mf-cat002
+data dir:    /tmp/mf-cat002-verify/vercel (scratch; canonical ~/.musterflow untouched)
+dashboard:   127.0.0.1:19881 (canonical 9876 deliberately NOT used)
+spec:        https://openapi.vercel.sh/
+
+⚡ MusterFlow 0.1.0
+
+Dashboard:    http://localhost:19881
+API:          http://localhost:19881/api/
+MCP endpoint: http://localhost:19881/mcp
+
+Connected APIs: 0
+
+Press Ctrl+C to stop.
+$ curl http://127.0.0.1:19881/api/health -> ready=1
+
+$ /tmp/mf-cat002 --data-dir /tmp/mf-cat002-verify/vercel --dashboard-addr 127.0.0.1:19881 connect https://openapi.vercel.sh/ --name vercel
+note: --data-dir /tmp/mf-cat002-verify/vercel is served by the running dashboard at http://127.0.0.1:19881; routing this command through it
+✓ Connected: vercel
+  ID: 9a87419efed4870b
+  Version: 0.0.1
+  Endpoints: 493
+  Base URL: https://api.vercel.com
+
+Try: musterflow vercel --help
+exit=0
+
+$ /tmp/mf-cat002 --data-dir /tmp/mf-cat002-verify/vercel --dashboard-addr 127.0.0.1:19881 list
+note: --data-dir /tmp/mf-cat002-verify/vercel is served by the running dashboard at http://127.0.0.1:19881; routing this command through it
+Connected APIs (1):
+
+  vercel (9a87419efed4870b)
+    Spec: https://openapi.vercel.sh/
+    Base: https://api.vercel.com
+    Endpoints: 493
+    Auth: none
+
+exit=0
+
+$ /tmp/mf-cat002 --data-dir /tmp/mf-cat002-verify/vercel --dashboard-addr 127.0.0.1:19881 catalog push 9a87419efed4870b
+note: --data-dir /tmp/mf-cat002-verify/vercel is served by the running dashboard at http://127.0.0.1:19881; routing this command through it
+Catalog entry JSON for 9a87419efed4870b:
+
+{
+  "id": "9a87419efed4870b",
+  "name": "vercel",
+  "type": "api",
+  "description": "Vercel combines the best developer experience with an obsessive focus on end-user performance. Our platform enables frontend teams to do their best work.",
+  "spec_url": "https://openapi.vercel.sh/",
+  "author": "community",
+  "version": "0.0.1",
+  "score": 2,
+  "quality_tier": "untested",
+  "added_at": "2026-11-20T16:37:15.623674Z",
+  "downloads": 0
+}
+
+Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/9a87419efed4870b.json and add it to index.json
+exit=0
+
+staged: /tmp/mf-cat002-stage/vercel.json (440 bytes)
+validated: parses as JSON with id, spec_url, score
+
+Shutting down...
+Goodbye.
+dashboard on :19881 stopped
+

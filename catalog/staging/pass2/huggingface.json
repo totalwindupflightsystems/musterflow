@@ -1,0 +1,13 @@
+{
+  "id": "8ac8f489bdf0ba6f",
+  "name": "huggingface",
+  "type": "api",
+  "description": "We have open endpoints that you can use to retrieve information from the Hub as well as perform certain actions such as creating model, dataset or Space repos. We offer a wrapper Python client, [`hugg...",
+  "spec_url": "https://huggingface.co/.well-known/openapi.json",
+  "author": "community",
+  "version": "0.0.1",
+  "score": 2,
+  "quality_tier": "untested",
+  "added_at": "2026-11-20T16:37:19.989801Z",
+  "downloads": 0
+}
