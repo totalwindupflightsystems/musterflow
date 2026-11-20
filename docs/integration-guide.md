@@ -691,10 +691,12 @@ Open `http://localhost:9876` in a browser to see the dark-themed dashboard: conn
 
 ```yaml
 port: 9876
-data_dir: ~/.musterflow/
+data_dir: /home/<user>/.musterflow
 default_format: table
 auto_completion: true
 ```
+
+`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path.
 
 **Data directory** (`~/.musterflow/` by default, overridable with `--data-dir`):
 
@@ -702,9 +704,14 @@ auto_completion: true
 ~/.musterflow/
 ├── config.yaml            # User configuration — also holds API credentials (see below)
 ├── musterflow.db          # DuckDB registry (API connections)
-├── flows/                 # Starlark workflow scripts
-└── transforms/            # WASM transforms (.wasm files, created by `transform list`)
+├── flows/                 # Starlark workflow scripts + <name>.star.json metadata sidecars
+├── transforms/            # WASM transforms (.wasm files, created by `transform list`)
+└── tokens/                # OAuth2 token cache from `auth login` (<client-id>.yaml, mode 0600)
 ```
+
+`flows/<name>.star` is the Starlark source; the `<name>.star.json` sidecar beside it carries the flow's `description` and `webhook` flag (`internal/workflow/engine.go` `writeMeta`), which `flow list` reads back. A missing sidecar is not an error — the flow reads as description-less and non-webhook, which covers flows created before sidecars existed. `transforms/` and `tokens/` resolve under the default `~/.musterflow` even when `--data-dir` points elsewhere.
+
+**CLI writes route through the dashboard.** When a dashboard answers on the configured port the CLI does not open `musterflow.db` at all — it goes over the dashboard's HTTP API, so reads and writes coexist with the running server (see [Operational Pitfalls](#operational-pitfalls) for the lock error this avoids and the two sanctioned ways forward).
 
 There is no separate credentials file: per-API credentials live in `config.yaml` under a top-level `auth:` map, keyed by API id:
 

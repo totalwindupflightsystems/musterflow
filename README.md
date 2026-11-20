@@ -225,6 +225,21 @@ auto_completion: true
 
 `data_dir` is stored as the **resolved absolute path** (no trailing slash): the first-run default is written that way. A `~` you set yourself is NOT expanded — `config set data_dir '~/.musterflow'` stores the literal `~`, and the app then creates a `~` directory relative to the current working directory. Always pass an absolute path. Scripts should read the resolved value.
 
+The data directory holds everything MusterFlow writes:
+
+```
+~/.musterflow/
+├── config.yaml            # User config — also holds per-API credentials (auth: map)
+├── musterflow.db          # DuckDB registry (API connections)
+├── flows/                 # Starlark flows: <name>.star + <name>.star.json metadata sidecar
+├── transforms/            # WASM transforms, read by `transform list`
+└── tokens/                # OAuth2 token cache from `auth login` (<client-id>.yaml, mode 0600)
+```
+
+`flows/<name>.star` holds only Starlark source; the `<name>.star.json` sidecar next to it holds the flow's `description` and `webhook` flag, which is what `flow list` and the webhook route read back. A flow whose sidecar is missing (created by an older MusterFlow) lists with an empty description and as non-webhook — that is a fallback, not an error. `transforms/` and `tokens/` always resolve under the default `~/.musterflow`, even when `--data-dir` points elsewhere.
+
+**The dashboard is the writer.** `musterflow start` serves the registry and holds the single-writer DuckDB lock on `<data_dir>/musterflow.db`. When a dashboard answers on the configured port, CLI commands go over its HTTP API instead of opening the file, so they mix with a running server without a lock conflict; if it serves a different port, `--dashboard-addr 127.0.0.1:<port>` (or the `port` config key) restores routing. A separate `--data-dir` gives you its own `musterflow.db` and lock for offline work.
+
 Port auto-discovery: if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing which one it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :9999` or by setting `port` in config.
 
 ## Shell Completion
