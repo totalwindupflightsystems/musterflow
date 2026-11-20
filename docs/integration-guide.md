@@ -384,13 +384,15 @@ The CLI `flow run` prints the Starlark script's output to stdout. The dashboard 
 
 ### HTTP Builtins
 
-Every flow is predeclared with three HTTP builtins, implemented with the Go standard library (no extra dependencies):
+Every flow is predeclared with five globals: three HTTP builtins and two utility globals (`sleep` and `json`), implemented with the Go standard library and go.starlark.net (no extra dependencies):
 
 | Builtin | Signature | Notes |
 |---------|-----------|-------|
 | `http_get` | `http_get(url, headers=None)` | GET |
 | `http_post` | `http_post(url, body=None, headers=None)` | POST |
 | `http_request` | `http_request(method, url, headers=None, body=None)` | Any method in the closed set below |
+| `sleep` | `sleep(seconds)` -> `None` | Blocks the calling flow; `seconds` is int or float, capped at 30s per call (`flowMaxSleep`), negative or non-finite raises. This is what makes a polling flow possible — Starlark has no clock, and a poll loop without a sleep hammers the upstream |
+| `json` | `json.encode(x)` / `json.decode(s)` | The standard go.starlark.net `json` module: decode a response body into dicts/lists instead of substring-matching raw JSON |
 
 Argument rules:
 
