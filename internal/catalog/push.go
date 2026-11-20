@@ -17,7 +17,7 @@ func ConnectionToCatalogEntry(conn *app.APIConnection) CatalogEntry {
 		version = "1.0.0"
 	}
 
-	return CatalogEntry{
+	entry := CatalogEntry{
 		ID:          conn.ID,
 		Name:        conn.Name,
 		Type:        "api",
@@ -25,9 +25,14 @@ func ConnectionToCatalogEntry(conn *app.APIConnection) CatalogEntry {
 		SpecURL:     conn.SpecURL,
 		Author:      "community",
 		Version:     version,
-		QualityTier: "community-inferred",
 		AddedAt:     conn.AddedAt,
 		Downloads:   0,
-		Score:       0,
 	}
+	// The shipped scoring function decides both the score and the tier, so a
+	// pushed entry carries a measured quality signal. Before CATALOG-002 the
+	// entry was emitted with a hardcoded Score of 0 and a hardcoded
+	// "community-inferred" tier, which is exactly the placeholder scoreToTier
+	// exists to avoid: a zero reads as "unscored" and the tier contradicted it.
+	entry.Score, entry.QualityTier = Score(entry)
+	return entry
 }
