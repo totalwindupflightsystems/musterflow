@@ -95,6 +95,31 @@ func isExtendedFormat(format string) bool {
 	return format == "csv" || format == "jsonl" || format == "parquet"
 }
 
+// isEngineNativeFormat returns true for formats the engine renders itself, so
+// a --output-file extension match only needs -o <format> passed through
+// (table is the engine's default and needs no flag at all).
+func isEngineNativeFormat(format string) bool {
+	return format == "json" || format == "yaml"
+}
+
+// forceEngineOutputFormat makes the generated leaf render format: it prepends
+// -o <format> to args and pins the leaf's "output" flag after cobra parses
+// flags, because flag state from the outer parse can bleed through cobra's
+// caching.  The returned restore func must be deferred by the caller.
+func forceEngineOutputFormat(target *cobra.Command, args []string, format string) ([]string, func()) {
+	cleanArgs := append([]string{"-o", format}, args...)
+
+	originalPreRunE := target.PreRunE
+	target.PreRunE = func(cmd *cobra.Command, a []string) error {
+		_ = cmd.Flags().Set("output", format)
+		if originalPreRunE != nil {
+			return originalPreRunE(cmd, a)
+		}
+		return nil
+	}
+	return cleanArgs, func() { target.PreRunE = originalPreRunE }
+}
+
 // createOutputFile creates the output file and its parent directories.
 func createOutputFile(path string) (*os.File, error) {
 	dir := filepath.Dir(path)
@@ -123,7 +148,9 @@ func createOutputFile(path string) (*os.File, error) {
 //
 // --output-file with a non-extended format (table, json, yaml) or --raw:
 // redirect the engine's stdout to the file so the engine's native output goes
-// directly to the file.
+// directly to the file.  When the format came from the file extension
+// (.json/.yaml) and no explicit -o was given, the engine is told to render that
+// format instead of its default table (DF-049).
 //
 // Format resolution order: explicit -o flag > --output-file extension > default "table".
 // Destination: --output-file wins for the destination; stdout otherwise.
@@ -189,25 +216,10 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 		// Also strip --output-file since we've already handled it.
 		cleanArgs := stripFlagFromArgs(remaining, "output", "o")
 		cleanArgs = stripFlagFromArgs(cleanArgs, "output-file", "")
-		// Prepend -o json to force JSON output from the engine.
-		cleanArgs = append([]string{"-o", "json"}, cleanArgs...)
+		// Prepend -o json and pin the flag after cobra parses it.
+		cleanArgs, restorePreRun := forceEngineOutputFormat(target, cleanArgs, "json")
+		defer restorePreRun()
 		target.SetArgs(cleanArgs)
-
-		// Install a PreRunE that forces the output flag to "json" AFTER
-		// cobra's flag parsing but BEFORE the engine's RunE fires. This
-		// is necessary because target.Execute() re-parses flags from
-		// SetArgs, and the previous flag state (csv) can bleed through
-		// cobra's internal caching. PreRunE runs after ParseFlags, so
-		// setting the flag here guarantees the engine sees "json".
-		originalPreRunE := target.PreRunE
-		target.PreRunE = func(cmd *cobra.Command, args []string) error {
-			_ = cmd.Flags().Set("output", "json")
-			if originalPreRunE != nil {
-				return originalPreRunE(cmd, args)
-			}
-			return nil
-		}
-		defer func() { target.PreRunE = originalPreRunE }()
 
 		// Capture the engine's JSON output.
 		var buf bytes.Buffer
@@ -255,6 +267,18 @@ func interceptOutput(target *cobra.Command, remaining []string) (bool, error) {
 	//     engine's stdout to the file and let it execute normally.
 	//     Strip --output-file from args since we've already handled it.
 	cleanArgs := stripFlagFromArgs(remaining, "output-file", "")
+
+	// When the format came from the file extension (no explicit -o), the engine
+	// still has to be told what to render: otherwise --output-file out.json
+	// receives the engine's default table, which contradicts the flag's
+	// "format auto-detected from extension" promise (DF-049).  --raw and the
+	// extended formats settled their own paths above.
+	restorePreRun := func() {}
+	if !hasFormat && !isRaw && isEngineNativeFormat(format) && target.Flags().Lookup("output") != nil {
+		cleanArgs, restorePreRun = forceEngineOutputFormat(target, cleanArgs, format)
+	}
+	defer restorePreRun()
+
 	target.SetArgs(cleanArgs)
 
 	if fileOut != nil {
