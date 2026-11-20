@@ -1,0 +1,45 @@
+{
+  "wave_id": "musterflow-foreman-2026-11-20-11-41-41",
+  "scheduler_tick": "musterflow-foreman-2026-11-20-11-41-41",
+  "project": "musterflow",
+  "workdir": "/home/kara/musterflow",
+  "base_ref": "origin/master",
+  "base_sha": "9ada37b",
+  "worker_model": "openai/gpt-6.1-terra",
+  "worker_provider": "xkiro",
+  "wave_budget": 6,
+  "composed_at": "2026-11-20T06:52:00-05:00",
+  "tasks": [
+    {
+      "id": "CATALOG-004",
+      "title": "Catalog pass 3: finish the tolerance path (5 remaining specs + parse call sites)",
+      "worktree": "/home/kara/worktrees/musterflow-CATALOG-004",
+      "branch": "wt/CATALOG-004",
+      "base_sha": "9ada37b",
+      "status_at_dispatch": "in_progress",
+      "files": ["internal/app/refresh.go", "internal/cli/api.go", "internal/mcp/tools.go", "internal/specfix/"]
+    },
+    {
+      "id": "DOC-2",
+      "title": "DOC README: replace stale 'Read-only CLI mode' claim with dashboard write-routing semantics (b3fb48d/53a750f)",
+      "worktree": "/home/kara/worktrees/musterflow-DOC-2",
+      "branch": "wt/DOC-2",
+      "base_sha": "9ada37b",
+      "status_at_dispatch": "in_progress",
+      "files": ["README.md"]
+    }
+  ],
+  "not_dispatched_row_level_reasons": [
+    {"rows": "INT-CI-003, CI-001, CI-004, CI-ENGINE-001", "reason": "premise dead: all 6 recent CI runs success (2026-11-20 07:04Z-07:25Z); engine repo public"},
+    {"rows": "DF-MUSTERFLOW-1, DF-MUSTERFLOW-1-R4", "reason": "premise dead: README quickstart verified live this tick (connect rc=0 + generated call rc=0 on fresh data dir); fallback documented in README"},
+    {"rows": "DF-MUSTERFLOW-2", "reason": "premise dead: --output json stdout verified pure JSON; INF logs on stderr"},
+    {"rows": "DF-032", "reason": "premise dead: resolve-engine.sh rewritten engine-publish era; info line + exit 0 by design, no error path"},
+    {"rows": "DOC-1", "reason": "premise dead: docs/integration-guide.md:154-155 + specs/dashboard.md:74-75 already document /api/export + /api/import"},
+    {"rows": "DF-MUSTERFLOW-5, DF-MUSTERFLOW-5-R4", "reason": "docs premise dead (integration-guide.md:88 documents routing/lock behavior); README-adjacent seam collides with DOC-2 this wave"},
+    {"rows": "DF-044, PERF-001", "reason": "engine-routed: defects live in github.com/wojons/muster pkg/retry + pkg/client; need engine commit + module bump (PERF-001 already deferred to 2026-12-01)"},
+    {"rows": "DF-022, DF-MUSTERFLOW-3", "reason": "engine-generator-routed: generated leaf flags/flag shapes owned by wojons/muster generator"},
+    {"rows": "QA-MUSTERFLOW-1-R9..R14", "reason": "host-routed: bunker-las-03 DNS/registry failures are bunker-ops lane, not code in this repo"},
+    {"rows": "E2E-001, NEVER-DONE", "reason": "per-tick fixtures: light smoke + audit run foreman-direct in this tick, never dispatched"},
+    {"rows": "GAP-017, CLN-1, QA-MUSTERFLOW-2/3/4 + R-variants", "reason": "audit/process/hygiene rows: reconciled or deferred on evidence this tick, not worker work"}
+  ]
+}
