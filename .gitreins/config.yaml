@@ -14,13 +14,20 @@ guards:
     - gopls
   static_analysis: true
   static_analysis_tools: {}
+  # tick 2026-11-21-02-15-24: hook_timeout must exceed test_timeout or the
+  # pre-commit guard gets cut off mid-run (auto-raised per-run to 1320s).
+  hook_timeout: 1320s
   go:
     build: true
     lint: true
     tests: true
 evaluator:
   max_iterations: 200
-  max_time: 25m
+  # tick 2026-11-21-02-15-24: INT-CI-202 tier2 judge starved at 25m (62.9
+  # iterations, guard consumed ~20m; 0/1 criteria graded). Fleet-proven rung
+  # for judges that run their own live verification on multi-package Go
+  # repos: 45m (gitreins-cap-sizing ladder).
+  max_time: 45m
   max_input_tokens: 2M
   max_output_tokens: 0.2M
   tool_call_weight: 0.1
