@@ -1809,6 +1809,30 @@ func freePort(t *testing.T) int {
 	return l.Addr().(*net.TCPAddr).Port
 }
 
+// waitForCallbackServer blocks until the OAuth callback server on port is
+// accepting requests. startCallbackServer listens from a goroutine and cannot
+// report a bind error, so a fixed sleep is a race: on a loaded runner the
+// listener is not up yet and the first GET dies with ECONNREFUSED/EOF (CI run
+// 44770853373, "failed to reach callback server: ... EOF"). The probe hits "/",
+// which ServeMux answers with 404 — proof the server is live — and which never
+// touches the /callback handler the test asserts on.
+func waitForCallbackServer(t *testing.T, port int) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	probe := fmt.Sprintf("http://localhost:%d/", port)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(probe)
+		if err == nil {
+			_ = resp.Body.Close()
+			return
+		}
+		lastErr = err
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("callback server on port %d never answered within 10s: %v", port, lastErr)
+}
+
 func TestStartCallbackServer_Success(t *testing.T) {
 	port := freePort(t)
 	done := make(chan string, 1)
@@ -1823,8 +1847,8 @@ func TestStartCallbackServer_Success(t *testing.T) {
 		done <- code
 	}()
 
-	// Give it a moment to start listening
-	time.Sleep(200 * time.Millisecond)
+	// Wait until the listener is actually serving
+	waitForCallbackServer(t, port)
 
 	// Hit the callback endpoint like a browser would
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback?code=test-auth-code-123", port))
@@ -1854,7 +1878,7 @@ func TestStartCallbackServer_MissingCode(t *testing.T) {
 		done <- err
 	}()
 
-	time.Sleep(200 * time.Millisecond)
+	waitForCallbackServer(t, port)
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback", port))
 	if err != nil {
@@ -1883,7 +1907,7 @@ func TestStartCallbackServer_ErrorParam(t *testing.T) {
 		done <- err
 	}()
 
-	time.Sleep(200 * time.Millisecond)
+	waitForCallbackServer(t, port)
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/callback?error=access_denied&error_description=user+cancelled", port))
 	if err != nil {

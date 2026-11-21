@@ -126,9 +126,13 @@ func newSpecServer(t *testing.T, body []byte) *specServer {
 
 func (s *specServer) specURL() string { return s.server.URL + "/openapi.yaml" }
 
+// readFixture resolves a testdata fixture through the repository tree (see
+// fixturePath), never through the process working directory: a cwd-relative read
+// makes the test depend on how it was invoked, which is exactly the class of
+// dependence INT-CI-202 removed.
 func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", name))
+	data, err := os.ReadFile(fixturePath(t, name))
 	if err != nil {
 		t.Fatalf("read fixture %s: %v", name, err)
 	}
@@ -143,6 +147,13 @@ func readFixture(t *testing.T, name string) []byte {
 // with an empty command list.
 func TestConnectTolerateAcceptedSpecsAreCallable(t *testing.T) {
 	stub := newStubAPI(t)
+	// INT-CI-202: the surface asserts only what it owns — repo fixtures, temp
+	// data dirs, a loopback stub — so pin the ambient inputs instead of
+	// inheriting whatever the developer's shell or a sibling test left behind.
+	// TestTolerateSurfaceIsHermetic re-runs this test in a pristine child
+	// process and is the authoritative environment-independence proof.
+	home := pinHermeticEnv(t)
+	resetCLIGlobals(t)
 
 	cases := []struct {
 		name    string
@@ -215,6 +226,11 @@ func TestConnectTolerateAcceptedSpecsAreCallable(t *testing.T) {
 			if connect.err != nil {
 				t.Fatalf("connect --tolerate failed on a repairable spec: %v\n%s", connect.err, connect.combined())
 			}
+			// The degraded state must be reported, never silent: this is the
+			// line the CI log surfaced when the surface went red, so pin it.
+			if !strings.Contains(connect.combined(), "cosmetic spec defect(s)") {
+				t.Errorf("connect --tolerate accepted a repairable spec without reporting the tolerated defects:\n%s", connect.combined())
+			}
 			if !strings.Contains(connect.stdout, "Try: musterflow "+tc.apiName+" --help") {
 				t.Errorf("connect did not print the Try hint:\n%s", connect.stdout)
 			}
@@ -245,6 +261,12 @@ func TestConnectTolerateAcceptedSpecsAreCallable(t *testing.T) {
 			}
 		})
 	}
+
+	// INT-CI-202: the surface must stay inside its own data dir. Anything under
+	// the pinned HOME means the run resolved state outside the data dir the test
+	// gave it (TestTolerateSurfaceIsHermetic proves the same thing from a fresh
+	// process with a foreign cwd).
+	assertEmptyDir(t, home, "pinned HOME")
 }
 
 // TestOperationCallNeverReFetchesSpec is the PERF-002 criterion-2 regression
