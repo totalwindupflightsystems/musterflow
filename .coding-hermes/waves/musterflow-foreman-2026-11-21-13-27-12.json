@@ -1,0 +1,52 @@
+{
+  "scheduler_tick_id": "musterflow-foreman-2026-11-21-13-27-12",
+  "project": "musterflow",
+  "composed_at": "2026-11-21T13:40:00-05:00",
+  "wave_budget": 8,
+  "workers_dispatched": 3,
+  "worker_model": "openai/gpt-6.1-terra",
+  "worker_provider": "xkiro",
+  "base": "origin/master",
+  "base_sha": "b5a0a30",
+  "workers": [
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261121-HOOKAUTH",
+      "priority": "P1",
+      "complexity": 5,
+      "worktree": "/home/kara/worktrees/musterflow-REVIEW-MUSTERFLOW-20261121-HOOKAUTH",
+      "branch": "wt/REVIEW-MUSTERFLOW-20261121-HOOKAUTH",
+      "brief": "/tmp/mf-tick1327-brief-HOOKAUTH.md",
+      "gitreins": "created+started",
+      "surface": "cmd/musterflow/main.go, internal/dashboard/server.go, internal/config/config.go, tests"
+    },
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261121-CATALOG-WIRE",
+      "priority": "P1",
+      "complexity": 2,
+      "worktree": "/home/kara/worktrees/musterflow-REVIEW-MUSTERFLOW-20261121-CATALOG-WIRE",
+      "branch": "wt/REVIEW-MUSTERFLOW-20261121-CATALOG-WIRE",
+      "brief": "/tmp/mf-tick1327-brief-CATALOG-WIRE.md",
+      "gitreins": "created+started",
+      "surface": "internal/catalog/client.go + testdata + cli/catalog test stubs"
+    },
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261121-DOCS-WORKFLOWS",
+      "priority": "P2",
+      "complexity": 2,
+      "worktree": "/home/kara/worktrees/musterflow-REVIEW-MUSTERFLOW-20261121-DOCS-WORKFLOWS",
+      "branch": "wt/REVIEW-MUSTERFLOW-20261121-DOCS-WORKFLOWS",
+      "brief": "/tmp/mf-tick1327-brief-DOCS-WORKFLOWS.md",
+      "gitreins": "created+started",
+      "surface": "docs/workflows.md (new), docs/integration-guide.md"
+    }
+  ],
+  "independence_notes": "HOOKAUTH touches cmd/musterflow/main.go + internal/dashboard + internal/config; CATALOG-WIRE touches internal/catalog/client.go + catalog/cli test stubs + testdata; DOCS-WORKFLOWS touches docs/ only. Disjoint file sets, no depends_on edges on any of the three rows (verified: all []).",
+  "cross_task_constraints": "HOOKAUTH must not 401 the loopback no-auth fresh start (CATALOG-WIRE AC3 asserts GET /api/catalog/search returns 200 there): auth is enforced when dashboard_token is configured, exposure is blocked by refusing a non-loopback bind without a token.",
+  "not_dispatched_this_tick": {
+    "DF-044 + PERF-001": "both fix the retry/timeout layer of the muster ENGINE (github.com/wojons/muster pkg/request), not this repo - different repo/workdir, serialise after this wave",
+    "REVIEW-MUSTERFLOW-20261121-CATALOG-PARITY": "same internal/catalog surface as CATALOG-WIRE - deferred to next tick to avoid a merge collision",
+    "REVIEW-MUSTERFLOW-20261121-STALE-DF12 + REVIEW-MUSTERFLOW-DF032-STALE": "verification-only rows; foreman closes them with evidence, no worker",
+    "rows without acceptance_criteria (DF-MUSTERFLOW-1/2/3, QA-MUSTERFLOW-* runs, DF-043, DF-042, DOC-11)": "not dispatchable until AC backfill (tracked by REVIEW-MUSTERFLOW-20261121-AC-AUDIT)"
+  },
+  "foreman_verification": "per-merge: gofmt -l, go build ./..., go vet ./..., go test ./... -count=1 on merged master, then push origin master; live proofs (hooks 405/401, catalog 200) re-run by the foreman after merge"
+}
