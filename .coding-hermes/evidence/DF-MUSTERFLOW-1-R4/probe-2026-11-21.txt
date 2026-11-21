@@ -1,0 +1,26 @@
+# DF-MUSTERFLOW-1-R4 fallback liveness probe — 2026-11-21T01:3xZ, binary /tmp/mf-probe @ master 4fef90f
+## README fallback connect (petstore v2, scratch data dir /tmp/mf-r4-probe)
+✓ Connected: swagger-petstore
+  ID: 3a0927ddd62cdfa9
+  Version: 1.0.9
+  Endpoints: 20
+  Base URL: https://petstore.swagger.io/v2
+
+Try: musterflow swagger-petstore --help
+RC=0
+
+## op call attempt through the fallback connection
+Error: unknown command "swagger-petstore" for "musterflow"
+
+Did you mean this?
+	swagger-petstore-openapi-3-0
+
+
+## README fallback block at HEAD (lines 49-55)
+# 1. Connect an API by its OpenAPI spec URL
+musterflow connect https://petstore3.swagger.io/api/v3/openapi.json
+
+#    petstore3 upstream is a third-party host that has had repeated 500
+#    outages. If connect fails on it, any other OpenAPI spec works the same
+#    way — e.g. the petstore v2 spec:
+musterflow connect https://petstore.swagger.io/v2/swagger.json
