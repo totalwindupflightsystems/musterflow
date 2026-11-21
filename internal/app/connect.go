@@ -261,11 +261,13 @@ func GenerateCommandConfig(conn *APIConnection) *generator.Config {
 		baseURL = PlaceholderBaseURL
 	}
 	return &generator.Config{
-		AppName:          "musterflow",
-		AppDescription:   fmt.Sprintf("MusterFlow CLI for %s", conn.Name),
-		BaseURL:          baseURL,
-		DefaultFormat:    "table",
-		SupportedFormats: []string{"table", "json", "yaml"},
+		AppName:        "musterflow",
+		AppDescription: fmt.Sprintf("MusterFlow CLI for %s", conn.Name),
+		BaseURL:        baseURL,
+		DefaultFormat:  DefaultOutputFormat,
+		// Copy so the generator can never mutate the authoritative list, and
+		// so the generated --output help advertises every renderable format.
+		SupportedFormats: append([]string(nil), SupportedOutputFormats...),
 		APIName:          conn.Name,
 	}
 }
