@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 )
@@ -90,7 +91,7 @@ func TestSearchValidCatalog(t *testing.T) {
 	body, _ := json.Marshal(entries)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/index.json" {
+		if r.URL.Path == "/entries.json" {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(body)
 			return
@@ -114,7 +115,7 @@ func TestSearchValidCatalog(t *testing.T) {
 
 func TestClientSearchEmptyCatalog(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/index.json" {
+		if r.URL.Path == "/entries.json" {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte("[]"))
 			return
@@ -199,7 +200,8 @@ func TestSearchNotFoundIsClassified(t *testing.T) {
 	if !errors.Is(err, ErrBackendUnavailable) {
 		t.Errorf("404 error does not match ErrBackendUnavailable: %v", err)
 	}
-	want := "catalog backend not available (HTTP 404): repo " + notFound.URL + " absent or private"
+	want := "catalog backend not available (HTTP 404): catalog repo " + notFound.URL +
+		" has no entries.json or index.json — repo absent or private"
 	if got := err.Error(); got != want {
 		t.Errorf("404 message text drifted from the local-mode wording:\n got: %q\nwant: %q", got, want)
 	}
@@ -216,7 +218,125 @@ func TestSearchNotFoundIsClassified(t *testing.T) {
 	if errors.Is(err, ErrBackendUnavailable) {
 		t.Errorf("non-404 status must not be classified as backend-unavailable: %v", err)
 	}
-	if want := "catalog returned status 503"; err.Error() != want {
+	if want := "catalog returned status 503 for " + upstream.URL + "/entries.json"; err.Error() != want {
 		t.Errorf("non-404 message: got %q, want %q", err.Error(), want)
+	}
+}
+
+// realCatalogFixture is the payload the community repo actually serves at
+// entries.json, captured verbatim (10 entries). Using it — instead of a
+// hand-written stub — is what makes the 200-decode path a REAL test: before the
+// filename fix that path had never run against this data, because the client
+// asked for an index.json the repo does not serve.
+func realCatalogFixture(t *testing.T) []byte {
+	t.Helper()
+	body, err := os.ReadFile("testdata/entries.json")
+	if err != nil {
+		t.Fatalf("read testdata/entries.json: %v", err)
+	}
+	if len(body) == 0 {
+		t.Fatal("testdata/entries.json is empty")
+	}
+	return body
+}
+
+// TestListDecodesRealCatalogFixture covers the 200 path end-to-end against the
+// real payload: List must request entries.json (the file the repo serves) and
+// decode all ten entries with usable id/name fields.
+func TestListDecodesRealCatalogFixture(t *testing.T) {
+	body := realCatalogFixture(t)
+
+	var requested []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requested = append(requested, r.URL.Path)
+		if r.URL.Path == "/entries.json" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	entries, err := NewClientWithRepoURL(srv.URL).List()
+	if err != nil {
+		t.Fatalf("List against the real entries.json payload: %v", err)
+	}
+	if len(entries) != 10 {
+		t.Fatalf("decoded %d entries, want 10 (the fixture is the live payload)", len(entries))
+	}
+	byID := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		if e.ID == "" || e.Name == "" {
+			t.Errorf("entry decoded without id/name: %+v", e)
+		}
+		if byID[e.ID] {
+			t.Errorf("duplicate entry id %q in the live payload", e.ID)
+		}
+		byID[e.ID] = true
+	}
+	if !byID["github"] {
+		t.Errorf("live payload decoded without its github entry: %v", byID)
+	}
+
+	// The filename is the whole bug: asking for index.json always 404s upstream.
+	if len(requested) != 1 || requested[0] != "/entries.json" {
+		t.Errorf("List requested %v, want exactly [/entries.json]", requested)
+	}
+}
+
+// TestListFallsBackToIndexJSON keeps the mirror/older-layout path working: when
+// entries.json 404s, index.json is tried once.
+func TestListFallsBackToIndexJSON(t *testing.T) {
+	body := realCatalogFixture(t)
+
+	var requested []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requested = append(requested, r.URL.Path)
+		if r.URL.Path == "/index.json" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	entries, err := NewClientWithRepoURL(srv.URL).List()
+	if err != nil {
+		t.Fatalf("List with only index.json available: %v", err)
+	}
+	if len(entries) != 10 {
+		t.Fatalf("decoded %d entries from the index.json fallback, want 10", len(entries))
+	}
+	if len(requested) != 2 || requested[0] != "/entries.json" || requested[1] != "/index.json" {
+		t.Errorf("requested %v, want [/entries.json /index.json]", requested)
+	}
+}
+
+// TestListDoesNotFallBackOnNon404 pins the boundary: only a 404 means "wrong
+// filename". A 5xx is an upstream failure and retrying another name cannot fix
+// it, so List must report it immediately instead of masking it behind a second
+// request.
+func TestListDoesNotFallBackOnNonError404(t *testing.T) {
+	var requested []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requested = append(requested, r.URL.Path)
+		http.Error(w, "boom", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	_, err := NewClientWithRepoURL(srv.URL).List()
+	if err == nil {
+		t.Fatal("expected an error for a 503 backend, got nil")
+	}
+	if errors.Is(err, ErrBackendUnavailable) {
+		t.Errorf("a 503 must not be classified as backend-unavailable: %v", err)
+	}
+	if want := "catalog returned status 503 for " + srv.URL + "/entries.json"; err.Error() != want {
+		t.Errorf("503 message: got %q, want %q", err.Error(), want)
+	}
+	if len(requested) != 1 {
+		t.Errorf("a non-404 must not trigger the fallback, requested %v", requested)
 	}
 }

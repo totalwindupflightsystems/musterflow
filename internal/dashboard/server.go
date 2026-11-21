@@ -280,12 +280,12 @@ func (s *Server) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 		// server error. Passing the class through keeps the same operation
 		// answering the same way with or without the dashboard: status 404 and
 		// the client's own message text ("catalog backend not available
-		// (HTTP 404): repo … absent or private"), which is exactly what the
-		// local CLI path prints.
+		// (HTTP 404): catalog repo … has no entries.json or index.json — repo
+		// absent or private"), which is exactly what the local CLI path prints.
 		//
 		// Everything else stays 500 on purpose: a transport failure
 		// ("fetch catalog index: …"), a non-200 upstream status
-		// ("catalog returned status 503") or an undecodable index
+		// ("catalog returned status 503 for <url>") or an undecodable index
 		// ("decode catalog: …") means the dashboard could not produce an
 		// answer, which is the 500-class this endpoint already advertises.
 		status := http.StatusInternalServerError
