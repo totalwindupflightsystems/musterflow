@@ -153,6 +153,46 @@ flows, so back up the directory:
 tar -czf "musterflow-data-$(date +%F).tar.gz" -C "$HOME" .musterflow
 ```
 
+### Recurring producer (systemd user timer)
+
+A daily backup producer runs alongside the host install — the manual command above is the
+one-off/on-demand path, not the only path:
+
+| piece | path |
+|---|---|
+| service | `~/.config/systemd/user/musterflow-backup.service` |
+| timer | `~/.config/systemd/user/musterflow-backup.timer` |
+| script (tar + retention) | `~/.config/systemd/user/musterflow-backup.sh` |
+| artifacts | `$HOME/backups/musterflow/musterflow-data-<YYYYmmdd-HHMMSS>.tar.gz` (under the host archive root) |
+
+- **Schedule:** `OnCalendar=daily` with `Persistent=true`, so a host that was down at the
+  scheduled instant catches up on the next boot instead of silently skipping a day.
+  `RandomizedDelaySec=300` spreads the run off the hour boundary.
+- **Retention:** 14 days. The script prunes with
+  `find "$HOME/backups/musterflow" -name 'musterflow-data-*.tar.gz' -mtime +14 -delete`,
+  so steady state is roughly 14 daily archives. Names are timestamped, so two runs never
+  overwrite each other.
+- **Enable / inspect:**
+  ```bash
+  export XDG_RUNTIME_DIR=/run/user/$(id -u)   # needed on a host with no login session
+  systemctl --user enable --now musterflow-backup.timer
+  systemctl --user list-timers musterflow-backup.timer
+  systemctl --user start musterflow-backup.service    # run one out of band
+  journalctl --user -u musterflow-backup.service -n 20
+  ```
+- **Contents:** each archive is the whole `~/.musterflow` tree, including `musterflow.db`
+  *and* its uncheckpointed `musterflow.db.wal`, so the DB restores consistently rather than
+  as a `-wal`-less snapshot.
+
+Verify an artifact and restore it:
+
+```bash
+newest="$(ls -1t "$HOME/backups/musterflow"/musterflow-data-*.tar.gz | head -1)"
+tar -tzf "$newest" | grep '^\.musterflow/'      # flows/, musterflow.db, musterflow.db.wal
+scratch="$(mktemp -d)"; tar -xzf "$newest" -C "$scratch"
+diff -r "$HOME/.musterflow/flows" "$scratch/.musterflow/flows"   # byte-identical digests
+```
+
 Restore is the reverse: stop the daemon, unpack over `~/.musterflow`, start it, then check
 `GET /api/health` reports the expected non-zero `connected_apis`. In the container deploy
 the same directory lives on the `musterflow-data` volume
