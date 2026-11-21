@@ -1,0 +1,57 @@
+=== CATALOG-005 regeneration — candidate huggingface ===
+binary:      /tmp/mf-cat005
+data dir:    /tmp/mf-cat005-verify/huggingface (scratch; canonical ~/.musterflow untouched)
+dashboard:   127.0.0.1:19892 (canonical 9876 deliberately NOT used)
+spec:        https://huggingface.co/.well-known/openapi.json
+
+⚡ MusterFlow 0.1.0
+
+Dashboard:    http://localhost:19892
+API:          http://localhost:19892/api/
+MCP endpoint: http://localhost:19892/mcp
+
+Connected APIs: 0
+
+Press Ctrl+C to stop.
+$ curl http://127.0.0.1:19892/api/health -> ready=1
+
+$ /tmp/mf-cat005 --data-dir /tmp/mf-cat005-verify/huggingface --dashboard-addr 127.0.0.1:19892 connect https://huggingface.co/.well-known/openapi.json --name huggingface
+note: --data-dir /tmp/mf-cat005-verify/huggingface is served by the running dashboard at http://127.0.0.1:19892; routing this command through it
+✓ Connected: huggingface
+  ID: 8ac8f489bdf0ba6f
+  Version: 0.0.1
+  Endpoints: 386
+  Base URL: https://huggingface.co
+
+Try: musterflow huggingface --help
+exit=0
+
+$ /tmp/mf-cat005 --data-dir /tmp/mf-cat005-verify/huggingface --dashboard-addr 127.0.0.1:19892 catalog push 8ac8f489bdf0ba6f
+note: --data-dir /tmp/mf-cat005-verify/huggingface is served by the running dashboard at http://127.0.0.1:19892; routing this command through it
+Catalog entry JSON for 8ac8f489bdf0ba6f:
+
+{
+  "id": "8ac8f489bdf0ba6f",
+  "name": "huggingface",
+  "type": "api",
+  "description": "We have open endpoints that you can use to retrieve information from the Hub as well as perform certain actions such as creating model, dataset or Space repos. We offer a wrapper Python client, [`hugg...",
+  "spec_url": "https://huggingface.co/.well-known/openapi.json",
+  "base_url": "https://huggingface.co",
+  "author": "community",
+  "version": "0.0.1",
+  "score": 9,
+  "quality_tier": "official",
+  "added_at": "2026-11-21T01:34:24.691338Z",
+  "downloads": 0
+}
+
+Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/8ac8f489bdf0ba6f.json and add it to index.json
+exit=0
+
+regenerated: .coding-hermes/evidence/CATALOG-005/regen/huggingface.json (556 bytes)
+validated: parses as JSON with id, spec_url, score
+
+Shutting down...
+Goodbye.
+dashboard on :19892 stopped
+

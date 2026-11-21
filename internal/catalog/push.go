@@ -23,6 +23,7 @@ func ConnectionToCatalogEntry(conn *app.APIConnection) CatalogEntry {
 		Type:        "api",
 		Description: description,
 		SpecURL:     conn.SpecURL,
+		BaseURL:     conn.BaseURL,
 		Author:      "community",
 		Version:     version,
 		AddedAt:     conn.AddedAt,
@@ -33,6 +34,10 @@ func ConnectionToCatalogEntry(conn *app.APIConnection) CatalogEntry {
 	// entry was emitted with a hardcoded Score of 0 and a hardcoded
 	// "community-inferred" tier, which is exactly the placeholder scoreToTier
 	// exists to avoid: a zero reads as "unscored" and the tier contradicted it.
+	//
+	// BaseURL is carried so Score can tell a provider that publishes its spec on
+	// a docs/openapi host (docs.hetzner.cloud next to api.hetzner.cloud) from a
+	// spec mirrored on a third-party host (CATALOG-005).
 	entry.Score, entry.QualityTier = Score(entry)
 	return entry
 }
