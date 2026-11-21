@@ -71,6 +71,7 @@ var dashboardBaseURL string
 // through the dashboard API (avoiding DuckDB lock conflicts).
 func SetDashboardURL(url string) {
 	dashboardBaseURL = url
+	installDashboardAuthTransport()
 }
 
 // auth command flags
@@ -713,7 +714,7 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			// Mask auth keys
+			// Mask auth keys and the dashboard token — the same helper.
 			for id, auth := range cfg.Auth {
 				auth.Key = config.MaskKey(auth.Key)
 				cfg.Auth[id] = auth
@@ -722,6 +723,11 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 			fmt.Printf("Data directory:    %s\n", cfg.DataDir)
 			fmt.Printf("Default format:    %s\n", cfg.DefaultFormat)
 			fmt.Printf("Auto-completion:   %v\n", cfg.AutoCompletion)
+			if cfg.DashboardToken != "" {
+				fmt.Printf("Dashboard token:   %s\n", config.MaskKey(cfg.DashboardToken))
+			} else {
+				fmt.Printf("Dashboard token:   (not set — dashboard routes are unauthenticated)\n")
+			}
 			fmt.Printf("Config file:       %s\n", configPath())
 			if len(cfg.Auth) > 0 {
 				fmt.Println("\nAuth:")
@@ -752,11 +758,18 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 				cfg.AutoCompletion = val == "true" || val == "1" || val == "yes"
 			case "data_dir":
 				cfg.DataDir = val
+			case "dashboard_token":
+				cfg.SetDashboardToken(val)
 			default:
-				return fmt.Errorf("unknown config key: %s (valid: port, default_format, auto_completion, data_dir)", key)
+				return fmt.Errorf("unknown config key: %s (valid: port, default_format, auto_completion, data_dir, dashboard_token)", key)
 			}
 			if err := config.Save(cfg); err != nil {
 				return fmt.Errorf("save config: %w", err)
+			}
+			if key == "dashboard_token" {
+				// Never echo the secret back to the terminal / shell history.
+				fmt.Printf("✓ Set %s = %s\n", key, config.MaskKey(val))
+				return nil
 			}
 			fmt.Printf("✓ Set %s = %s\n", key, val)
 			return nil

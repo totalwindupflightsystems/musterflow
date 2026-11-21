@@ -230,6 +230,9 @@ port: 9876
 data_dir: /home/<user>/.musterflow
 default_format: table
 auto_completion: true
+# Optional: require "Authorization: Bearer <token>" on /api/*, /mcp and /hooks/*
+# (MUSTERFLOW_DASHBOARD_TOKEN overrides it). Required to bind a non-loopback address.
+# dashboard_token: <32-byte hex>
 ```
 
 `data_dir` is stored as the **resolved absolute path** (no trailing slash): the first-run default is written that way. A `~` you set yourself is NOT expanded — `config set data_dir '~/.musterflow'` stores the literal `~`, and the app then creates a `~` directory relative to the current working directory. Always pass an absolute path. Scripts should read the resolved value.
@@ -251,6 +254,8 @@ The data directory holds everything MusterFlow writes:
 
 Port auto-discovery: if another program already holds the configured port, MusterFlow tries the nine ports above it (`port+1` … `port+9` — 9877–9885 for the default 9876) and serves on the first free one, printing which one it chose. A port held by another MusterFlow dashboard is never bypassed: `start` refuses and tells you to reuse it. Override with `--dashboard-addr :9999` or by setting `port` in config.
 
+**The dashboard binds loopback.** With no `--dashboard-addr`, and with the host-less `--dashboard-addr :<port>` form, the listener is `127.0.0.1:<port>`; an explicit host is honoured. Set `dashboard_token` (or `MUSTERFLOW_DASHBOARD_TOKEN`) to require `Authorization: Bearer <token>` on `/api/*`, `/mcp` and `/hooks/*` — `/api/health` and `/metrics` stay open for probes. With no token the daemon still starts on loopback (with a warning) but **refuses a non-loopback bind**, so an exposed dashboard cannot come up unauthenticated. Webhook triggers are `POST /hooks/<name>` only.
+
 ### Per-API credentials (`auth:`)
 
 There is no separate credentials file. `musterflow auth add` / `musterflow auth login` write into `config.yaml` itself, under a top-level `auth:` map keyed by API id:
@@ -264,7 +269,7 @@ auth:
     key_path: key.pem    # mtls only
 ```
 
-The key is **file-only**: `config set` does not accept `auth` (`Error: unknown config key: auth (valid: port, default_format, auto_completion, data_dir)`), so entries are managed with `auth add`, `auth login` and `auth remove`. The file is written mode `0600` because these values are plaintext secrets.
+The key is **file-only**: `config set` does not accept `auth` (`Error: unknown config key: auth (valid: port, default_format, auto_completion, data_dir, dashboard_token)`), so entries are managed with `auth add`, `auth login` and `auth remove`. The file is written mode `0600` because these values are plaintext secrets.
 
 Both display surfaces mask the secret. `musterflow auth list` shows keys longer than 8 characters as first four characters + `…` + last four (`<api-id>: type=apikey key=ghp_…3456`), four asterisks (`****`) for a key of 8 characters or fewer, and `(not set)` for an empty key. `musterflow config show` prints the same entries under an `Auth:` heading using first four + `****` + last four, and `****` alone for short or empty keys. `musterflow auth get <api-id>` prints the raw value.
 
