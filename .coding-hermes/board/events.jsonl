@@ -560,3 +560,6 @@
 {"id":551,"timestamp":"2026-11-20 12:55:56.000000","event_type":"audit","task_id":null,"actor":"foreman","detail":"{\"tick\": 234, \"summary\": \"merged wt branch, judged PASS\"}","tick_number":234}
 {"id":552,"timestamp":"2026-11-20 12:55:56.000000","event_type":"task_completed","task_id":"SUP-DEPS-20261004","actor":"foreman","detail":"{\"commit\": \"bcbbe085d1a498690ff3d4612b07f440b7b1f110\", \"guard\": \"PASS\", \"judge\": \"576f6cc1 PASS\", \"tick\": 234}","tick_number":234}
 {"id":553,"timestamp":"2026-11-20 12:55:56.000000","event_type":"audit","task_id":null,"actor":"foreman","detail":"{\"tick\": 234, \"summary\": \"merged wt branch, judged PASS\"}","tick_number":234}
+{"id":554,"timestamp":"2026-11-21 01:06:34.127800","event_type":"task_created","task_id":"CATALOG-005","actor":"foreman","detail":"{\"id\":\"CATALOG-005\",\"status\":\"pending\"}","tick_number":null}
+{"id":555,"timestamp":"2026-11-21 01:06:50.667404","event_type":"task_created","task_id":"CATALOG-006","actor":"foreman","detail":"{\"id\":\"CATALOG-006\",\"status\":\"pending\"}","tick_number":null}
+{"id":556,"timestamp":"2026-11-21 01:07:00.275636","event_type":"task_created","task_id":"DISP-001","actor":"foreman","detail":"{\"id\":\"DISP-001\",\"status\":\"pending\"}","tick_number":null}
