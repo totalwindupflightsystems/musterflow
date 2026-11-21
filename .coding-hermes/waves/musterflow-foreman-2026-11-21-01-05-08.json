@@ -1,0 +1,39 @@
+{
+  "scheduler_tick_id": "musterflow-foreman-2026-11-21-01-05-08",
+  "project": "musterflow",
+  "composed_at": "2026-11-21T01:20:00-05:00",
+  "wave_budget": 4,
+  "worker_model": "openai/gpt-6.1-terra",
+  "worker_provider": "xkiro",
+  "base": "origin/master",
+  "base_sha": "4fef90f",
+  "workers": [
+    {
+      "task_id": "CATALOG-006",
+      "priority": "P1",
+      "worktree": "/home/kara/worktrees/musterflow-CATALOG-006",
+      "branch": "wt/CATALOG-006",
+      "brief": "/tmp/mf-tick0105-brief-CATALOG-006.md",
+      "gitreins": "created+started"
+    },
+    {
+      "task_id": "CATALOG-005",
+      "priority": "P2",
+      "worktree": "/home/kara/worktrees/musterflow-CATALOG-005",
+      "branch": "wt/CATALOG-005",
+      "brief": "/tmp/mf-tick0105-brief-CATALOG-005.md",
+      "gitreins": "created+started"
+    },
+    {
+      "task_id": "INT-CI-203",
+      "priority": "P1",
+      "worktree": "/home/kara/worktrees/musterflow-INT-CI-203",
+      "branch": "wt/INT-CI-203",
+      "brief": "/tmp/mf-tick0105-brief-INT-CI-203.md",
+      "gitreins": "created+started"
+    }
+  ],
+  "independence_notes": "CATALOG-006 edits internal/catalog client/search + cli wiring + tests; CATALOG-005 edits internal/catalog/scoring.go + scoring_test.go + push.go evidence only — different files, both may touch internal/catalog but disjoint files; INT-CI-203 edits only .github/workflows/{ci,docker}.yml. No shared files; serial merge with gates per merge.",
+  "board_track_in_parallel": "DISP-001 remediation (close premise-dead deferred rows with evidence), DF-MUSTERFLOW-1-R4 liveness probe",
+  "foreman_verification": "per-merge: go build ./... + go test -short -count=1 on merged master, then push origin master; CI runs on push prove INT-CI-203 AC4"
+}
