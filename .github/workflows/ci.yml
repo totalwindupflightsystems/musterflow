@@ -18,7 +18,6 @@ jobs:
         with:
           repository: wojons/muster
           path: muster
-          token: ${{ secrets.GH_PAT }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
