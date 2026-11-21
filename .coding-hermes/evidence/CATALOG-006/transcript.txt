@@ -1,0 +1,79 @@
+=== CATALOG-006 live transcript: serve a default catalog offline ===
+worktree: /home/kara/worktrees/musterflow-CATALOG-006
+branch:   wt/CATALOG-006
+HEAD:     4fef90f
+binary:   /tmp/mf-cat006
+data dir: /tmp/mf-cat006-data   (scratch only; canonical data dir and dashboard port 9876 are not used)
+
+=== catalog/seed.json is unchanged by this work ===
+$ git diff --stat -- catalog/seed.json
+[exit 0]
+
+$ sha256sum catalog/seed.json internal/catalog/seed.json
+31ac2a9d969accad291d154df789787a3212a64c317198553380e1d0ef18ac40  catalog/seed.json
+31ac2a9d969accad291d154df789787a3212a64c317198553380e1d0ef18ac40  internal/catalog/seed.json
+
+=== build ===
+$ go build -o /tmp/mf-cat006 ./cmd/musterflow/
+[exit 0]
+
+$ ls -l /tmp/mf-cat006
+-rwxrwxr-x 1 kara kara 72635152 Nov 20 20:35 /tmp/mf-cat006
+[exit 0]
+
+=== force the community index unreachable ===
+MUSTERFLOW_CATALOG_REPO_URL=http://127.0.0.1:1  (connection refused)
+
+$ /tmp/mf-cat006 catalog list --no-dashboard --data-dir /tmp/mf-cat006-data
+notice: community index unavailable — serving bundled seed entries (built-in catalog/seed.json): fetch catalog index: Get "http://127.0.0.1:1/index.json": dial tcp 127.0.0.1:1: connect: connection refused
+Catalog entries (10):
+
+  ID                   NAME                 TYPE   DESCRIPTION                                                  DOWNLOADS
+  github               GitHub               openapi GitHub REST API — issues, PRs, repos, users, actions, and    0
+  stripe               Stripe               openapi Stripe API — payments, subscriptions, invoices, customers.   0
+  slack                Slack                openapi Slack Web API — messaging, channels, users, bots. The API    0
+  discord              Discord              openapi Discord API — guilds, channels, messages, webhooks. The AP   0
+  openai               OpenAI               openapi OpenAI API — chat completions, embeddings, models, fine-tu   0
+  notion               Notion               openapi Notion API — pages, databases, blocks, users. The API for    0
+  linear               Linear               openapi Linear API — issues, projects, teams, cycles. The project    0
+  jira                 Jira                 openapi Jira Cloud REST API — issues, projects, workflows, sprints   0
+  twilio               Twilio               openapi Twilio API — SMS, voice, video, chat. The communications A   0
+  cloudflare           Cloudflare           openapi Cloudflare API — DNS, workers, zones, firewall rules. The    0
+[exit 0]
+
+=== same degradation for catalog search ===
+$ /tmp/mf-cat006 catalog search github --no-dashboard --data-dir /tmp/mf-cat006-data
+notice: community index unavailable — serving bundled seed entries (built-in catalog/seed.json): fetch catalog index: Get "http://127.0.0.1:1/index.json": dial tcp 127.0.0.1:1: connect: connection refused
+Catalog search results (1):
+
+  ID                   NAME                 TYPE   DESCRIPTION                                                  DOWNLOADS
+  github               GitHub               openapi GitHub REST API — issues, PRs, repos, users, actions, and    0
+[exit 0]
+
+=== scratch data dir actually used ===
+$ ls -la /tmp/mf-cat006-data
+total 19676
+drwxr-xr-x 2 kara kara     4096 Nov 20 20:35 .
+drwxrwxrwt 1 root root 20070400 Nov 20 20:35 ..
+-rw-rw-r-- 1 kara kara    12288 Nov 20 20:35 musterflow.db
+-rw-rw-r-- 1 kara kara      788 Nov 20 20:35 musterflow.db.wal
+[exit 0]
+
+=== seeded api ids served from the bundled catalog ===
+github
+stripe
+slack
+discord
+openai
+notion
+linear
+jira
+twilio
+cloudflare
+seeded id count: 10
+
+=== canonical surfaces untouched: --no-dashboard means no server was started ===
+dashboard listeners on port 9876 that this run could have created: 0 (informational; this run starts none)
+
+=== fallback notice line (stderr) as printed to an operator ===
+notice: community index unavailable — serving bundled seed entries (built-in catalog/seed.json): fetch catalog index: Get "http://127.0.0.1:1/index.json": dial tcp 127.0.0.1:1: connect: connection refused

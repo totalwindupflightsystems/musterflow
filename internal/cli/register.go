@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/totalwindupflightsystems/musterflow/internal/app"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 )
@@ -144,10 +146,12 @@ func listViaDashboard() error {
 }
 
 // catalogSearchViaDashboard searches the catalog via the dashboard HTTP API.
-func catalogSearchViaDashboard(query string) error {
+// It returns the entries and lets the caller render them, so the CLI has one
+// output path for both routing modes (CATALOG-006).
+func catalogSearchViaDashboard(query string) ([]catalog.CatalogEntry, error) {
 	resp, err := http.Get(dashboardBaseURL + "/api/catalog/search?q=" + query)
 	if err != nil {
-		return fmt.Errorf("dashboard catalog search: %w", err)
+		return nil, fmt.Errorf("dashboard catalog search: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -163,9 +167,9 @@ func catalogSearchViaDashboard(query string) error {
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
 		if errResult.Error != "" {
-			return errors.New(errResult.Error)
+			return nil, errors.New(errResult.Error)
 		}
-		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
 	}
 
 	var result struct {
@@ -173,23 +177,10 @@ func catalogSearchViaDashboard(query string) error {
 		Total   int                    `json:"total"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return fmt.Errorf("decode dashboard response: %w", err)
+		return nil, fmt.Errorf("decode dashboard response: %w", err)
 	}
 
-	if len(result.Results) == 0 {
-		fmt.Println("No catalog entries found.")
-		return nil
-	}
-	fmt.Printf("Catalog search results (%d):\n\n", len(result.Results))
-	fmt.Printf("  %-20s %-20s %-6s %-60s %s\n", "ID", "NAME", "TYPE", "DESCRIPTION", "DOWNLOADS")
-	for _, e := range result.Results {
-		desc := e.Description
-		if len(desc) > 60 {
-			desc = desc[:60]
-		}
-		fmt.Printf("  %-20s %-20s %-6s %-60s %d\n", e.ID, e.Name, e.Type, desc, e.Downloads)
-	}
-	return nil
+	return result.Results, nil
 }
 
 // refreshViaDashboard routes a refresh operation through the dashboard HTTP API.
@@ -277,15 +268,20 @@ func pushViaDashboard(apiID string) error {
 }
 
 // pullViaDashboard pulls an API from the catalog via the dashboard HTTP API.
-func pullViaDashboard(apiID string) error {
-	client := catalog.NewClient()
-	entry, _, err := client.FetchEntry(apiID)
+// The entry is resolved with the same bundled-seed fallback the local path
+// uses, so both routing modes see the same catalog (CATALOG-006).
+func pullViaDashboard(cmd *cobra.Command, apiID string) error {
+	res, err := catalog.NewClient().FetchCatalogEntry(apiID)
 	if err != nil {
 		return err
 	}
+	entry := res.Entry
 	if entry == nil {
 		fmt.Printf("Entry %s not found in catalog.\n", apiID)
 		return nil
+	}
+	if res.Source == catalog.SourceBundled {
+		bundledCatalogNotice(cmd.ErrOrStderr(), res.Reason)
 	}
 	fmt.Printf("Pulling %s (%s) from community catalog...\n", entry.ID, entry.Name)
 

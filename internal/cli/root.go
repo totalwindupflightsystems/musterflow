@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -300,6 +301,59 @@ func newDisconnectCommand(registry *app.Registry) *cobra.Command {
 	}
 }
 
+// bundledCatalogNotice is printed when the community index could not be served
+// and the catalog bundled inside the binary answers instead. The degradation is
+// visible on purpose: the line names both "community index" and "bundled" so it
+// is greppable, and it carries the community-side cause when one is known.
+func bundledCatalogNotice(w io.Writer, reason error) {
+	line := "notice: community index unavailable — serving bundled seed entries (built-in catalog/seed.json)"
+	if reason != nil {
+		line += ": " + reason.Error()
+	}
+	_, _ = fmt.Fprintln(w, line)
+}
+
+// printCatalogEntries renders catalog entries in the table shape `catalog
+// search` has always used, so list and search stay visually consistent.
+func printCatalogEntries(w io.Writer, label string, entries []catalog.CatalogEntry) {
+	if len(entries) == 0 {
+		_, _ = fmt.Fprintln(w, "No catalog entries found.")
+		return
+	}
+	_, _ = fmt.Fprintf(w, "%s (%d):\n\n", label, len(entries))
+	_, _ = fmt.Fprintf(w, "  %-20s %-20s %-6s %-60s %s\n", "ID", "NAME", "TYPE", "DESCRIPTION", "DOWNLOADS")
+	for _, e := range entries {
+		desc := e.Description
+		if len(desc) > 60 {
+			desc = desc[:60]
+		}
+		_, _ = fmt.Fprintf(w, "  %-20s %-20s %-6s %-60s %d\n", e.ID, e.Name, e.Type, desc, e.Downloads)
+	}
+}
+
+// catalogSearch resolves a catalog search, degrading to the bundled seed
+// catalog when the community index cannot be served. Both routing modes (local
+// and through a running dashboard) answer the same way: the dashboard path only
+// changes where the community answer is fetched from, not what happens when
+// there isn't one.
+func catalogSearch(query string) (catalog.Catalog, error) {
+	if dashboardBaseURL != "" {
+		entries, err := catalogSearchViaDashboard(query)
+		if err == nil {
+			return catalog.Catalog{Entries: entries, Source: catalog.SourceCommunity}, nil
+		}
+		res, fallbackErr := catalog.NewClient().SearchCatalog(query)
+		if fallbackErr != nil {
+			return catalog.Catalog{}, err
+		}
+		if res.Source == catalog.SourceBundled {
+			res.Reason = err
+		}
+		return res, nil
+	}
+	return catalog.NewClient().SearchCatalog(query)
+}
+
 func newCatalogCommand(registry *app.Registry) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "catalog",
@@ -311,27 +365,35 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 		Short: "Search the community catalog",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if dashboardBaseURL != "" {
-				return catalogSearchViaDashboard(args[0])
-			}
-			client := catalog.NewClient()
-			results, err := client.Search(args[0])
+			res, err := catalogSearch(args[0])
 			if err != nil {
 				return err
 			}
-			if len(results) == 0 {
-				fmt.Println("No catalog entries found.")
-				return nil
+			if res.Source == catalog.SourceBundled {
+				bundledCatalogNotice(cmd.ErrOrStderr(), res.Reason)
 			}
-			fmt.Printf("Catalog search results (%d):\n\n", len(results))
-			fmt.Printf("  %-20s %-20s %-6s %-60s %s\n", "ID", "NAME", "TYPE", "DESCRIPTION", "DOWNLOADS")
-			for _, e := range results {
-				desc := e.Description
-				if len(desc) > 60 {
-					desc = desc[:60]
-				}
-				fmt.Printf("  %-20s %-20s %-6s %-60s %d\n", e.ID, e.Name, e.Type, desc, e.Downloads)
+			printCatalogEntries(cmd.OutOrStdout(), "Catalog search results", res.Entries)
+			return nil
+		},
+	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "list",
+		Short: "List every entry in the catalog",
+		Long: "List every catalog entry. When the community index cannot be served the\n" +
+			"binary's bundled seed entries are listed instead, with a notice saying so.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// No dashboard equivalent: listing is a pure read, so it always
+			// goes to the catalog index directly.
+			res, err := catalog.NewClient().ListCatalog()
+			if err != nil {
+				return err
 			}
+			if res.Source == catalog.SourceBundled {
+				bundledCatalogNotice(cmd.ErrOrStderr(), res.Reason)
+			}
+			printCatalogEntries(cmd.OutOrStdout(), "Catalog entries", res.Entries)
 			return nil
 		},
 	})
@@ -376,20 +438,25 @@ func newCatalogCommand(registry *app.Registry) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if dashboardBaseURL != "" {
-				return pullViaDashboard(args[0])
+				return pullViaDashboard(cmd, args[0])
 			}
 			// DF-045: pulling writes to the registry; name the lock up front.
 			if err := StoreUnavailable(); err != nil {
 				return err
 			}
-			client := catalog.NewClient()
-			entry, _, err := client.FetchEntry(args[0])
+			// CATALOG-006: resolve the entry from the community index, or from
+			// the bundled seed catalog when that index cannot be served.
+			res, err := catalog.NewClient().FetchCatalogEntry(args[0])
 			if err != nil {
 				return err
 			}
+			entry := res.Entry
 			if entry == nil {
 				fmt.Printf("Entry %s not found in catalog.\n", args[0])
 				return nil
+			}
+			if res.Source == catalog.SourceBundled {
+				bundledCatalogNotice(cmd.ErrOrStderr(), res.Reason)
 			}
 			fmt.Printf("Pulling %s (%s) from community catalog...\n", entry.ID, entry.Name)
 			specData, err := loadSpecData(entry.SpecURL)
