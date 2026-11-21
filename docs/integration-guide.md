@@ -67,17 +67,27 @@ musterflow list
 ### Flow Commands
 
 ```bash
-# Create a new Starlark workflow (--source takes inline Starlark source text, not a file path)
-musterflow flow create --name myflow --source 'print(6 * 7)' --description "My first flow"
+# Write the Starlark source to a file — --source takes inline source text, not a path
+cat > /tmp/hello.star <<'EOF'
+def main():
+    print("hello from", "musterflow")
+
+main()
+EOF
+
+# Create a Starlark workflow from that file
+musterflow flow create hello --source "$(cat /tmp/hello.star)" --description "My first flow"
 
 # List all workflows
 musterflow flow list
 
-# Run a workflow
-musterflow flow run myflow
+# Run a workflow — the captured print() output is the result
+musterflow flow run hello
 ```
 
 A flow whose `.star` source prints output returns it from `flow run`. Webhook-triggered flows are created with the `--webhook` flag; the webhook payload is available inside the Starlark script as the `trigger` global (a top-level `if trigger != None:` guard does not compile — `trigger` must be used inside a function body).
+
+For the authoring reference — every predeclared builtin with its exact signature and failure modes, the function-body rule, and three complete worked examples — see [workflows.md](workflows.md).
 
 ### Dashboard Control
 
@@ -372,15 +382,26 @@ Returns the MCP endpoint URL, transport type, tool count, and per-tool name/desc
 
 MusterFlow embeds a Starlark workflow engine. Workflows are `.star` scripts stored in `~/.musterflow/flows/`.
 
+The authoring reference — the full builtin table with exact signatures and failure modes, the function-body rule, and three complete worked examples — is [workflows.md](workflows.md). This section is the short tour.
+
 ### Creating and Running a Flow
 
 ```bash
-$ musterflow flow create --name myflow --source 'print(6 * 7)' --description "My first flow"
-$ musterflow flow run myflow
-42
+$ cat > /tmp/hello.star <<'EOF'
+def main():
+    print("hello from", "musterflow")
+
+main()
+EOF
+$ musterflow flow create hello --source "$(cat /tmp/hello.star)" --description "My first flow"
+✓ Created flow "hello"
+  Description: My first flow
+  Edit: /home/you/.musterflow/flows/hello.star
+$ musterflow flow run hello
+hello from musterflow
 ```
 
-The CLI `flow run` prints the Starlark script's output to stdout. The dashboard API (`POST /api/flows/<name>/run`) returns the same output wrapped in a JSON object: `{"result": "42"}`.
+The CLI `flow run` prints the Starlark script's output to stdout. The dashboard API (`POST /api/flows/<name>/run`) returns the same output wrapped in a JSON object: `{"result": "hello from musterflow"}`.
 
 ### HTTP Builtins
 
