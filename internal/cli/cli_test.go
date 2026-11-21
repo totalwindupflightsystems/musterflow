@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -327,16 +328,30 @@ func TestCatalogCommand(t *testing.T) {
 	}
 	root := NewRootCommand(r)
 
-	buf := new(bytes.Buffer)
-	root.SetOut(buf)
-	root.SetArgs([]string{"catalog", "search", "test"})
+	// CATALOG-006: an unavailable community index degrades to the bundled seed
+	// catalog instead of failing, and says so on stderr. Point the client at a
+	// local 404 so the test never depends on the network.
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer backend.Close()
+	t.Setenv("MUSTERFLOW_CATALOG_REPO_URL", backend.URL)
 
-	// The default catalog backend repo is not available (404), so search
-	// should now return a descriptive error instead of silently succeeding.
-	err := root.Execute()
-	if err == nil {
-		t.Fatal("expected error from catalog search with unavailable backend, got nil")
-		return
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	root.SetOut(out)
+	root.SetErr(errOut)
+	root.SetArgs([]string{"catalog", "search", "github"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatalf("catalog search with unavailable index should serve bundled seeds, got error: %v", err)
+	}
+	if !strings.Contains(out.String(), "github") {
+		t.Errorf("expected the bundled GitHub entry, got output:\n%s", out.String())
+	}
+	notice := errOut.String()
+	if !strings.Contains(notice, "community index") || !strings.Contains(notice, "bundled") {
+		t.Errorf("expected a greppable fallback notice naming the community index and bundled entries, got %q", notice)
 	}
 }
 
@@ -1191,7 +1206,7 @@ func TestCatalogCommand_Subcommands(t *testing.T) {
 		t.Fatalf("find catalog: %v", err)
 	}
 
-	expected := map[string]bool{"search": true, "push": true, "pull": true}
+	expected := map[string]bool{"search": true, "list": true, "push": true, "pull": true}
 	names := make(map[string]bool)
 	for _, sub := range cmd.Commands() {
 		names[sub.Name()] = true
@@ -1210,49 +1225,98 @@ func TestCatalogCommand_SearchOutput(t *testing.T) {
 	}
 	defer func() { _ = r.Close() }()
 
-	root := NewRootCommand(r)
-	root.SetArgs([]string{"catalog", "search", "github"})
+	// CATALOG-006: when the community index IS reachable, its entries are what
+	// gets served and no fallback notice appears. (The unavailable-index arm is
+	// covered by TestCatalogCommand and the list tests.)
+	index := []catalog.CatalogEntry{{
+		ID:          "community-only-api",
+		Name:        "Community Only",
+		Type:        "api",
+		Description: "an entry that only the community index carries",
+	}}
+	body, err := json.Marshal(index)
+	if err != nil {
+		t.Fatalf("marshal index: %v", err)
+	}
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/index.json" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+			return
+		}
+		http.NotFound(w, req)
+	}))
+	defer backend.Close()
+	t.Setenv("MUSTERFLOW_CATALOG_REPO_URL", backend.URL)
 
-	// The default catalog backend repo is not available (404), so search
-	// returns a descriptive error. The error is printed by cobra/main.
-	err := root.Execute()
-	if err == nil {
-		t.Fatal("expected error from catalog search with unavailable backend, got nil")
-		return
+	root := NewRootCommand(r)
+	out := new(bytes.Buffer)
+	errOut := new(bytes.Buffer)
+	root.SetOut(out)
+	root.SetErr(errOut)
+	root.SetArgs([]string{"catalog", "search", "community"})
+
+	if execErr := root.Execute(); execErr != nil {
+		t.Fatalf("catalog search against a reachable index: %v", execErr)
+	}
+	if !strings.Contains(out.String(), "community-only-api") {
+		t.Errorf("expected the community entry in the output, got:\n%s", out.String())
+	}
+	if strings.Contains(out.String(), "github") {
+		t.Errorf("community-served output must not carry bundled seed entries:\n%s", out.String())
+	}
+	if strings.Contains(errOut.String(), "bundled") {
+		t.Errorf("a reachable community index must not print the fallback notice, got %q", errOut.String())
 	}
 }
 
-// TestCatalogSearchError_IdenticalWithAndWithoutDashboard is the DF-035
-// acceptance at the user-visible surface: the same operation against the same
-// absent backend must report the same error text whether the CLI routes through
-// a running dashboard or not.
+// TestCatalogSearchDegradesIdenticallyWithAndWithoutDashboard is the catalog
+// search parity acceptance at the user-visible surface: the same operation
+// against the same absent backend must answer the same way whether the CLI
+// routes through a running dashboard or not.
 //
-// Local mode is represented by the catalog client's own error, which is what
-// the no-dashboard branch returns verbatim (root.go: `results, err :=
-// client.Search(...)` → `return err`). Dashboard mode is driven end-to-end
-// through a real dashboard server, so this also proves the CLI relays the
-// dashboard's error body instead of printing a bare "dashboard returned HTTP N"
-// line.
-func TestCatalogSearchError_IdenticalWithAndWithoutDashboard(t *testing.T) {
+// DF-035 kept the classification at the client (Search still returns
+// ErrBackendUnavailable, asserted below); CATALOG-006 changed the CLI's answer:
+// instead of relaying that error, both routing modes degrade to the bundled seed
+// catalog and print the fallback notice. Dashboard mode is driven end-to-end
+// through a real dashboard server, which proves the CLI also degrades when the
+// failure arrives as a relayed dashboard error rather than a client error.
+func TestCatalogSearchDegradesIdenticallyWithAndWithoutDashboard(t *testing.T) {
 	// The absent catalog backend both modes talk to.
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 	}))
 	defer backend.Close()
+	t.Setenv("MUSTERFLOW_CATALOG_REPO_URL", backend.URL)
 
+	// Premise: the client's own error is still the DF-035 classified one.
 	_, localErr := catalog.NewClientWithRepoURL(backend.URL).Search("github")
 	if localErr == nil {
 		t.Fatal("premise failed: expected the local catalog client to fail on the absent backend")
 	}
+	if !errors.Is(localErr, catalog.ErrBackendUnavailable) {
+		t.Errorf("client error lost its backend-unavailable class: %v", localErr)
+	}
 
-	// Dashboard mode: a real dashboard server whose catalog client points at
-	// the same absent backend.
 	r := app.NewRegistry(t.TempDir())
 	if err := r.Load(); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	defer func() { _ = r.Close() }()
 
+	// Local mode.
+	localRoot := NewRootCommand(r)
+	localOut := new(bytes.Buffer)
+	localErrOut := new(bytes.Buffer)
+	localRoot.SetOut(localOut)
+	localRoot.SetErr(localErrOut)
+	localRoot.SetArgs([]string{"catalog", "search", "github"})
+	if err := localRoot.Execute(); err != nil {
+		t.Fatalf("local catalog search should degrade to bundled seeds, got: %v", err)
+	}
+
+	// Dashboard mode: a real dashboard server whose catalog client points at
+	// the same absent backend, so the dashboard relays the catalog error.
 	dash := dashboard.NewServer(r, catalog.NewClientWithRepoURL(backend.URL), nil, ":0")
 	ts := httptest.NewServer(dash.Handler())
 	defer ts.Close()
@@ -1260,18 +1324,29 @@ func TestCatalogSearchError_IdenticalWithAndWithoutDashboard(t *testing.T) {
 	SetDashboardURL(ts.URL)
 	defer SetDashboardURL("")
 
-	root := NewRootCommand(r)
-	root.SetArgs([]string{"catalog", "search", "github"})
-	err := root.Execute()
-	if err == nil {
-		t.Fatal("expected error from catalog search via dashboard, got nil")
+	dashRoot := NewRootCommand(r)
+	dashOut := new(bytes.Buffer)
+	dashErrOut := new(bytes.Buffer)
+	dashRoot.SetOut(dashOut)
+	dashRoot.SetErr(dashErrOut)
+	dashRoot.SetArgs([]string{"catalog", "search", "github"})
+	if err := dashRoot.Execute(); err != nil {
+		t.Fatalf("dashboard-routed catalog search should degrade to bundled seeds too, got: %v", err)
 	}
 
-	if got, want := err.Error(), localErr.Error(); got != want {
-		t.Errorf("catalog search error diverges by routing mode:\n with dashboard: %q\n without:        %q", got, want)
+	if got, want := dashOut.String(), localOut.String(); got != want {
+		t.Errorf("catalog search output diverges by routing mode:\n with dashboard: %q\n without:        %q", got, want)
 	}
-	if strings.Contains(err.Error(), "dashboard returned HTTP") {
-		t.Errorf("dashboard mode still reports a bare status line instead of the catalog message: %q", err.Error())
+	for _, mode := range []struct {
+		name string
+		out  string
+	}{{"local", localErrOut.String()}, {"dashboard", dashErrOut.String()}} {
+		if !strings.Contains(mode.out, "community index") || !strings.Contains(mode.out, "bundled") {
+			t.Errorf("%s mode did not print the fallback notice, got %q", mode.name, mode.out)
+		}
+	}
+	if strings.Contains(dashErrOut.String(), "dashboard returned HTTP") {
+		t.Errorf("dashboard mode still reports a bare status line instead of the catalog message: %q", dashErrOut.String())
 	}
 }
 

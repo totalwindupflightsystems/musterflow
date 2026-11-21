@@ -8,10 +8,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
 const defaultCatalogRepo = "https://raw.githubusercontent.com/totalwindupflightsystems/musterflow-catalog/main"
+
+// catalogRepoEnvVar overrides the community catalog repo URL. It exists so an
+// operator (or a test, or this binary's own verification run) can point the
+// catalog at a mirror — or at an unreachable host to exercise the bundled
+// fallback — without rebuilding.
+const catalogRepoEnvVar = "MUSTERFLOW_CATALOG_REPO_URL"
 
 // ErrBackendUnavailable classifies the failure where the catalog backend
 // itself is absent: the index URL answers 404 (repo missing, private, or
@@ -45,10 +53,15 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient creates a new catalog client.
+// NewClient creates a new catalog client. The repo URL can be overridden with
+// MUSTERFLOW_CATALOG_REPO_URL.
 func NewClient() *Client {
+	repoURL := defaultCatalogRepo
+	if override := strings.TrimSpace(os.Getenv(catalogRepoEnvVar)); override != "" {
+		repoURL = override
+	}
 	return &Client{
-		repoURL:    defaultCatalogRepo,
+		repoURL:    repoURL,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }
@@ -64,6 +77,17 @@ func NewClientWithRepoURL(repoURL string) *Client {
 
 // Search searches the catalog index for matching entries.
 func (c *Client) Search(query string) ([]CatalogEntry, error) {
+	entries, err := c.List()
+	if err != nil {
+		return nil, err
+	}
+
+	// Fuzzy search with relevance scoring (see search.go)
+	return Search(entries, query), nil
+}
+
+// List fetches every entry in the community catalog index, unfiltered.
+func (c *Client) List() ([]CatalogEntry, error) {
 	url := fmt.Sprintf("%s/index.json", c.repoURL)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
@@ -82,9 +106,7 @@ func (c *Client) Search(query string) ([]CatalogEntry, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
 		return nil, fmt.Errorf("decode catalog: %w", err)
 	}
-
-	// Fuzzy search with relevance scoring (see search.go)
-	return Search(entries, query), nil
+	return entries, nil
 }
 
 // FetchEntry retrieves a specific catalog entry.
