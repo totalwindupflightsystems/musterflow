@@ -33,9 +33,16 @@ type Server struct {
 ### 2.2 Constructor and Lifecycle
 
 ```go
-// NewServer creates a new dashboard server with all routes registered.
+// NewServer creates a new dashboard server with all routes registered and
+// bearer auth disabled (the embedding/test constructor: it cannot report the
+// fail-closed refusal). A host-less addr is still normalized to loopback.
 // catalogClient and toolRegistry may be nil — routes handle nil gracefully.
 func NewServer(registry *app.Registry, catalogClient *catalog.Client, toolRegistry *mcp.ToolRegistry, addr string) *Server
+
+// NewServerWithToken is the production constructor: it resolves the listen
+// address (dashboard.ListenAddr) and refuses a non-loopback address when token
+// is empty, so an exposed listener can never come up unauthenticated.
+func NewServerWithToken(registry *app.Registry, catalogClient *catalog.Client, toolRegistry *mcp.ToolRegistry, addr, token string) (*Server, error)
 
 // SetMCPHandler sets the HTTP handler for the /mcp JSON-RPC endpoint.
 // If not set, /mcp returns a JSON-RPC error (code -32000) indicating no API is connected.
@@ -57,10 +64,14 @@ func (s *Server) Handler() http.Handler
 func (s *Server) registerRoutes()
 ```
 
-Registers exactly 13 route patterns on `s.mux` (`internal/dashboard/server.go:59-73`), in
+Registers exactly 13 route patterns on `s.mux` (`internal/dashboard/server.go:101-127`), in
 registration order. "any" in the Methods column means the handler performs no method
 check and answers every method the same way; the POST-only contract on `/mcp` is enforced
 inside the delegated `mcp.HTTPServer`, not in `registerRoutes`.
+
+Every pattern except `/api/health`, `/metrics` and the `/` UI catch-all is wrapped in
+`s.requireAuth` when a dashboard token is configured (see §4.6): the handler is not reached
+at all and the request answers `401 {"error": "unauthorized"}`.
 
 | # | Pattern | Handler | Methods | Description |
 |---|---------|---------|---------|-------------|
@@ -74,7 +85,7 @@ inside the delegated `mcp.HTTPServer`, not in `registerRoutes`.
 | 8 | `/api/export` | `s.handleExport` | GET | Stream the whole connection registry as JSONL (`application/x-ndjson`) for backup/transfer |
 | 9 | `/api/import` | `s.handleImport` | POST | Import connections from a JSONL request body (same-ID entries replaced) → `{"imported": N}` |
 | 10 | `/mcp` | `s.handleMCP` | POST (JSON-RPC) | MCP JSON-RPC 2.0 endpoint; delegates to the handler set by `SetMCPHandler`, otherwise returns the `-32000` not-configured JSON-RPC error |
-| 11 | `/hooks/` | `s.handleWebhook` | any | Webhook trigger for a Starlark flow: `/hooks/<name>` runs that flow with the decoded JSON body as its payload |
+| 11 | `/hooks/` | `s.handleWebhook` | POST | Webhook trigger for a Starlark flow: `POST /hooks/<name>` runs that flow with the decoded JSON body as its payload; any other method → 405 with `Allow: POST` and the flow is NOT run |
 | 12 | `/metrics` | `s.metrics.HandleMetrics` | any | Prometheus text exposition (`text/plain; version=0.0.4`, stable section order) for scraping |
 | 13 | `/` | `serveIndex` | any | Dashboard UI: the `go:embed`-ed `index.html`, overridable by `web/index.html` on disk in dev mode; catch-all, so `ServeMux` longest-prefix matching gives every other pattern precedence |
 
@@ -142,7 +153,8 @@ type Server struct {
 	registry      *app.Registry      // DuckDB-backed API connection registry
 	catalogClient  *catalog.Client     // community catalog HTTP client (may be nil)
 	toolRegistry   *mcp.ToolRegistry   // MCP tool registry from connected APIs (may be nil)
-	addr           string              // listen address, e.g. ":9876"
+	addr           string              // resolved listen address, e.g. "127.0.0.1:9876" (never host-less)
+	token          string              // dashboard bearer token; empty = auth disabled (loopback only)
 	mux            *http.ServeMux       // route multiplexer
 	mcpHandler     http.Handler         // MCP JSON-RPC handler (set via SetMCPHandler)
 }
@@ -278,11 +290,11 @@ type ToolRegistry struct {
 
 `cmd/musterflow/main.go` `startServer()` function wires the dashboard:
 
-1. Resolve port: `config.FindPort(cfg.Port)` (tries port, +1, +2, ... up to 10 ports)
-2. `addr := fmt.Sprintf(":%d", port)`
+1. Resolve the listen address: `dashboard.ListenAddr(flagDashboardAddr, cfg.Port)` — the flag's host is kept, a host-less/absent flag resolves to `127.0.0.1:<port>`
+2. `selectStartPort(port, dashboardPortOccupied)` walks `[port, port+9]`; `addr := net.JoinHostPort(host, strconv.Itoa(choice.Port))`
 3. Build MCP tool registry: `toolRegistry := mcp.NewToolRegistry(registry)` → `toolRegistry.Refresh()`
 4. Create catalog client: `catalogClient := catalog.NewClient()`
-5. Create dashboard server: `dashServer := dashboard.NewServer(registry, catalogClient, toolRegistry, addr)`
+5. Create dashboard server: `dashServer, err := dashboard.NewServerWithToken(registry, catalogClient, toolRegistry, addr, cfg.DashboardToken)` — a non-loopback `addr` with no token returns an error and `start` exits non-zero before the banner and before binding
 6. Build MCP handler chain:
    - `handlers.NewRegistry()` — registers 4 handlers: Initialize, Initialized, ListTools, CallTool
    - `mcp.NewHTTPServer(handlerReg)` → returns `http.Handler`
@@ -375,13 +387,18 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]string{"error": "missing flow name"})
 		return
 	}
+	if r.Method != http.MethodPost {  // POST-only: a GET must never run the flow
+		w.Header().Set("Allow", http.MethodPost)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
 	var payload map[string]interface{}
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&payload)  // best-effort, ignore errors
 	}
 	engine := workflow.NewEngine(
 		filepath.Join(app.DefaultDataDir(), "flows"),
-		fmt.Sprintf("http://localhost%s", s.addr),  // self-reference for nested API calls
+		s.baseURL(),  // self-reference for nested API calls; loopback renders as localhost
 	)
 	output, err := engine.Run(name, payload)
 	if err != nil {
@@ -392,9 +409,38 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-### 4.6 Config Env Vars
+### 4.6 Config, Env Vars, Auth and Bind Policy
 
-No environment variable overrides. Port is from `config.yaml` (`port: 9876`) or `--dashboard-addr` CLI flag. `config.FindPort` auto-discovers an available port in range `[port, port+9]`.
+**Env vars.** `MUSTERFLOW_DASHBOARD_TOKEN` overrides `dashboard_token` from `config.yaml`
+(the environment wins). It is the only environment override on this surface — the port comes
+from `config.yaml` (`port: 9876`) or the `--dashboard-addr` flag, and `config.FindPort`
+auto-discovers an available port in `[port, port+9]`.
+
+**Token.** `dashboard_token` (or the env var) enables bearer auth. `s.requireAuth` compares
+`Authorization: Bearer <token>` against the configured value with
+`crypto/subtle.ConstantTimeCompare`; a missing, malformed or wrong header answers
+`401 {"error": "unauthorized"}` with `WWW-Authenticate: Bearer realm="musterflow"` and the
+handler is never called (no registry, flow or definition data on a 401). `/api/health` and
+`/metrics` stay unauthenticated in every mode: health is the CLI's liveness probe and metrics
+carry counters only.
+
+**Bind policy (fail closed).** `dashboard.ListenAddr(requested, defaultPort)` is the single
+place the flag becomes a listen address (`internal/dashboard/auth.go`):
+
+| `--dashboard-addr` | resolve to |
+|---|---|
+| absent | `127.0.0.1:<config port>` |
+| `:port` | `127.0.0.1:port` |
+| `host:port` / `[v6]:port` | verbatim |
+| anything else | error naming the accepted forms |
+
+A host-less address is never produced, because `net.Listen` reads it as "every interface".
+`NewServerWithToken` then refuses a non-loopback address with no token
+(`dashboard: refusing to listen on 0.0.0.0:<port> without a dashboard token — ...`), and a
+token-less loopback start prints `WARNING: dashboard auth disabled — set dashboard_token to
+require a bearer token`. `BaseURL` renders a loopback address as `http://localhost:<port>`
+for the banner, the MCP endpoint and flow webhook URLs. `Start` exits non-zero on the refusal
+because construction happens before the banner and before `ListenAndServe`.
 
 ---
 
@@ -413,6 +459,8 @@ No environment variable overrides. Port is from `config.yaml` (`port: 9876`) or 
 | Refresh failure | `POST /api/apis/<id>/refresh` | 500 | `{"error": err.Error()}` | `app.Refresh` returns error |
 | Catalog search failure | `GET /api/catalog/search` | 500 | `{"error": err.Error()}` | `catalogClient.Search(query)` returns error |
 | Missing flow name | `POST /hooks/` | 400 | `{"error": "missing flow name"}` | Path after `/hooks/` is empty |
+| Webhook method not allowed | `GET/PUT/DELETE/… /hooks/<name>` | 405 | `{"error": "method not allowed"}` + `Allow: POST` | Method is not POST — checked before an engine is constructed, so the flow does not run |
+| Unauthorized (token configured) | any protected route | 401 | `{"error": "unauthorized"}` + `WWW-Authenticate: Bearer realm="musterflow"` | Missing, malformed or wrong `Authorization: Bearer <token>`; the handler is never called |
 | Workflow execution failure | `POST /hooks/<name>` | 404 | `{"error": err.Error()}` | `engine.Run(name, payload)` returns error (flow not found, Starlark error) |
 | MCP not configured | `POST /mcp` | 200 | JSON-RPC error `{code: -32000, message: "MCP server not configured — connect an API first"}` | `s.mcpHandler == nil` |
 | MCP handler error | `POST /mcp` | (delegated) | (delegated to mcpHandler) | `s.mcpHandler != nil` — status and body come from the MCP handler chain |

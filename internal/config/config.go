@@ -13,12 +13,38 @@ import (
 
 // Config holds all MusterFlow configuration.
 type Config struct {
-	Port           int                   `yaml:"port"`
-	DataDir        string                `yaml:"data_dir"`
-	DefaultFormat  string                `yaml:"default_format"`
-	AutoCompletion bool                  `yaml:"auto_completion"`
+	Port           int    `yaml:"port"`
+	DataDir        string `yaml:"data_dir"`
+	DefaultFormat  string `yaml:"default_format"`
+	AutoCompletion bool   `yaml:"auto_completion"`
+	// DashboardToken, when non-empty, requires "Authorization: Bearer <token>"
+	// on the dashboard's /api/*, /mcp and /hooks/* routes. Masked in display
+	// like the per-API auth keys. MUSTERFLOW_DASHBOARD_TOKEN wins over this.
+	DashboardToken string                `yaml:"dashboard_token,omitempty"`
 	Auth           map[string]AuthConfig `yaml:"auth,omitempty"`
+
+	// fileDashboardToken is the token as it exists in config.yaml, and
+	// dashboardTokenFromEnv records that the environment overrode it. Together
+	// they let Save keep an operator-injected token OUT of the file: an
+	// operator who exports MUSTERFLOW_DASHBOARD_TOKEN did so to avoid writing
+	// the secret to disk, and an unrelated `config set port` must not undo
+	// that.
+	fileDashboardToken    string
+	dashboardTokenFromEnv bool
 }
+
+// SetDashboardToken records an explicitly provided token (e.g. `config set
+// dashboard_token`), marking it for persistence on the next Save.
+func (c *Config) SetDashboardToken(token string) {
+	c.DashboardToken = token
+	c.fileDashboardToken = token
+	c.dashboardTokenFromEnv = false
+}
+
+// DashboardTokenEnvVar overrides the config file's dashboard_token. The
+// environment wins so an operator can inject the token without writing it to
+// config.yaml.
+const DashboardTokenEnvVar = "MUSTERFLOW_DASHBOARD_TOKEN"
 
 // AuthConfig holds per-API authentication settings.
 type AuthConfig struct {
@@ -62,6 +88,7 @@ func loadFrom(dir string) (Config, error) {
 
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
+		applyEnvOverrides(&cfg)
 		return cfg, nil
 	}
 	if err != nil {
@@ -73,10 +100,22 @@ func loadFrom(dir string) (Config, error) {
 		fmt.Fprintf(os.Stderr, "Warning: invalid config at %s: %v — using defaults\n", path, err)
 		d := Defaults()
 		d.DataDir = dir
+		applyEnvOverrides(&d)
 		return d, nil
 	}
 
+	applyEnvOverrides(&cfg)
 	return cfg, nil
+}
+
+// applyEnvOverrides lets the environment win over the config file. Only keys
+// that can be injected as secrets are overridden this way.
+func applyEnvOverrides(cfg *Config) {
+	cfg.fileDashboardToken = cfg.DashboardToken
+	if v := os.Getenv(DashboardTokenEnvVar); v != "" {
+		cfg.DashboardToken = v
+		cfg.dashboardTokenFromEnv = true
+	}
 }
 
 // Save writes the config to the config file in cfg.DataDir if non-empty,
@@ -100,6 +139,10 @@ const configFileMode os.FileMode = 0600
 func SaveWithDataDir(cfg Config, dir string) error {
 	if dir == "" {
 		dir = defaultDataDir()
+	}
+	if cfg.dashboardTokenFromEnv {
+		// The environment supplied the token; persist only what the file had.
+		cfg.DashboardToken = cfg.fileDashboardToken
 	}
 	path := configPathFor(dir)
 	if err := os.MkdirAll(dir, 0755); err != nil {

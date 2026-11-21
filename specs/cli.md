@@ -104,6 +104,12 @@ func SetAuthManager(m *auth.Manager)
 // through the dashboard HTTP API (avoiding DuckDB lock conflicts).
 // When non-empty, connect/disconnect/list/refresh/catalog/mcp route via HTTP.
 func SetDashboardURL(url string)
+
+// SetDashboardToken sets the bearer token presented on those routed calls
+// (config dashboard_token / MUSTERFLOW_DASHBOARD_TOKEN). The header is added by
+// a transport wrapper scoped to the dashboard's origin, so third-party spec
+// fetches never see it.
+func SetDashboardToken(token string)
 ```
 
 ### 2.5 Dashboard-Routing Helper Functions (unexported)
@@ -212,6 +218,7 @@ var apiCommands = make(map[string]*apiCommandState)
 var apiCommandsMu sync.Mutex
 var authMgr *auth.Manager              // set by SetAuthManager
 var dashboardBaseURL string            // set by SetDashboardURL
+var dashboardToken string              // set by SetDashboardToken (dashboard bearer token)
 var outputFlag string                   // set by root.PersistentFlags --output-file
 ```
 

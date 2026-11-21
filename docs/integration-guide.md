@@ -180,12 +180,37 @@ POST /api/apis/<id>/refresh         → 200  refresh an API's spec (returns vers
 GET  /api/flows                     → 200  {"flows":[...]}
 POST /api/flows                     → 201  create a flow
 POST /api/flows/<name>/run          → 200  run a flow
-POST /hooks/<name>                  → 200  trigger a webhook-enabled flow
+POST /hooks/<name>                  → 200  trigger a webhook-enabled flow (POST only; other methods → 405)
 GET  /hooks                         → 307  redirect to /hooks/ (flow name required)
 GET  /api/catalog/search?q=<query>  → 200  catalog search
 GET  /api/mcp/info                  → 200  MCP endpoint info and tool list
 GET  /api/export                    → 200  whole connection registry streamed as JSONL (application/x-ndjson)
 POST /api/import                    → 200  import connections from a JSONL body → {"imported":N}
+GET  /metrics                       → 200  Prometheus metrics (counters only)
+```
+
+### Authentication and binding
+
+The dashboard listens on **loopback** unless you say otherwise: the config default and a
+host-less `--dashboard-addr :<port>` both resolve to `127.0.0.1:<port>`. The host you pass is
+kept — `--dashboard-addr 0.0.0.0:9876` binds every interface, `--dashboard-addr 127.0.0.1:9876`
+binds loopback only.
+
+Set `dashboard_token` (in `config.yaml`, or `MUSTERFLOW_DASHBOARD_TOKEN` in the environment —
+the environment wins) to require `Authorization: Bearer <token>` on `/api/*`, `/mcp` and
+`/hooks/*`. `/api/health` and `/metrics` stay open in every mode: health is the liveness probe
+the CLI uses to find a running dashboard, and metrics carry counters, not registry data.
+A missing or wrong token answers `401 {"error":"unauthorized"}` — no flow, definition or
+registry data is returned.
+
+**Fail closed on exposure.** With no token configured the server refuses to start on a
+non-loopback address (`0.0.0.0`, `::`, a specific external IP) and tells you to set
+`dashboard_token` or bind loopback. On loopback it starts and prints
+`WARNING: dashboard auth disabled — set dashboard_token to require a bearer token`.
+
+```bash
+musterflow config set dashboard_token "$(openssl rand -hex 32)"   # stored 0600, masked in `config show`
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:9876/api/apis
 ```
 
 Export and import are a matched pair. `GET /api/export` streams one JSON object per line (`application/x-ndjson`), and `POST /api/import` consumes exactly that stream: the request body is JSONL, each parsed connection is inserted, and an entry whose `id` already exists is replaced — the response reports how many rows were imported as `{"imported":N}`. That is how connections move between hosts (backup, transfer to another machine) without opening DuckDB directly. Any other method answers 405, and an empty body is rejected with 400 `{"error":"missing request body"}`.
@@ -717,9 +742,12 @@ port: 9876
 data_dir: /home/<user>/.musterflow
 default_format: table
 auto_completion: true
+# Optional: require "Authorization: Bearer <token>" on /api/*, /mcp and /hooks/*.
+# MUSTERFLOW_DASHBOARD_TOKEN overrides it. Required to bind a non-loopback address.
+# dashboard_token: <32-byte hex>
 ```
 
-`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path.
+`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path. `dashboard_token` is settable with `musterflow config set dashboard_token <value>` (masked in `config show`, and the `set` confirmation prints it masked) or injected with `MUSTERFLOW_DASHBOARD_TOKEN`, which wins over the file.
 
 **Data directory** (`~/.musterflow/` by default, overridable with `--data-dir`):
 

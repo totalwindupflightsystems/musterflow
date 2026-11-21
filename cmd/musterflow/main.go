@@ -6,10 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -78,6 +80,11 @@ func run() error {
 	if flagDashboardAddr != "" {
 		dashAddr = flagDashboardAddr
 	}
+
+	// The dashboard may require a bearer token (dashboard_token /
+	// MUSTERFLOW_DASHBOARD_TOKEN); every CLI call that routes through it has to
+	// present it. Set before any dashboard request is made.
+	cli.SetDashboardToken(cfg.DashboardToken)
 
 	// --no-dashboard forces the local registry path, skipping dashboard
 	// detection entirely.
@@ -221,16 +228,20 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 		return err
 	}
 
-	// Resolve port: CLI flag > config file > default with auto-discovery.
-	// The --dashboard-addr flag may be in "host:port" or ":port" form.
-	port := cfg.Port
-	if flagDashboardAddr != "" {
-		// Extract the port from either "host:port" or ":port" form.
-		// fmt.Sscanf does not support %*[^:] suppression, so use
-		// strings.LastIndex to find the final colon.
-		if idx := strings.LastIndex(flagDashboardAddr, ":"); idx >= 0 {
-			_, _ = fmt.Sscanf(flagDashboardAddr[idx+1:], "%d", &port)
-		}
+	// Resolve the listen address. The host from --dashboard-addr is preserved
+	// (loopback when the flag is host-less or absent): the dashboard used to
+	// discard it and listen on ":<port>", which binds every interface.
+	requested, err := dashboard.ListenAddr(flagDashboardAddr, cfg.Port)
+	if err != nil {
+		return err
+	}
+	host, portStr, err := net.SplitHostPort(requested)
+	if err != nil {
+		return fmt.Errorf("invalid --dashboard-addr %q: want host:port or :port", flagDashboardAddr)
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return fmt.Errorf("invalid --dashboard-addr %q: %q is not a port between 0 and 65535", flagDashboardAddr, portStr)
 	}
 
 	// Port selection (GAP-018): a foreign process on the configured port is
@@ -244,19 +255,42 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 	if choice.Note != "" {
 		fmt.Println(choice.Note)
 	}
-	port = choice.Port
 
-	addr := fmt.Sprintf(":%d", port)
+	addr := net.JoinHostPort(host, strconv.Itoa(choice.Port))
+
+	// Build tool registry from connected APIs
+	toolRegistry := mcp.NewToolRegistry(registry)
+	catalogClient := catalog.NewClient()
+
+	// Construction (not ListenAndServe) enforces the fail-closed policy: a
+	// non-loopback bind with no dashboard_token is refused here, before the
+	// banner claims a dashboard is up.
+	dashServer, err := dashboard.NewServerWithToken(registry, catalogClient, toolRegistry, addr, cfg.DashboardToken)
+	if err != nil {
+		return err
+	}
+
 	fmt.Printf("⚡ MusterFlow %s\n\n", Version)
-	fmt.Printf("Dashboard:    http://localhost%s\n", addr)
-	fmt.Printf("API:          http://localhost%s/api/\n", addr)
-	fmt.Printf("MCP endpoint: http://localhost%s/mcp\n", addr)
+	url := dashboard.BaseURL(addr)
+	fmt.Printf("Dashboard:    %s\n", url)
+	fmt.Printf("API:          %s/api/\n", url)
+	fmt.Printf("MCP endpoint: %s/mcp\n", url)
+	if dashServer.AuthEnabled() {
+		fmt.Println("Auth:         bearer token required (dashboard_token)")
+	}
 	fmt.Printf("\nConnected APIs: %d\n", len(registry.List()))
 	fmt.Println()
 	fmt.Println("Press Ctrl+C to stop.")
 
-	// Build tool registry from connected APIs
-	toolRegistry := mcp.NewToolRegistry(registry)
+	// Build MCP handler registry
+	handlerReg := handlers.NewRegistry()
+	handlerReg.Register(handlers.NewInitializeHandler("musterflow-mcp", Version))
+	handlerReg.Register(handlers.NewInitializedHandler())
+	handlerReg.Register(handlers.NewListToolsHandler(toolRegistry))
+	handlerReg.Register(handlers.NewCallToolHandler(toolRegistry))
+
+	mcpHTTPServer := mcp.NewHTTPServer(handlerReg)
+	dashServer.SetMCPHandler(mcpHTTPServer)
 
 	// GAP-016: Retry the boot refresh with exponential backoff so a transient
 	// failure (network down, spec host unreachable) recovers without restart.
@@ -268,19 +302,6 @@ func startServer(registry *app.Registry, cfg config.Config) error {
 			fmt.Fprintf(os.Stderr, "Warning: MCP tool refresh: %v\n", err)
 		})
 	}()
-
-	catalogClient := catalog.NewClient()
-	dashServer := dashboard.NewServer(registry, catalogClient, toolRegistry, addr)
-
-	// Build MCP handler registry
-	handlerReg := handlers.NewRegistry()
-	handlerReg.Register(handlers.NewInitializeHandler("musterflow-mcp", Version))
-	handlerReg.Register(handlers.NewInitializedHandler())
-	handlerReg.Register(handlers.NewListToolsHandler(toolRegistry))
-	handlerReg.Register(handlers.NewCallToolHandler(toolRegistry))
-
-	mcpHTTPServer := mcp.NewHTTPServer(handlerReg)
-	dashServer.SetMCPHandler(mcpHTTPServer)
 
 	httpServer := &http.Server{
 		Addr:    addr,

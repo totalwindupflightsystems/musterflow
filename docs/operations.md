@@ -8,11 +8,28 @@ is accepting requests and failing them.
 
 | unit | entrypoint | default bind | data |
 |---|---|---|---|
-| `musterflow start` daemon | `cmd/musterflow` (`dashboard.NewServer`) | `127.0.0.1` / `:9876` (config `port`, `--dashboard-addr`) | `~/.musterflow` (`config.DataDir`) |
+| `musterflow start` daemon | `cmd/musterflow` (`dashboard.NewServerWithToken`) | `127.0.0.1:9876` (config `port`, `--dashboard-addr`) | `~/.musterflow` (`config.DataDir`) |
 
 The daemon serves the dashboard SPA (`/`), the JSON API (`/api/...`), the MCP JSON-RPC
 endpoint (`/mcp`), inbound webhooks (`/hooks/...`), a health route (`/api/health`) and the
 metrics endpoint (`/metrics`).
+
+## Exposure and authentication
+
+The listener binds **loopback by default**: no `--dashboard-addr`, and the host-less
+`--dashboard-addr :<port>` form, both resolve to `127.0.0.1:<port>`. An explicit host is
+honoured (`--dashboard-addr 0.0.0.0:9876` binds every interface).
+
+`dashboard_token` (config key, or `MUSTERFLOW_DASHBOARD_TOKEN` — the environment wins)
+requires `Authorization: Bearer <token>` on `/api/*`, `/mcp` and `/hooks/*`; a rejected
+request answers `401 {"error":"unauthorized"}` with no registry or flow data. `/api/health`
+and `/metrics` stay open so probes keep working.
+
+With no token configured the daemon starts on loopback and prints one line —
+`WARNING: dashboard auth disabled — set dashboard_token to require a bearer token` — but
+**refuses to start on a non-loopback address**, naming both remedies. That is the fail-closed
+half of the policy: an exposed listener without auth is not a configuration the daemon will
+accept.
 
 ## Build and toolchain
 
@@ -48,14 +65,22 @@ musterflow start --dashboard-addr :9876 --data-dir /var/lib/musterflow
 
 ## Deploy (container)
 
-`docker-compose.yml` builds the image, publishes `9876:9876`, mounts the
-`musterflow-data` volume at `/root/.musterflow` and sets `restart: unless-stopped` — Docker
-is the supervisor and the restart policy, so no separate systemd unit is required:
+`docker-compose.yml` builds the image, runs `start --dashboard-addr 0.0.0.0:9876` (the
+container must bind every interface for the published port to work), publishes `9876:9876`,
+mounts the `musterflow-data` volume at `/root/.musterflow` and sets
+`restart: unless-stopped` — Docker is the supervisor and the restart policy, so no separate
+systemd unit is required. Because `0.0.0.0` is an exposed bind, the daemon refuses to start
+without a token, so compose passes one through and fails fast when it is missing:
 
 ```bash
+export MUSTERFLOW_DASHBOARD_TOKEN=$(openssl rand -hex 32)   # or put it in .env
 docker compose up -d --build
 docker compose logs -f musterflow
+curl -H "Authorization: Bearer $MUSTERFLOW_DASHBOARD_TOKEN" http://127.0.0.1:9876/api/health
 ```
+
+A bare `docker run` of the image (no arguments) keeps the safe default: the daemon binds
+`127.0.0.1:9876`, which is reachable from inside the container but not through `-p`.
 
 **Engine prerequisite: none.** The image builds from this repository's context alone, against
 the published `github.com/wojons/muster` module pinned in `go.mod` — no caller needs a muster
@@ -106,9 +131,9 @@ process with no usable catalog).
 ## Metrics
 
 `GET /metrics` serves the Prometheus text exposition format (`version=0.0.4`) on the same
-listener. It is unauthenticated like the rest of the local dashboard surface, so it is bound
-to the same address — keep the listener on loopback or behind the reverse proxy, never
-expose `:9876` directly to the internet.
+listener. It is unauthenticated in every mode (as is `/api/health`), so it is bound to the
+same address as the rest of the dashboard: keep the listener on loopback, or set
+`dashboard_token` and front it with TLS, never expose `:9876` directly to the internet.
 
 Families exported (stable prefix `musterflow_`):
 

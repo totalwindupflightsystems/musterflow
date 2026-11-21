@@ -22,6 +22,7 @@ type Server struct {
 	catalogClient *catalog.Client
 	toolRegistry  *mcp.ToolRegistry
 	addr          string
+	token         string
 	flowsDir      string
 	mux           *http.ServeMux
 	mcpHandler    http.Handler
@@ -29,19 +30,61 @@ type Server struct {
 	handler       http.Handler
 }
 
-// NewServer creates a new dashboard server.
+// NewServer creates a dashboard server with bearer auth disabled. It is the
+// in-process/embedding constructor: the address is normalized like
+// NewServerWithToken's (a host-less ":port" becomes loopback) but exposure is
+// NOT validated, because this signature cannot report an error. Production
+// startup goes through NewServerWithToken, which refuses a non-loopback bind
+// with no token.
 func NewServer(registry *app.Registry, catalogClient *catalog.Client, toolRegistry *mcp.ToolRegistry, addr string) *Server {
+	return newServer(registry, catalogClient, toolRegistry, addr, "", false)
+}
+
+// NewServerWithToken creates a dashboard server that requires
+// "Authorization: Bearer <token>" on /api/* (except /api/health), /mcp and
+// /hooks/* whenever token is non-empty.
+//
+// It fails closed: a non-loopback address with no token is refused, because
+// that combination publishes the registry, flow sources and an unauthenticated
+// webhook trigger to every host that can reach the port. The returned error
+// tells the operator both ways out (set dashboard_token, or bind loopback).
+func NewServerWithToken(registry *app.Registry, catalogClient *catalog.Client, toolRegistry *mcp.ToolRegistry, addr, token string) (*Server, error) {
+	resolved, err := ListenAddr(addr, 0)
+	if err != nil {
+		return nil, err
+	}
+	if token == "" && !IsLoopbackAddr(resolved) {
+		return nil, fmt.Errorf(
+			"dashboard: refusing to listen on %s without a dashboard token — "+
+				"set dashboard_token in config.yaml (or MUSTERFLOW_DASHBOARD_TOKEN) to require a bearer token, "+
+				"or bind loopback (--dashboard-addr 127.0.0.1:<port>)",
+			resolved)
+	}
+	return newServer(registry, catalogClient, toolRegistry, resolved, token, true), nil
+}
+
+// newServer builds the server. warn adds the one-line startup notice when the
+// dashboard is reachable without a token; it is only requested by the
+// production constructor so tests stay quiet.
+func newServer(registry *app.Registry, catalogClient *catalog.Client, toolRegistry *mcp.ToolRegistry, addr, token string, warn bool) *Server {
+	if resolved, err := ListenAddr(addr, 0); err == nil {
+		addr = resolved
+	}
 	s := &Server{
 		registry:      registry,
 		catalogClient: catalogClient,
 		toolRegistry:  toolRegistry,
 		addr:          addr,
+		token:         token,
 		flowsDir:      filepath.Join(registry.DataDir(), "flows"),
 		mux:           http.NewServeMux(),
 		metrics:       NewMetrics(),
 	}
 	s.registerRoutes()
 	s.handler = s.metrics.Instrument(s.mux)
+	if warn && token == "" && IsLoopbackAddr(addr) {
+		fmt.Fprintln(os.Stderr, AuthDisabledWarning)
+	}
 	return s
 }
 
@@ -58,19 +101,37 @@ func (s *Server) SetMCPHandler(h http.Handler) {
 }
 
 func (s *Server) registerRoutes() {
+	// /api/health and /metrics are deliberately unauthenticated even when a
+	// dashboard token is configured:
+	//   - /api/health is the liveness probe the CLI uses to detect a running
+	//     dashboard (isMusterflowDashboard) and the port-selection walk uses;
+	//     a probe cannot hold a secret, and the payload is a status string plus
+	//     a connection count.
+	//   - /metrics carries Prometheus counters (method, path, code) and no
+	//     registry, flow or definition data.
+	// Everything that can read the registry, list flow sources, export
+	// definitions, run a flow or trigger outbound HTTP requires the bearer
+	// token whenever one is configured.
 	s.mux.HandleFunc("/api/health", s.handleHealth)
-	s.mux.HandleFunc("/api/apis", s.handleAPIs)
-	s.mux.HandleFunc("/api/apis/", s.handleAPIByID)
-	s.mux.HandleFunc("/api/flows", s.handleFlows)
-	s.mux.HandleFunc("/api/flows/", s.handleFlowRun)
-	s.mux.HandleFunc("/api/catalog/search", s.handleCatalogSearch)
-	s.mux.HandleFunc("/api/mcp/info", s.handleMCPInfo)
-	s.mux.HandleFunc("/api/export", s.handleExport)
-	s.mux.HandleFunc("/api/import", s.handleImport)
-	s.mux.HandleFunc("/mcp", s.handleMCP)
-	s.mux.HandleFunc("/hooks/", s.handleWebhook)
+	s.mux.HandleFunc("/api/apis", s.requireAuth(s.handleAPIs))
+	s.mux.HandleFunc("/api/apis/", s.requireAuth(s.handleAPIByID))
+	s.mux.HandleFunc("/api/flows", s.requireAuth(s.handleFlows))
+	s.mux.HandleFunc("/api/flows/", s.requireAuth(s.handleFlowRun))
+	s.mux.HandleFunc("/api/catalog/search", s.requireAuth(s.handleCatalogSearch))
+	s.mux.HandleFunc("/api/mcp/info", s.requireAuth(s.handleMCPInfo))
+	s.mux.HandleFunc("/api/export", s.requireAuth(s.handleExport))
+	s.mux.HandleFunc("/api/import", s.requireAuth(s.handleImport))
+	s.mux.HandleFunc("/mcp", s.requireAuth(s.handleMCP))
+	s.mux.HandleFunc("/hooks/", s.requireAuth(s.handleWebhook))
 	s.mux.HandleFunc("/metrics", s.metrics.HandleMetrics)
 	s.mux.HandleFunc("/", serveIndex)
+}
+
+// baseURL is the address the dashboard's own flows call back on (webhook URLs,
+// MCP endpoint and flow HTTP calls). It renders the loopback bind as
+// http://localhost:<port> so the advertised URLs stay stable for local use.
+func (s *Server) baseURL() string {
+	return BaseURL(s.addr)
 }
 
 // refreshMCPTools re-derives the MCP tool registry from the current set of
@@ -314,7 +375,7 @@ type mcpToolInfo struct {
 // handleMCPInfo returns information about the MCP endpoint and its tools.
 // GET /api/mcp/info
 func (s *Server) handleMCPInfo(w http.ResponseWriter, r *http.Request) {
-	endpoint := fmt.Sprintf("http://localhost%s/mcp", s.addr)
+	endpoint := s.baseURL() + "/mcp"
 
 	if s.toolRegistry == nil {
 		apiCount := 0
@@ -485,7 +546,7 @@ func writeJSON(w http.ResponseWriter, code int, data interface{}) {
 func (s *Server) handleFlows(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		engine := workflow.NewEngine(s.flowsDir, fmt.Sprintf("http://localhost%s", s.addr))
+		engine := workflow.NewEngine(s.flowsDir, s.baseURL())
 		flows, err := engine.List()
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -524,7 +585,7 @@ func (s *Server) handleFlowCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	engine := workflow.NewEngine(s.flowsDir, fmt.Sprintf("http://localhost%s", s.addr))
+	engine := workflow.NewEngine(s.flowsDir, s.baseURL())
 	flow, err := engine.Create(body.Name, body.Source, body.Description, body.Webhook)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -573,7 +634,7 @@ func (s *Server) handleFlowRun(w http.ResponseWriter, r *http.Request) {
 		payload = body.Trigger
 	}
 
-	engine := workflow.NewEngine(s.flowsDir, fmt.Sprintf("http://localhost%s", s.addr))
+	engine := workflow.NewEngine(s.flowsDir, s.baseURL())
 	output, err := engine.Run(name, payload)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
@@ -583,6 +644,12 @@ func (s *Server) handleFlowRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"result": output})
 }
 
+// handleWebhook handles /hooks/<name>: a webhook trigger for a flow.
+//
+// POST only. Every other method is refused with 405 before an engine is even
+// constructed, so a bare GET — which the route used to accept, running the flow
+// and returning its output — cannot trigger arbitrary outbound HTTP on behalf
+// of anyone who can reach the port.
 func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	// Extract flow name from path: /hooks/<name>
 	name := r.URL.Path[len("/hooks/"):]
@@ -591,15 +658,18 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
 	var payload map[string]interface{}
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&payload)
 	}
 
-	engine := workflow.NewEngine(
-		s.flowsDir,
-		fmt.Sprintf("http://localhost%s", s.addr),
-	)
+	engine := workflow.NewEngine(s.flowsDir, s.baseURL())
 	output, err := engine.Run(name, payload)
 	if err != nil {
 		writeJSON(w, 404, map[string]string{"error": err.Error()})

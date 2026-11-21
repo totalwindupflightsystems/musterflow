@@ -1992,6 +1992,52 @@ func TestConfigCommand_SetAndShow(t *testing.T) {
 	}
 }
 
+// TestConfigCommand_DashboardTokenMasked proves the dashboard token is treated
+// like an auth key on both display surfaces: `config set` does not echo it and
+// `config show` masks it.
+func TestConfigCommand_DashboardTokenMasked(t *testing.T) {
+	home := t.TempDir()
+	defer setHome(t, home)()
+
+	r := app.NewRegistry(home)
+	if err := r.Load(); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	const token = "s3cr3t-dashboard-token-0123456789"
+
+	root := NewRootCommand(r)
+	root.SetArgs([]string{"config", "set", "dashboard_token", token})
+	output := captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("config set dashboard_token: %v", err)
+		}
+	})
+	if strings.Contains(output, token) {
+		t.Errorf("config set echoed the raw token: %s", output)
+	}
+	if !strings.Contains(output, config.MaskKey(token)) {
+		t.Errorf("config set output does not carry the masked token: %s", output)
+	}
+
+	root = NewRootCommand(r)
+	root.SetArgs([]string{"config", "show"})
+	output = captureStdout(func() {
+		if err := root.Execute(); err != nil {
+			t.Errorf("config show: %v", err)
+		}
+	})
+	if strings.Contains(output, token) {
+		t.Errorf("config show printed the raw token: %s", output)
+	}
+	if !strings.Contains(output, "Dashboard token:") {
+		t.Errorf("config show does not mention the dashboard token: %s", output)
+	}
+	if !strings.Contains(output, config.MaskKey(token)) {
+		t.Errorf("config show does not mask the dashboard token: %s", output)
+	}
+}
+
 func TestConfigCommand_SetInvalidKey(t *testing.T) {
 	home := t.TempDir()
 	defer setHome(t, home)()

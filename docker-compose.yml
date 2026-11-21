@@ -2,6 +2,17 @@ services:
   musterflow:
     build: .
     image: ghcr.io/totalwindupflightsystems/musterflow:latest
+    # The published port only works when the daemon binds every interface
+    # INSIDE the container, and an exposed listener requires a token — the
+    # daemon refuses 0.0.0.0 without one. Set MUSTERFLOW_DASHBOARD_TOKEN in the
+    # environment (or a .env file next to this compose file) before `up`:
+    #
+    #   MUSTERFLOW_DASHBOARD_TOKEN=$(openssl rand -hex 32) docker compose up -d
+    #
+    # then talk to it with `-H "Authorization: Bearer $MUSTERFLOW_DASHBOARD_TOKEN"`.
+    command: ["start", "--dashboard-addr", "0.0.0.0:9876"]
+    environment:
+      MUSTERFLOW_DASHBOARD_TOKEN: ${MUSTERFLOW_DASHBOARD_TOKEN:?set MUSTERFLOW_DASHBOARD_TOKEN to a bearer token before starting the container}
     ports:
       - "9876:9876"
     volumes:
