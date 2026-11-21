@@ -1239,7 +1239,7 @@ func TestCatalogCommand_SearchOutput(t *testing.T) {
 		t.Fatalf("marshal index: %v", err)
 	}
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/index.json" {
+		if req.URL.Path == "/entries.json" {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(body)
 			return

@@ -88,7 +88,7 @@ func TestCatalogListServesCommunityWhenReachable(t *testing.T) {
 		t.Fatalf("marshal index: %v", err)
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/index.json" {
+		if r.URL.Path == "/entries.json" {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(body)
 			return

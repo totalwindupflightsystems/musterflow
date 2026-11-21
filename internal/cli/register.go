@@ -263,7 +263,7 @@ func pushViaDashboard(apiID string) error {
 	fmt.Printf("Catalog entry JSON for %s:\n\n", conn.ID)
 	fmt.Println(string(data))
 	fmt.Println()
-	fmt.Printf("Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/%s.json and add it to index.json\n", conn.ID)
+	fmt.Printf("Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/%s.json and add it to entries.json\n", conn.ID)
 	return nil
 }
 

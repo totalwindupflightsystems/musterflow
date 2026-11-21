@@ -445,7 +445,7 @@ func TestServer_CatalogSearch_UnclassifiedError_Stays500(t *testing.T) {
 		backend  string
 		wantText string // exact match, or prefix when suffixed with "*"
 	}{
-		{name: "upstream 503", backend: unavailable.URL, wantText: "catalog returned status 503"},
+		{name: "upstream 503", backend: unavailable.URL, wantText: "catalog returned status 503 for " + unavailable.URL + "/entries.json"},
 		{name: "undecodable index", backend: badJSON.URL, wantText: "decode catalog: *"},
 		{name: "transport failure", backend: deadURL, wantText: "fetch catalog index: *"},
 	}

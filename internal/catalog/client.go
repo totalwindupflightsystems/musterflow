@@ -15,6 +15,17 @@ import (
 
 const defaultCatalogRepo = "https://raw.githubusercontent.com/totalwindupflightsystems/musterflow-catalog/main"
 
+// The community catalog repo serves its full entry list as entries.json. It
+// does NOT serve index.json, so a list request for index.json always 404s (the
+// bug that made every catalog call report "repo absent or private" while the
+// repo was healthy). index.json stays as a one-shot fallback because an
+// operator may point MUSTERFLOW_CATALOG_REPO_URL at a mirror or an older
+// layout that only carries an index.
+const (
+	catalogEntriesFile = "entries.json"
+	catalogIndexFile   = "index.json"
+)
+
 // catalogRepoEnvVar overrides the community catalog repo URL. It exists so an
 // operator (or a test, or this binary's own verification run) can point the
 // catalog at a mirror — or at an unreachable host to exercise the bundled
@@ -22,11 +33,13 @@ const defaultCatalogRepo = "https://raw.githubusercontent.com/totalwindupflights
 const catalogRepoEnvVar = "MUSTERFLOW_CATALOG_REPO_URL"
 
 // ErrBackendUnavailable classifies the failure where the catalog backend
-// itself is absent: the index URL answers 404 (repo missing, private, or
-// renamed). It carries no message text of its own in the wrapped error — the
-// sentence operators already see ("catalog backend not available (HTTP 404):
-// repo … absent or private") is composed at the 404 site, so classifying on
-// errors.Is changes the failure CLASS without changing a byte of the text.
+// itself is absent: neither candidate index filename (entries.json) answers,
+// so the repo is missing, private, or renamed. It carries no message text of
+// its own in the wrapped error — the sentence operators see ("catalog backend
+// not available (HTTP 404): catalog repo … has no entries.json or index.json —
+// repo absent or private") is composed at the site that has tried every
+// filename, so classifying on errors.Is changes the failure CLASS without
+// changing a byte of the text.
 //
 // Callers use it to answer with a 404-class status instead of a 500: a missing
 // backend is a not-found condition, not a server error (DF-035).
@@ -87,9 +100,45 @@ func (c *Client) Search(query string) ([]CatalogEntry, error) {
 	return Search(entries, query), nil
 }
 
+// errListFileNotFound marks a 404 on one candidate index filename. It is
+// internal: List turns a 404 on every candidate into the single
+// ErrBackendUnavailable error callers classify on.
+var errListFileNotFound = errors.New("catalog index file not found")
+
 // List fetches every entry in the community catalog index, unfiltered.
+//
+// It requests entries.json — the file the community repo actually serves — and
+// falls back to index.json once for mirrors/older layouts that only carry an
+// index. Only a 404 moves on to the next candidate: any other failure (transport
+// error, non-200 status, undecodable body) is reported as-is, because retrying
+// a different filename cannot fix it.
 func (c *Client) List() ([]CatalogEntry, error) {
-	url := fmt.Sprintf("%s/index.json", c.repoURL)
+	entries, err := c.listFile(catalogEntriesFile)
+	if err == nil {
+		return entries, nil
+	}
+	if !errors.Is(err, errListFileNotFound) {
+		return nil, err
+	}
+
+	entries, fallbackErr := c.listFile(catalogIndexFile)
+	if fallbackErr == nil {
+		return entries, nil
+	}
+	if !errors.Is(fallbackErr, errListFileNotFound) {
+		return nil, fallbackErr
+	}
+
+	// Both candidates 404'd: the backend itself is absent (missing, private or
+	// renamed repo). Name every filename tried so the message cannot read as
+	// "the repo is missing" when only the requested path was wrong.
+	return nil, fmt.Errorf("%w (HTTP %d): catalog repo %s has no %s or %s — repo absent or private",
+		ErrBackendUnavailable, http.StatusNotFound, c.repoURL, catalogEntriesFile, catalogIndexFile)
+}
+
+// listFile fetches and decodes one candidate index filename.
+func (c *Client) listFile(name string) ([]CatalogEntry, error) {
+	url := fmt.Sprintf("%s/%s", c.repoURL, name)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("fetch catalog index: %w", err)
@@ -97,10 +146,10 @@ func (c *Client) List() ([]CatalogEntry, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("%w (HTTP %d): repo %s absent or private", ErrBackendUnavailable, resp.StatusCode, c.repoURL)
+		return nil, fmt.Errorf("%w: %s", errListFileNotFound, url)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("catalog returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("catalog returned status %d for %s", resp.StatusCode, url)
 	}
 
 	var entries []CatalogEntry

@@ -42,8 +42,9 @@ func absentBackend(t *testing.T) string {
 	return srv.URL
 }
 
-// presentBackend returns a repo URL whose index.json carries entries and whose
-// /entries/<id>.json paths serve them, i.e. a healthy community catalog.
+// presentBackend returns a repo URL whose entries.json carries entries and whose
+// /entries/<id>.json paths serve them, i.e. a healthy community catalog. The
+// filename matters: entries.json is what the real catalog repo serves.
 func presentBackend(t *testing.T, entries []CatalogEntry) string {
 	t.Helper()
 	index, err := json.Marshal(entries)
@@ -51,7 +52,7 @@ func presentBackend(t *testing.T, entries []CatalogEntry) string {
 		t.Fatalf("marshal index: %v", err)
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/index.json" {
+		if r.URL.Path == "/entries.json" {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(index)
 			return
