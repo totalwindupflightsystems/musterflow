@@ -16,7 +16,7 @@ guards:
   static_analysis_tools: {}
   # tick 2026-11-21-02-15-24: hook_timeout must exceed test_timeout or the
   # pre-commit guard gets cut off mid-run (auto-raised per-run to 1320s).
-  hook_timeout: 1320s
+  hook_timeout: 1320
   go:
     build: true
     lint: true
