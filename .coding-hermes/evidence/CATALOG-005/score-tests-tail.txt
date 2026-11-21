@@ -1,0 +1,40 @@
+=== RUN   TestOfficialSpecHostReachability/docs_host,_differing_api_base_(pass-2_hetzner)
+=== RUN   TestOfficialSpecHostReachability/openapi_host,_differing_api_base_(pass-2_vercel)
+=== RUN   TestOfficialSpecHostReachability/spec_served_off_the_api_host_itself_(pass-2_nws)
+=== RUN   TestOfficialSpecHostReachability/well-known_spec_on_the_provider_host_(pass-2_huggingface)
+=== RUN   TestOfficialSpecHostReachability/docs_host_on_the_declared_base_domain,_unknown_provider
+=== RUN   TestOfficialSpecHostReachability/docs_host_on_a_DIFFERENT_domain_than_the_declared_base
+=== RUN   TestOfficialSpecHostReachability/third-party_raw_mirror_(pass-2_ollama)
+=== RUN   TestOfficialSpecHostReachability/bare_marketing_host,_no_base_declared
+=== RUN   TestOfficialSpecHostReachability/empty_spec_url
+--- PASS: TestOfficialSpecHostReachability (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/docs_host,_differing_api_base_(pass-2_hetzner) (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/openapi_host,_differing_api_base_(pass-2_vercel) (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/spec_served_off_the_api_host_itself_(pass-2_nws) (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/well-known_spec_on_the_provider_host_(pass-2_huggingface) (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/docs_host_on_the_declared_base_domain,_unknown_provider (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/docs_host_on_a_DIFFERENT_domain_than_the_declared_base (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/third-party_raw_mirror_(pass-2_ollama) (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/bare_marketing_host,_no_base_declared (0.00s)
+    --- PASS: TestOfficialSpecHostReachability/empty_spec_url (0.00s)
+=== RUN   TestScore_GeneratorEntryDocsHostedSpec
+--- PASS: TestScore_GeneratorEntryDocsHostedSpec (0.00s)
+=== RUN   TestScore_StructuredSpecBonusReachableForGeneratorType
+=== RUN   TestScore_StructuredSpecBonusReachableForGeneratorType/generator_type_api_with_a_spec_document
+=== RUN   TestScore_StructuredSpecBonusReachableForGeneratorType/type_api_without_a_spec_document
+=== RUN   TestScore_StructuredSpecBonusReachableForGeneratorType/legacy_type_openapi
+=== RUN   TestScore_StructuredSpecBonusReachableForGeneratorType/non-API_catalog_type
+--- PASS: TestScore_StructuredSpecBonusReachableForGeneratorType (0.00s)
+    --- PASS: TestScore_StructuredSpecBonusReachableForGeneratorType/generator_type_api_with_a_spec_document (0.00s)
+    --- PASS: TestScore_StructuredSpecBonusReachableForGeneratorType/type_api_without_a_spec_document (0.00s)
+    --- PASS: TestScore_StructuredSpecBonusReachableForGeneratorType/legacy_type_openapi (0.00s)
+    --- PASS: TestScore_StructuredSpecBonusReachableForGeneratorType/non-API_catalog_type (0.00s)
+=== RUN   TestStagedEntryScoresRegenerated
+    staged_scores_test.go:66: c3ecb6f87d542f23	spec_url=https://docs.hetzner.cloud/cloud.spec.json	score_before=2	score_after=9	tier_after=official
+    staged_scores_test.go:66: 8ac8f489bdf0ba6f	spec_url=https://huggingface.co/.well-known/openapi.json	score_before=2	score_after=9	tier_after=official
+    staged_scores_test.go:66: 70b5bf949a656585	spec_url=https://api.weather.gov/openapi.json	score_before=1	score_after=8	tier_after=official
+    staged_scores_test.go:66: 3f26453ec4d52504	spec_url=https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml	score_before=2	score_after=4	tier_after=community-inferred
+    staged_scores_test.go:66: 9a87419efed4870b	spec_url=https://openapi.vercel.sh/	score_before=2	score_after=9	tier_after=official
+--- PASS: TestStagedEntryScoresRegenerated (0.00s)
+PASS
+ok  	github.com/totalwindupflightsystems/musterflow/internal/catalog	0.010s

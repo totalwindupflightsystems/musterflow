@@ -52,14 +52,19 @@ func TestConnectionToCatalogEntry(t *testing.T) {
 		t.Errorf("Downloads: got %d, want 0", entry.Downloads)
 	}
 	// The tier and score come from the catalog scoring function (CATALOG-002),
-	// not from a hardcoded constant: this fixture has a description (>20 chars)
-	// and a version but neither an official spec host nor an "openapi" type,
-	// so Score() lands on 2 — below scoreToTier's 3 threshold.
-	if entry.Score != 2 {
-		t.Errorf("Score: got %d, want 2", entry.Score)
+	// not from a hardcoded constant: this fixture has a description (>20 chars),
+	// a version and a spec URL on a third-party host, so Score() lands on 4 —
+	// the structured-spec bonus (+2, an "api" entry that points at a spec
+	// document) plus description and version — which is below scoreToTier's 7
+	// threshold because the spec host is not the provider's own.
+	if entry.Score != 4 {
+		t.Errorf("Score: got %d, want 4", entry.Score)
 	}
-	if entry.QualityTier != "untested" {
-		t.Errorf("QualityTier: got %q, want %q", entry.QualityTier, scoreToTier(2))
+	if entry.BaseURL != conn.BaseURL {
+		t.Errorf("BaseURL: got %q, want %q", entry.BaseURL, conn.BaseURL)
+	}
+	if entry.QualityTier != "community-inferred" {
+		t.Errorf("QualityTier: got %q, want %q", entry.QualityTier, scoreToTier(4))
 	}
 }
 
@@ -79,14 +84,17 @@ func TestConnectionToCatalogEntryScoreIsComputed(t *testing.T) {
 				Version:     "1.0.0",
 				Description: "The GitHub REST API for repos, issues and PRs",
 			},
-			wantScore: 7,
+			// +5 official provider domain (api.github.com is GitHub's), +2
+			// structured spec (an "api" entry pointing at a spec document),
+			// +1 description, +1 version (CATALOG-005).
+			wantScore: 9,
 			wantTier:  "official",
 		},
 		{
 			name: "short fallback description scores only on the version",
 			conn: &app.APIConnection{
 				ID:   "bare",
-				Name: "A", // "API connector for A" is exactly 20 chars: no bonus
+				Name: "A", // "API connector for A" is 19 chars: no bonus
 			},
 			wantScore: 1,
 			wantTier:  "untested",
@@ -100,8 +108,9 @@ func TestConnectionToCatalogEntryScoreIsComputed(t *testing.T) {
 				Version:     "2.1.0",
 				Description: "A test API for unit testing",
 			},
-			wantScore: 2,
-			wantTier:  "untested",
+			// +2 structured spec, +1 description, +1 version (CATALOG-005).
+			wantScore: 4,
+			wantTier:  "community-inferred",
 		},
 	}
 

@@ -1,0 +1,57 @@
+=== CATALOG-005 regeneration — candidate ollama ===
+binary:      /tmp/mf-cat005
+data dir:    /tmp/mf-cat005-verify/ollama (scratch; canonical ~/.musterflow untouched)
+dashboard:   127.0.0.1:19893 (canonical 9876 deliberately NOT used)
+spec:        https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml
+
+⚡ MusterFlow 0.1.0
+
+Dashboard:    http://localhost:19893
+API:          http://localhost:19893/api/
+MCP endpoint: http://localhost:19893/mcp
+
+Connected APIs: 0
+
+Press Ctrl+C to stop.
+$ curl http://127.0.0.1:19893/api/health -> ready=1
+
+$ /tmp/mf-cat005 --data-dir /tmp/mf-cat005-verify/ollama --dashboard-addr 127.0.0.1:19893 connect https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml --name ollama
+note: --data-dir /tmp/mf-cat005-verify/ollama is served by the running dashboard at http://127.0.0.1:19893; routing this command through it
+✓ Connected: ollama
+  ID: 3f26453ec4d52504
+  Version: 0.1.0
+  Endpoints: 17
+  Base URL: http://localhost:11434
+
+Try: musterflow ollama --help
+exit=0
+
+$ /tmp/mf-cat005 --data-dir /tmp/mf-cat005-verify/ollama --dashboard-addr 127.0.0.1:19893 catalog push 3f26453ec4d52504
+note: --data-dir /tmp/mf-cat005-verify/ollama is served by the running dashboard at http://127.0.0.1:19893; routing this command through it
+Catalog entry JSON for 3f26453ec4d52504:
+
+{
+  "id": "3f26453ec4d52504",
+  "name": "ollama",
+  "type": "api",
+  "description": "OpenAPI specification for the Ollama HTTP API\n",
+  "spec_url": "https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml",
+  "base_url": "http://localhost:11434",
+  "author": "community",
+  "version": "0.1.0",
+  "score": 4,
+  "quality_tier": "community-inferred",
+  "added_at": "2026-11-21T01:34:25.984251Z",
+  "downloads": 0
+}
+
+Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/3f26453ec4d52504.json and add it to index.json
+exit=0
+
+regenerated: .coding-hermes/evidence/CATALOG-005/regen/ollama.json (428 bytes)
+validated: parses as JSON with id, spec_url, score
+
+Shutting down...
+Goodbye.
+dashboard on :19893 stopped
+

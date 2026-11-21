@@ -1,0 +1,13 @@
+{
+  "id": "70b5bf949a656585",
+  "name": "nws",
+  "type": "api",
+  "description": "weather.gov API",
+  "spec_url": "https://api.weather.gov/openapi.json",
+  "author": "community",
+  "version": "3.12.2",
+  "score": 1,
+  "quality_tier": "untested",
+  "added_at": "2026-11-21T01:34:57.573302Z",
+  "downloads": 0
+}

@@ -31,6 +31,7 @@ type CatalogEntry struct {
 	Type        string    `json:"type"` // "api", "workflow", "wasm"
 	Description string    `json:"description"`
 	SpecURL     string    `json:"spec_url,omitempty"`
+	BaseURL     string    `json:"base_url,omitempty"`
 	Author      string    `json:"author"`
 	Version     string    `json:"version"`
 	Score       int       `json:"score"`        // 0-10

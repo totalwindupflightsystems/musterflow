@@ -1,0 +1,13 @@
+{
+  "id": "9a87419efed4870b",
+  "name": "vercel",
+  "type": "api",
+  "description": "Vercel combines the best developer experience with an obsessive focus on end-user performance. Our platform enables frontend teams to do their best work.",
+  "spec_url": "https://openapi.vercel.sh/",
+  "author": "community",
+  "version": "0.0.1",
+  "score": 2,
+  "quality_tier": "untested",
+  "added_at": "2026-11-21T01:34:53.270878Z",
+  "downloads": 0
+}

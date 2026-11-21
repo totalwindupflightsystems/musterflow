@@ -1,0 +1,57 @@
+=== CATALOG-005 regeneration — candidate hetzner ===
+binary:      /tmp/mf-cat005
+data dir:    /tmp/mf-cat005-verify/hetzner (scratch; canonical ~/.musterflow untouched)
+dashboard:   127.0.0.1:19895 (canonical 9876 deliberately NOT used)
+spec:        https://docs.hetzner.cloud/cloud.spec.json
+
+⚡ MusterFlow 0.1.0
+
+Dashboard:    http://localhost:19895
+API:          http://localhost:19895/api/
+MCP endpoint: http://localhost:19895/mcp
+
+Connected APIs: 0
+
+Press Ctrl+C to stop.
+$ curl http://127.0.0.1:19895/api/health -> ready=1
+
+$ /tmp/mf-cat005 --data-dir /tmp/mf-cat005-verify/hetzner --dashboard-addr 127.0.0.1:19895 connect https://docs.hetzner.cloud/cloud.spec.json --name hetzner
+note: --data-dir /tmp/mf-cat005-verify/hetzner is served by the running dashboard at http://127.0.0.1:19895; routing this command through it
+✓ Connected: hetzner
+  ID: c3ecb6f87d542f23
+  Version: 1.0.0
+  Endpoints: 190
+  Base URL: https://api.hetzner.cloud/v1
+
+Try: musterflow hetzner --help
+exit=0
+
+$ /tmp/mf-cat005 --data-dir /tmp/mf-cat005-verify/hetzner --dashboard-addr 127.0.0.1:19895 catalog push c3ecb6f87d542f23
+note: --data-dir /tmp/mf-cat005-verify/hetzner is served by the running dashboard at http://127.0.0.1:19895; routing this command through it
+Catalog entry JSON for c3ecb6f87d542f23:
+
+{
+  "id": "c3ecb6f87d542f23",
+  "name": "hetzner",
+  "type": "api",
+  "description": "# Overview\n\nThis is the official documentation for the Hetzner Cloud API.\n\n## Introduction\n\nThe Hetzner Cloud API operates over HTTPS and uses JSON as its data format. The API is a RESTful API and uti...",
+  "spec_url": "https://docs.hetzner.cloud/cloud.spec.json",
+  "base_url": "https://api.hetzner.cloud/v1",
+  "author": "community",
+  "version": "1.0.0",
+  "score": 9,
+  "quality_tier": "official",
+  "added_at": "2026-11-21T01:34:29.283898Z",
+  "downloads": 0
+}
+
+Submit a PR to https://github.com/totalwindupflightsystems/musterflow-catalog with the entry JSON at entries/c3ecb6f87d542f23.json and add it to index.json
+exit=0
+
+regenerated: .coding-hermes/evidence/CATALOG-005/regen/hetzner.json (559 bytes)
+validated: parses as JSON with id, spec_url, score
+
+Shutting down...
+Goodbye.
+dashboard on :19895 stopped
+

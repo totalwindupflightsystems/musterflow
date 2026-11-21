@@ -1,0 +1,13 @@
+{
+  "id": "c3ecb6f87d542f23",
+  "name": "hetzner",
+  "type": "api",
+  "description": "# Overview\n\nThis is the official documentation for the Hetzner Cloud API.\n\n## Introduction\n\nThe Hetzner Cloud API operates over HTTPS and uses JSON as its data format. The API is a RESTful API and uti...",
+  "spec_url": "https://docs.hetzner.cloud/cloud.spec.json",
+  "author": "community",
+  "version": "1.0.0",
+  "score": 2,
+  "quality_tier": "untested",
+  "added_at": "2026-11-21T01:34:59.946384Z",
+  "downloads": 0
+}

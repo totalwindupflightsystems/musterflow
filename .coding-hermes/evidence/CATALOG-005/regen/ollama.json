@@ -1,0 +1,14 @@
+{
+  "id": "3f26453ec4d52504",
+  "name": "ollama",
+  "type": "api",
+  "description": "OpenAPI specification for the Ollama HTTP API\n",
+  "spec_url": "https://raw.githubusercontent.com/ollama/ollama/main/docs/openapi.yaml",
+  "base_url": "http://localhost:11434",
+  "author": "community",
+  "version": "0.1.0",
+  "score": 4,
+  "quality_tier": "community-inferred",
+  "added_at": "2026-11-21T01:34:25.984251Z",
+  "downloads": 0
+}
