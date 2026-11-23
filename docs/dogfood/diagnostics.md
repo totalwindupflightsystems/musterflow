@@ -364,3 +364,50 @@ that secret-looking strings are masked on the way to the terminal: verify
 stored credentials with sha256/byte-length comparisons, never by eyeballing
 the printed value.
 
+### Round 8 (2026-11-23, HEAD d49da36) — how the auth era behaves in real use
+
+Round 8 was the first fire to drive the post-3cf99b4 product: bearer-token
+dashboard auth, the MCP JSON-RPC surface, and the flow HTTP builtins
+(`http_get`/`http_post`/`http_request`/`sleep`/`json`) live on a dashboard.
+
+**The design that works, and is worth copying forward:** one variable —
+`MUSTERFLOW_DASHBOARD_TOKEN` (or `dashboard_token`) — means the same thing to
+the server and the CLI. The CLI presents that token on every request it makes
+to the dashboard (list, generated API subcommands even route their HTTP calls
+through it). When it holds the token, everything just works; when it doesn't,
+the server refuses with 401 JSON on exactly the routes specs/dashboard.md says
+must be protected, and `/metrics` + `/api/health` stay genuinely exempt. The
+loopback-only no-token mode prints a warning banner instead of silently
+listening.
+
+**The gap that DF-052 files:** the CLI's token is a spec-only fact. A user who
+follows integration-guide.md sets `dashboard_token`, starts the dashboard, and
+then finds every CLI command answering `unknown command "<api>"` after a
+401-shaped fallback warning — the CLI-side contract (specs/cli.md) never made
+it into the docs a person actually reads.
+
+**Auth-adjacent residue:** the UI catch-all is deliberately inside the exempt
+set, which makes `GET /api/nope` answer 200 HTML token-free (the open
+API-CATCHALL row); the flow-not-found error echoes the flow file path
+(`data/flows/nope.star`) — relative with a relative data-dir, absolute with an
+absolute one (still-failing FLOWERR-PATHLEAK AC).
+
+**Engine notes worth keeping:** flow response dicts carry exactly
+`status`/`body`/`headers`, non-2xx is data (branch, don't catch — Starlark here
+has no try), transport failures raise with the builtin prefix, sleep caps at
+30s, and undefined globals are compile errors with file:line. Every one of
+those documented claims was reproduced verbatim this fire — the docs engine
+(docs/workflows.md, +475 lines in this delta) is the most accurate round 8 has
+measured.
+
+**Install leg:** the round-7-era "no active server" bunker state ended; the
+battery launched detached on bunker-mvp (agent c686f0f2) — verdict recorded at
+tick close in the dogfood log, not here.
+
+**Harness trap of this fire:** a probe handler crashed on ANY empty-query
+request (bad dict() over a one-element split list). The crash presents to the
+client as EOF on POST/GET, which the product's own retry logic counts 3 times
+before surfacing — the same EOF shape the round-7 DF-044 retry finding reads
+from. If a retry observation depends on which side died, capture the server's
+side per request before filing; a fixed harness can flip the finding.
+

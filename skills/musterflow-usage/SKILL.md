@@ -155,6 +155,15 @@ curl -X POST localhost:9876/hooks/hook-flow -H 'Content-Type: application/json' 
     <dashboard-port>` (or `--dashboard-addr host:port` on every call) — then
     routing works and the warning disappears. Never trust an empty `list`
     while a dashboard is running elsewhere.
+18. **A tokened dashboard makes the CLI useless without the SAME env var
+    (DF-052, P2, round 8, live at d49da36).** With `dashboard_token` set, CLI
+    commands without the token answer `Warning: could not fetch APIs from
+    dashboard (HTTP 401); falling back to local registry` then
+    `Error: unknown command "<api>"`. The fix is one line the docs don't
+    write: `export MUSTERFLOW_DASHBOARD_TOKEN=<token>` — the CLI honors the
+    same variable the server does (verified round 8; contract recorded in
+    specs/cli.md only). Flow/webhook HTTP calls are unaffected (send
+    `Authorization: Bearer <token>` yourself).
 
 ## Testing pattern for agents
 
@@ -168,6 +177,6 @@ $D connect <spec-url-or-file> && $D list
 
 ## References
 
-- `docs/dogfood/2026-10-01-integration.md` (round-6 report), `2026-09-10-integration.md` (round-4), `2026-08-20-integration.md`, `2026-08-10-integration.md`
-- `docs/dogfood/diagnostics.md` (architecture + error trail, rounds 1-6)
-- `docs/integration-guide.md`, `specs/cli.md`, `specs/dashboard.md`
+- `docs/integration-guide.md`, `specs/cli.md`, `specs/dashboard.md`, `docs/workflows.md`
+- `docs/dogfood/diagnostics.md` (architecture + error trail, rounds 1-8), `2026-11-23-integration.md` (round-8), `2026-11-16-integration.md` (round-7), `2026-10-01-integration.md` (round-6), `2026-09-10-integration.md` (round-4), `2026-08-20-integration.md`, `2026-08-10-integration.md`
+- Engine dependency: `github.com/wojons/muster` — private, resolved by `scripts/resolve-engine.sh` into a generated `go.work`; a fresh clone must have the engine checked out locally first or the build won't resolve.

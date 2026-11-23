@@ -69,3 +69,14 @@
 - **Artifacts:** `docs/dogfood/2026-11-16-integration.md`, `docs/dogfood/diagnostics.md` (round-7 section), `skills/musterflow-usage/SKILL.md` (v3.2.0, pitfalls 15-17).
 - **Environment notes:** isolated `--data-dir` + `HOME` in `~/.hermes/cache/scratch/mf-1816`; probe backends = own OpenAPI CRUD API (ThreadingHTTPServer), TCP black hole for stall probes; dashboard on :19876, scratch only. Real `~/.musterflow` untouched. Two harness bugs found and fixed in-flight (single-threaded HTTP probe server; secret redaction on the terminal misread as product masking — resolved by sha256 comparison).
 
+## 2026-11-23 — Verdict: 🟡 PROMISING-BUT-ROUGH (round 8, HEAD d49da36)
+
+- Tick: musterflow-dogfood-2026-11-23-14-15-27 (first fire, delivery 1)
+- **Promise:** Connect an OpenAPI spec → instant CLI + MCP tool server + Starlark workflow engine.
+- **Reality:** First round to drive the post-3cf99b4 bearer-auth contract, the MCP surface end to end, and all three flow-invocation paths (CLI / dashboard API / webhook) in one session — all held, and every documented error message matched the product verbatim. New friction is auth-shaped: the CLI has no documented way to present the dashboard token and degrades a tokened-dashboard 401 into `unknown command "<api>"` (DF-052, P2). Still live at HEAD: API-CATCHALL (unknown `/api/*` → 200 HTML, tokened and token-free), FLOWERR-PATHLEAK (relative path echo `data/flows/nope.star`), PERF-001 (no timeout key). Verified fixed at HEAD: DF-045 lock hint (actionable, names PID + remedy), DF-051 output formats, catalog backend (d496d8d).
+- **Time-to-first-success:** connect cold local spec 0.22s rc=0 (pristine data dir); remote petstore v2 0.57s rc=0; CLI call 0.05–0.08s; flow run 1.03s including a sleep(1) (~30ms engine). Nothing user-noticeably slow — no perf row this fire.
+- **Top findings:** DF-052 (P2, new) CLI vs tokened dashboard; 3 pending rows re-verified live with evidence notes.
+- **Install leg:** bunker-qa.sh launched detached battery on bunker-mvp agent c686f0f2 (first run since round 7 — the "no active server" state ended); collect at tick close rounds this entry.
+- **Artifacts:** `docs/dogfood/2026-11-23-integration.md`, `docs/dogfood/diagnostics.md` (round-8 section), `.coding-hermes/evidence/2026-11-23-dogfood-r8/` (raw HTTP/MCP captures + probe backend script).
+- **Environment notes:** scratch HOME + `--data-dir` in `~/.hermes/cache/scratch/mf-dog-20261123`; dashboard :20981 bearer token (scratch-only throwaway). Real `~/.musterflow` untouched. One harness bug fixed in-flight (probe query parser crashed on empty query → product's 3× retry read as EOF before any product arm ran); disclosed in evidence INDEX.
+
