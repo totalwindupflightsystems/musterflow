@@ -445,7 +445,8 @@ When `dashboardBaseURL != ""`, these commands route through the dashboard HTTP A
 | Condition | When it triggers | CLI Exit Code | Error Message Pattern |
 |-----------|-----------------|---------------|----------------------|
 | Missing positional arg | `connect`, `disconnect`, `refresh`, `auth add`, `auth remove`, `auth get`, `auth login`, `import`, `completion`, `transform install` called without required args | 1 (cobra prints arg error to stderr) | `"accepts X arg(s), received Y"` |
-| Unknown config key | `config set <invalid-key> <val>` | 1 | `"unknown config key: %s (valid: port, default_format, auto_completion, data_dir)"` |
+| Unknown config key | `config set <invalid-key> <val>` | 1 | `"unknown config key: %s (valid: port, default_format, auto_completion, data_dir, dashboard_token, timeout)"` |
+| Invalid timeout value | `config set timeout <0 / negative / non-numeric>` | 1 | `"invalid timeout %q: timeout is a positive integer number of seconds (e.g. 5 or 30); zero and negatives are not allowed"` |
 | Missing OAuth2 flags | `auth login` without `--client-id`, `--client-secret`, `--auth-url`, or `--token-url` | 1 | `"--client-id is required for OAuth2 login"` (and similar for each missing flag) |
 | Spec fetch failure | `connect` with unreachable URL or missing file | 1 | `"fetch spec: %w"` wrapping `http get: ...` or file read error |
 | Spec parse failure | `connect` with invalid OpenAPI document | 1 | `"parse spec: %w"` |

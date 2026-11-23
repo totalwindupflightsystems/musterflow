@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -20,8 +22,13 @@ type Config struct {
 	// DashboardToken, when non-empty, requires "Authorization: Bearer <token>"
 	// on the dashboard's /api/*, /mcp and /hooks/* routes. Masked in display
 	// like the per-API auth keys. MUSTERFLOW_DASHBOARD_TOKEN wins over this.
-	DashboardToken string                `yaml:"dashboard_token,omitempty"`
-	Auth           map[string]AuthConfig `yaml:"auth,omitempty"`
+	DashboardToken string `yaml:"dashboard_token,omitempty"`
+	// Timeout, when > 0, caps one generated CLI API call in seconds
+	// (PERF-001). Zero (unset) keeps engine behavior: no override, so the
+	// engine default (30 s per attempt, up to 3 attempts) applies and
+	// MUSTER_HTTP_TIMEOUT stays the operator override.
+	Timeout         int                   `yaml:"timeout,omitempty"`
+	Auth            map[string]AuthConfig `yaml:"auth,omitempty"`
 
 	// fileDashboardToken is the token as it exists in config.yaml, and
 	// dashboardTokenFromEnv records that the environment overrode it. Together
@@ -45,6 +52,23 @@ func (c *Config) SetDashboardToken(token string) {
 // environment wins so an operator can inject the token without writing it to
 // config.yaml.
 const DashboardTokenEnvVar = "MUSTERFLOW_DASHBOARD_TOKEN"
+
+// TimeoutEnvVar is the engine's per-attempt HTTP timeout environment knob
+// (MUSTER_HTTP_TIMEOUT, seconds). When the config timeout key is set, main.go
+// translates it into this var so the engine's request path honors it — but an
+// operator who exported the var themselves keeps precedence (their env wins).
+const TimeoutEnvVar = "MUSTER_HTTP_TIMEOUT"
+
+// ParseTimeoutSeconds validates a `config set timeout` value: a positive
+// integer number of seconds. Zero and negatives are rejected — unset the key
+// (by not having it) to restore engine defaults instead of writing 0.
+func ParseTimeoutSeconds(val string) (int, error) {
+	n, err := strconv.Atoi(strings.TrimSpace(val))
+	if err != nil || n <= 0 {
+		return 0, fmt.Errorf("invalid timeout %q: timeout is a positive integer number of seconds (e.g. 5 or 30); zero and negatives are not allowed", val)
+	}
+	return n, nil
+}
 
 // AuthConfig holds per-API authentication settings.
 type AuthConfig struct {

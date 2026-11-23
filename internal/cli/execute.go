@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/wojons/muster/pkg/request"
@@ -29,6 +33,10 @@ type ExecuteOptions struct {
 	Raw        bool              // output raw response
 	AuthToken  string            // optional bearer token (explicit override)
 	Output     string            // output file path (auto-detects format from extension)
+	// TimeoutSeconds caps the whole request (PERF-001): when > 0 the call
+	// carries a context deadline and builder.WithTimeout is applied. 0 keeps
+	// today's engine behavior (30 s per attempt, up to 3 attempts).
+	TimeoutSeconds int
 	// Auto-resolved auth
 	AuthManager *auth.Manager // auth manager for auto-resolving credentials
 	APIID       string        // API ID for credential lookup
@@ -102,10 +110,30 @@ func BuildRequest(cmd *cobra.Command, opts ExecuteOptions) (*request.Builder, er
 }
 
 // ExecuteAndFormat executes the request and formats the output.
+//
+// PERF-001: the context carries SIGINT/SIGTERM notification so a stalled
+// upstream (a TCP black-hole peer) is interrupted instead of hanging the
+// process, and — when opts.TimeoutSeconds is set — a deadline capping the
+// WHOLE call (the engine's built-in timeout is per attempt, and its retry
+// loop makes 3 × 30 s = ~90 s stall the unconfigured default). The seams
+// below exist so tests never send real signals.
 func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts ExecuteOptions) error {
-	ctx := context.Background()
+	ctx, stop := newExecContext()
+	defer stop()
+	if opts.TimeoutSeconds > 0 {
+		applyBuilderTimeout(builder, opts.TimeoutSeconds)
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(opts.TimeoutSeconds)*time.Second)
+		defer cancel()
+	}
 	resp, err := builder.Execute(ctx)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return interruptedError()
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return timedOutError(opts.TimeoutSeconds)
+		}
 		return fmt.Errorf("execute request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -280,3 +308,35 @@ func formatValue(v interface{}) string {
 
 // ensure import of response package (compile check)
 var _ = response.HTTPError{}
+
+// newExecContext builds the context ExecuteAndFormat runs the request in.
+// Production: SIGINT/SIGTERM-aware NotifyContext (PERF-001). Tests swap this
+// seam to inject an already-cancelled/timed context instead of real signals.
+var newExecContext = defaultNewExecContext
+
+func defaultNewExecContext() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+}
+
+// applyBuilderTimeout forwards the configured timeout to the engine builder.
+// NOTE: the engine's Builder.WithTimeout is currently implemented as a no-op
+// (pkg/request/builder.go); the load-bearing cap is the context deadline set
+// in ExecuteAndFormat, which the engine threads into every attempt. The seam
+// exists so musterflow's half of the contract stays observable and so an
+// engine that later honors WithTimeout is picked up without a musterflow
+// change.
+var applyBuilderTimeout = func(b *request.Builder, secs int) {
+	if secs > 0 {
+		b.WithTimeout(time.Duration(secs) * time.Second)
+	}
+}
+
+// interruptedError names an abort caused by SIGINT/SIGTERM.
+func interruptedError() error {
+	return fmt.Errorf("canceled: interrupted by SIGINT before the upstream answered")
+}
+
+// timedOutError names a config-timeout exhaustion on a stalled upstream.
+func timedOutError(secs int) error {
+	return fmt.Errorf("canceled: no upstream answer within the configured %d-second timeout — raise it with 'musterflow config set timeout <seconds>' or check the API's base URL", secs)
+}

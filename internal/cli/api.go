@@ -383,12 +383,20 @@ func newLazyResourceGroup(res app.PlanResource, idx *app.PlanIndex, conn *app.AP
 
 // executeLeaf runs one generated operation command with the arguments that
 // follow it, applying the output-format interception the CLI owns (DF-020).
+//
+// PERF-001: before the leaf executes, arm the whole-call operation watchdog
+// (when the timeout config key is set) — the engine's generated RunE captures
+// its own context.Background(), so this process-level ceiling is the only
+// musterflow-owned way to bound a stalled call on this path.
 func executeLeaf(target *cobra.Command, remaining []string) error {
 	// Silence usage/errors on the target so it doesn't double-print (the root
 	// already has SilenceUsage/SilenceErrors; the error propagates back through
 	// the parent's RunE to root's ExecuteContext).
 	target.SilenceUsage = true
 	target.SilenceErrors = true
+	if stop := armOperationWatchdog(target); stop != nil {
+		defer stop()
+	}
 	intercepted, err := interceptOutput(target, remaining)
 	if intercepted {
 		return err

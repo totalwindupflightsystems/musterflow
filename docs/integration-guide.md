@@ -742,12 +742,17 @@ port: 9876
 data_dir: /home/<user>/.musterflow
 default_format: table
 auto_completion: true
-# Optional: require "Authorization: Bearer <token>" on /api/*, /mcp and /hooks/*.
+# Optional: cap one CLI API call in seconds (whole call, attempts included).
+# Unset keeps the engine default: 30 s per attempt, up to 3 attempts
+# (MUSTER_HTTP_TIMEOUT and MUSTER_MAX_RETRIES still override from the
+# environment — an exported MUSTER_HTTP_TIMEOUT wins over this key).
+# timeout: 5
+# Optional: require "Authorization: Bearer ***" on /api/*, /mcp and /hooks/*.
 # MUSTERFLOW_DASHBOARD_TOKEN overrides it. Required to bind a non-loopback address.
 # dashboard_token: <32-byte hex>
 ```
 
-`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path. `dashboard_token` is settable with `musterflow config set dashboard_token <value>` (masked in `config show`, and the `set` confirmation prints it masked) or injected with `MUSTERFLOW_DASHBOARD_TOKEN`, which wins over the file.
+`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path. `dashboard_token` is settable with `musterflow config set dashboard_token <value>` (masked in `config show`, and the `set` confirmation prints it masked) or injected with `MUSTERFLOW_DASHBOARD_TOKEN`, which wins over the file. `timeout` is a positive integer of seconds (`musterflow config set timeout 5`, rejected for `0`, negatives and non-numbers) and caps ONE generated CLI API call end to end: a stalled upstream — a peer that accepts TCP but never answers — is aborted within that window instead of hanging for the unconfigured engine default of 3 × 30 s. When the key is set, musterflow also translates it into `MUSTER_HTTP_TIMEOUT` (per-attempt cap) unless that variable was already exported by the operator, whose value keeps precedence.
 
 **Data directory** (`~/.musterflow/` by default, overridable with `--data-dir`):
 

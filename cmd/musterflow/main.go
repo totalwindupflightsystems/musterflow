@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -36,11 +37,45 @@ var (
 	Commit    = "unknown"
 	BuildDate = "unknown"
 
+	// flagDashboardServingMain is flipped by startServer before it sits in
+	// its signal wait: the signal goroutine must not hard-exit a serving
+	// dashboard (startServer owns the graceful shutdown there).
+	dashboardServing atomic.Bool
+
 	// CLI flag overrides
 	flagDashboardAddr string
 	flagDataDir       string
 	flagNoDashboard   bool
 )
+
+// applyTimeoutEnv translates the config timeout key into the engine's
+// per-attempt MUSTER_HTTP_TIMEOUT knob. Only when the key is set (Timeout >
+// 0) AND the operator did not export the var themselves — explicit
+// MUSTER_HTTP_TIMEOUT keeps precedence over the config file (the docs state
+// this: the env var is the operator override).
+func applyTimeoutEnv(cfg config.Config) {
+	if cfg.Timeout <= 0 {
+		return
+	}
+	if os.Getenv(config.TimeoutEnvVar) != "" {
+		return
+	}
+	_ = os.Setenv(config.TimeoutEnvVar, strconv.Itoa(cfg.Timeout))
+}
+
+// signalAbortMessage is the one-shot command's stderr line on SIGINT/SIGTERM.
+// os.Signal.String() prints "interrupt"/"terminated"; the canonical signal
+// names are what an operator grep-reads, so map the two supported ones.
+func signalAbortMessage(sig os.Signal) string {
+	name := sig.String()
+	switch sig {
+	case syscall.SIGINT:
+		name = "SIGINT"
+	case syscall.SIGTERM:
+		name = "SIGTERM"
+	}
+	return fmt.Sprintf("musterflow: canceled: interrupted by %s before the upstream answered\n", name)
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -92,6 +127,14 @@ func run() error {
 	if !flagNoDashboard {
 		dashRunning = isMusterflowDashboard(dashAddr)
 	}
+
+	// PERF-001: translate the config timeout into the engine's per-attempt
+	// knob. The engine reads MUSTER_HTTP_TIMEOUT from the environment at
+	// request time; musterflow cannot pass the deadline through the generated
+	// command path, so the environment is the seam. An operator's own
+	// MUSTER_HTTP_TIMEOUT export keeps precedence by design.
+	applyTimeoutEnv(cfg)
+	cli.SetOperationTimeout(cfg.Timeout)
 
 	// Load registry.
 	//
@@ -179,9 +222,20 @@ func run() error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
+	// PERF-001: the dashboard's graceful-shutdown handler below (startServer)
+	// owns the serving path. For every OTHER (one-shot) command a bare cancel
+	// used to be a no-op — the engine's generated handlers request with an
+	// inner context.Background(), so Ctrl-C silently did nothing and a
+	// stalled call hung forever. Abort the process instead, with a message
+	// naming the interruption.
 	go func() {
-		<-sigCh
-		cancel()
+		sig := <-sigCh
+		if dashboardServing.Load() {
+			cancel()
+			return
+		}
+		fmt.Fprint(os.Stderr, signalAbortMessage(sig))
+		os.Exit(1)
 	}()
 
 	// Auto-install shell completions on first run (unless disabled or non-interactive)
@@ -222,6 +276,10 @@ func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
 }
 
 func startServer(registry *app.Registry, cfg config.Config) error {
+	// The signal goroutine in run() must not hard-exit a serving dashboard:
+	// startServer owns the graceful shutdown there.
+	dashboardServing.Store(true)
+
 	// DF-045: refuse to start a second dashboard over an unreadable registry —
 	// it would serve an empty API list while another process owns the store.
 	if err := cli.StoreUnavailable(); err != nil {

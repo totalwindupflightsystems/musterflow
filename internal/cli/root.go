@@ -723,6 +723,11 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 			fmt.Printf("Data directory:    %s\n", cfg.DataDir)
 			fmt.Printf("Default format:    %s\n", cfg.DefaultFormat)
 			fmt.Printf("Auto-completion:   %v\n", cfg.AutoCompletion)
+			if cfg.Timeout > 0 {
+				fmt.Printf("Timeout:           %d\n", cfg.Timeout)
+			} else {
+				fmt.Printf("Timeout:           (unset — engine default: 30s per attempt, up to 3 attempts)\n")
+			}
 			if cfg.DashboardToken != "" {
 				fmt.Printf("Dashboard token:   %s\n", config.MaskKey(cfg.DashboardToken))
 			} else {
@@ -760,8 +765,14 @@ func newConfigCommand(registry *app.Registry) *cobra.Command {
 				cfg.DataDir = val
 			case "dashboard_token":
 				cfg.SetDashboardToken(val)
+			case "timeout":
+				secs, err := config.ParseTimeoutSeconds(val)
+				if err != nil {
+					return err
+				}
+				cfg.Timeout = secs
 			default:
-				return fmt.Errorf("unknown config key: %s (valid: port, default_format, auto_completion, data_dir, dashboard_token)", key)
+				return fmt.Errorf("unknown config key: %s (valid: port, default_format, auto_completion, data_dir, dashboard_token, timeout)", key)
 			}
 			if err := config.Save(cfg); err != nil {
 				return fmt.Errorf("save config: %w", err)
