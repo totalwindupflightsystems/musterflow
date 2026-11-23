@@ -1,0 +1,153 @@
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  5.871MB
+Step 1/15 : FROM golang:1.26-bookworm AS builder
+1.26-bookworm: Pulling from library/golang
+4f4fb700ef54: Pulling fs layer
+c6b99ccefcff: Pulling fs layer
+d6c30932f8d3: Pulling fs layer
+6dbc954da649: Pulling fs layer
+69245854ad58: Pulling fs layer
+6da9d21223e3: Pulling fs layer
+338554e9113f: Pulling fs layer
+4f4fb700ef54: Download complete
+6da9d21223e3: Download complete
+338554e9113f: Download complete
+2695a5d28899: Download complete
+d6c30932f8d3: Download complete
+6dbc954da649: Download complete
+69245854ad58: Download complete
+48c8ffa6c187: Download complete
+c6b99ccefcff: Download complete
+69245854ad58: Pull complete
+338554e9113f: Pull complete
+d6c30932f8d3: Pull complete
+c6b99ccefcff: Pull complete
+6dbc954da649: Pull complete
+4f4fb700ef54: Pull complete
+6da9d21223e3: Pull complete
+Digest: sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0
+Status: Downloaded newer image for golang:1.26-bookworm
+ ---> dc40a13b6130
+Step 2/15 : WORKDIR /app
+ ---> Running in 2eb58f50755f
+ ---> Removed intermediate container 2eb58f50755f
+ ---> 8e3bbfcb25ab
+Step 3/15 : RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
+ ---> Running in 6a88255badae
+Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [379 kB]
+Fetched 9417 kB in 1s (8948 kB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+gcc is already the newest version (4:12.2.0-3).
+g++ is already the newest version (4:12.2.0-3).
+0 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.
+ ---> Removed intermediate container 6a88255badae
+ ---> ca951b54ef39
+Step 4/15 : COPY go.mod go.sum ./
+ ---> 290fd5fad29d
+Step 5/15 : COPY scripts/resolve-engine.sh ./scripts/
+ ---> 2c615ccaa86a
+Step 6/15 : RUN bash scripts/resolve-engine.sh &&     go mod download
+ ---> Running in 3b84f1f6b66f
+info: no local muster engine checkout — building against the published muster module (set MUSTER_ENGINE_DIR to develop against a local checkout)
+ ---> Removed intermediate container 3b84f1f6b66f
+ ---> bb627403301a
+Step 7/15 : COPY . .
+ ---> ed8c936d4fa4
+Step 8/15 : RUN bash scripts/resolve-engine.sh &&     CGO_ENABLED=1 go build -ldflags="-s -w" -o musterflow ./cmd/musterflow/
+ ---> Running in 87aceb181565
+info: no local muster engine checkout — building against the published muster module (set MUSTER_ENGINE_DIR to develop against a local checkout)
+ ---> Removed intermediate container 87aceb181565
+ ---> 784b3ceb72c0
+Step 9/15 : FROM debian:bookworm-slim
+bookworm-slim: Pulling from library/debian
+dd051e1b8c92: Pulling fs layer
+dd051e1b8c92: Download complete
+91fa335226d3: Download complete
+dd051e1b8c92: Pull complete
+Digest: sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+Status: Downloaded newer image for debian:bookworm-slim
+ ---> 734a72b3d614
+Step 10/15 : RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+ ---> Running in 6698cd2e1ee7
+Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [379 kB]
+Fetched 9417 kB in 1s (9591 kB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  libssl3 openssl
+The following NEW packages will be installed:
+  ca-certificates libssl3 openssl
+0 upgraded, 3 newly installed, 0 to remove and 0 not upgraded.
+Need to get 3643 kB of archives.
+After this operation, 8955 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.22-1~deb12u2 [2040 kB]
+Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.22-1~deb12u2 [1442 kB]
+Get:3 http://deb.debian.org/debian-security bookworm-security/main amd64 ca-certificates all 20250419~deb12u2 [161 kB]
+[91mdebconf: delaying package configuration, since apt-utils is not installed
+[0mFetched 3643 kB in 0s (55.1 MB/s)
+Selecting previously unselected package libssl3:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6096 files and directories currently installed.)
+Preparing to unpack .../libssl3_3.0.22-1~deb12u2_amd64.deb ...
+Unpacking libssl3:amd64 (3.0.22-1~deb12u2) ...
+Selecting previously unselected package openssl.
+Preparing to unpack .../openssl_3.0.22-1~deb12u2_amd64.deb ...
+Unpacking openssl (3.0.22-1~deb12u2) ...
+Selecting previously unselected package ca-certificates.
+Preparing to unpack .../ca-certificates_20250419~deb12u2_all.deb ...
+Unpacking ca-certificates (20250419~deb12u2) ...
+Setting up libssl3:amd64 (3.0.22-1~deb12u2) ...
+Setting up openssl (3.0.22-1~deb12u2) ...
+Setting up ca-certificates (20250419~deb12u2) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (TERM is not set, so the dialog frontend is not usable.)
+debconf: falling back to frontend: Readline
+debconf: unable to initialize frontend: Readline
+debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+debconf: falling back to frontend: Teletype
+Updating certificates in /etc/ssl/certs...
+148 added, 0 removed; done.
+Processing triggers for libc-bin (2.36-9+deb12u14) ...
+Processing triggers for ca-certificates (20250419~deb12u2) ...
+Updating certificates in /etc/ssl/certs...
+0 added, 0 removed; done.
+Running hooks in /etc/ca-certificates/update.d...
+done.
+ ---> Removed intermediate container 6698cd2e1ee7
+ ---> d4e901137955
+Step 11/15 : COPY --from=builder /app/musterflow /usr/local/bin/musterflow
+ ---> 4c1a92b3d25a
+Step 12/15 : EXPOSE 9876
+ ---> Running in 8f1bc01a958f
+ ---> Removed intermediate container 8f1bc01a958f
+ ---> 46dd7afed26c
+Step 13/15 : VOLUME /root/.musterflow
+ ---> Running in 0cdc1183a255
+ ---> Removed intermediate container 0cdc1183a255
+ ---> eeeca5ce4c90
+Step 14/15 : ENTRYPOINT ["musterflow"]
+ ---> Running in 12d8746e6b3c
+ ---> Removed intermediate container 12d8746e6b3c
+ ---> b28081e7d53e
+Step 15/15 : CMD ["start"]
+ ---> Running in 5fd6774b42d6
+ ---> Removed intermediate container 5fd6774b42d6
+ ---> 37df3611ca0c
+Successfully built 37df3611ca0c

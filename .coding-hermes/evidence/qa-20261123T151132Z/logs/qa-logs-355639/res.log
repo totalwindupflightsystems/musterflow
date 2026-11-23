@@ -1,0 +1,993 @@
+PARENT_CAP=unlimited
+SUBSHELL_CAP=3145728
+CAP_EFFECTIVE=3145728 CAP_REQUESTED=3145728
+ok  	github.com/totalwindupflightsystems/musterflow/cmd/musterflow	2.039s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/app	1.252s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/auth	0.162s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/catalog	0.040s
+2026/11/23 15:00:23 Starlark failed to allocate 4GB address space: cannot allocate memory. Integer performance may suffer.
+No workflows defined.
+Create one with: musterflow flow create <name>
+runtime/cgo: pthread_create failed: Resource temporarily unavailable
+SIGABRT: abort
+PC=0x7d843089ebec m=9 sigcode=18446744073709551610
+
+goroutine 0 gp=0x1fbe3f3912c0 m=9 mp=0x1fbe3f3c0008 [idle]:
+runtime: g 0 gp=0x1fbe3f3912c0: unknown pc 0x7d843089ebec
+stack: frame={sp:0x7d83d09f9d40, fp:0x0} stack=[0x7d83d01fa7d0,0x7d83d09fa3d0)
+                   7 6 5 4  3 2 1 0   f e d c  b a 9 8  0123456789abcdef
+00007d83d09f9c40: d7b0f401 574d515a  a99ff5fd da535c73  ZQMW....s\S.....
+00007d83d09f9c50: ceae3295 c415dfe9  183c52d5 713c63f4  .....2...c<q.R<.
+00007d83d09f9c60: 6c4bb92d 6c4bb92d  6c4bb92d 6c4bb92d  -.Kl-.Kl-.Kl-.Kl
+00007d83d09f9c70: 37f6c3ab 37f6c3ab  37f6c3ab 37f6c3ab  ...7...7...7...7
+00007d83d09f9c80: 06be07b3 06be07b3  06be07b3 06be07b3  ................
+00007d83d09f9c90: 00000000 00000000  00000000 00000000  ................
+00007d83d09f9ca0: 00007d83 d09f9cf0  00007d84 30893c9a  .....}...<.0.}..
+00007d83d09f9cb0: 00000000 00000000  00000000 00000037  ........7.......
+00007d83d09f9cc0: 18af8371 18af8371  00007d83 d09f9d70  q...q...p....}..
+00007d83d09f9cd0: 00000000 00000037  00007d84 30a03030  7.......00.0.}..
+00007d83d09f9ce0: 00007d83 d09f9d70  00007d84 30a054e0  p....}...T.0.}..
+00007d83d09f9cf0: 00007d83 d09f9d30  00007d84 30860c8f  0....}.....0.}..
+00007d83d09f9d00: 00000000 00000002  80000000 00000006  ................
+00007d83d09f9d10: 00000000 00000000  00000000 00000000  ................
+00007d83d09f9d20: 00000000 00000000  00000000 00000000  ................
+00007d83d09f9d30: 00000000 00000000  00007d84 3089ebde  ...........0.}..
+00007d83d09f9d40: d7b0f401 574d515a  817c9a13 0c287300  ZQMW.....s(...|.
+                  ^ SP
+00007d83d09f9d50: 00007d84 3085f730  00000000 00000006  0..0.}..........
+00007d83d09f9d60: 00007d83 d09fd6c0  00001fbe 3f16a1e0  .....}.....?....
+00007d83d09f9d70: 00001fbe 3f3912c0  ffffffff ffffffff  ..9?............
+00007d83d09f9d80: 00007d83 d09f9da0  00007d84 3084527e  .....}..~R.0.}..
+00007d83d09f9d90: 00007d84 30a054e0  00007d84 30a05b50  .T.0.}..P[.0.}..
+00007d83d09f9da0: 00007d83 d09f9e60  00007d84 308288ff  `....}.....0.}..
+00007d83d09f9db0: 00000000 00000020  00007d84 30892631   .......1&.0.}..
+00007d83d09f9dc0: 7261726f 706d6574  00007d84 30a054e0  temporar.T.0.}..
+00007d83d09f9dd0: 00000000 0000000a  00007d83 d09fd6c0  .............}..
+00007d83d09f9de0: 00001fbe 3f3912c0  ffffffff ffffffff  ..9?............
+00007d83d09f9df0: 00007d83 d09f9e20  00007d84 30892fb3   ....}.../.0.}..
+00007d83d09f9e00: 00000000 00000001  00007d84 30a054e0  .........T.0.}..
+00007d83d09f9e10: 00000000 0000000a  00007d83 d09fd6c0  .............}..
+00007d83d09f9e20: 00007d83 d09f9e60  00007d84 3088ec22  `....}.."..0.}..
+00007d83d09f9e30: 0000000c 00000000  00007d84 30a056a0  .........V.0.}..
+runtime: g 0 gp=0x1fbe3f3912c0: unknown pc 0x7d843089ebec
+stack: frame={sp:0x7d83d09f9d40, fp:0x0} stack=[0x7d83d01fa7d0,0x7d83d09fa3d0)
+                   7 6 5 4  3 2 1 0   f e d c  b a 9 8  0123456789abcdef
+00007d83d09f9c40: d7b0f401 574d515a  a99ff5fd da535c73  ZQMW....s\S.....
+00007d83d09f9c50: ceae3295 c415dfe9  183c52d5 713c63f4  .....2...c<q.R<.
+00007d83d09f9c60: 6c4bb92d 6c4bb92d  6c4bb92d 6c4bb92d  -.Kl-.Kl-.Kl-.Kl
+00007d83d09f9c70: 37f6c3ab 37f6c3ab  37f6c3ab 37f6c3ab  ...7...7...7...7
+00007d83d09f9c80: 06be07b3 06be07b3  06be07b3 06be07b3  ................
+00007d83d09f9c90: 00000000 00000000  00000000 00000000  ................
+00007d83d09f9ca0: 00007d83 d09f9cf0  00007d84 30893c9a  .....}...<.0.}..
+00007d83d09f9cb0: 00000000 00000000  00000000 00000037  ........7.......
+00007d83d09f9cc0: 18af8371 18af8371  00007d83 d09f9d70  q...q...p....}..
+00007d83d09f9cd0: 00000000 00000037  00007d84 30a03030  7.......00.0.}..
+00007d83d09f9ce0: 00007d83 d09f9d70  00007d84 30a054e0  p....}...T.0.}..
+00007d83d09f9cf0: 00007d83 d09f9d30  00007d84 30860c8f  0....}.....0.}..
+00007d83d09f9d00: 00000000 00000002  80000000 00000006  ................
+00007d83d09f9d10: 00000000 00000000  00000000 00000000  ................
+00007d83d09f9d20: 00000000 00000000  00000000 00000000  ................
+00007d83d09f9d30: 00000000 00000000  00007d84 3089ebde  ...........0.}..
+00007d83d09f9d40: d7b0f401 574d515a  817c9a13 0c287300  ZQMW.....s(...|.
+                  ^ SP
+00007d83d09f9d50: 00007d84 3085f730  00000000 00000006  0..0.}..........
+00007d83d09f9d60: 00007d83 d09fd6c0  00001fbe 3f16a1e0  .....}.....?....
+00007d83d09f9d70: 00001fbe 3f3912c0  ffffffff ffffffff  ..9?............
+00007d83d09f9d80: 00007d83 d09f9da0  00007d84 3084527e  .....}..~R.0.}..
+00007d83d09f9d90: 00007d84 30a054e0  00007d84 30a05b50  .T.0.}..P[.0.}..
+00007d83d09f9da0: 00007d83 d09f9e60  00007d84 308288ff  `....}.....0.}..
+00007d83d09f9db0: 00000000 00000020  00007d84 30892631   .......1&.0.}..
+00007d83d09f9dc0: 7261726f 706d6574  00007d84 30a054e0  temporar.T.0.}..
+00007d83d09f9dd0: 00000000 0000000a  00007d83 d09fd6c0  .............}..
+00007d83d09f9de0: 00001fbe 3f3912c0  ffffffff ffffffff  ..9?............
+00007d83d09f9df0: 00007d83 d09f9e20  00007d84 30892fb3   ....}.../.0.}..
+00007d83d09f9e00: 00000000 00000001  00007d84 30a054e0  .........T.0.}..
+00007d83d09f9e10: 00000000 0000000a  00007d83 d09fd6c0  .............}..
+00007d83d09f9e20: 00007d83 d09f9e60  00007d84 3088ec22  `....}.."..0.}..
+00007d83d09f9e30: 0000000c 00000000  00007d84 30a056a0  .........V.0.}..
+
+goroutine 1 gp=0x1fbe3eed81e0 m=nil [chan receive]:
+runtime.gopark(0x7d8430b944e8?, 0x7d83e867f5e8?, 0x70?, 0x4?, 0x352df20?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3ef27908 sp=0x1fbe3ef278e8 pc=0x74ca4a
+runtime.chanrecv(0x1fbe3ef7b780, 0x1fbe3f3119ef, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/chan.go:667 +0x4ae fp=0x1fbe3ef27980 sp=0x1fbe3ef27908 pc=0x6d88ce
+runtime.chanrecv1(0x18?, 0x35aad40?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/chan.go:509 +0x12 fp=0x1fbe3ef279a8 sp=0x1fbe3ef27980 pc=0x6d83f2
+testing.(*T).Run(0x1fbe3f25c488, {0x28dd092?, 0x1fbe3f35faa0?}, 0x364fc10)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2268 +0x4f2 fp=0x1fbe3ef27a80 sp=0x1fbe3ef279a8 pc=0x8000b2
+testing.runTests.func1(0x1fbe3f25c488)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2744 +0x37 fp=0x1fbe3ef27ac0 sp=0x1fbe3ef27a80 pc=0x805cd7
+testing.tRunner(0x1fbe3f25c488, 0x1fbe3f35fbc8)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2195 +0xea fp=0x1fbe3ef27b10 sp=0x1fbe3ef27ac0 pc=0x7ffb4a
+testing.runTests({0x28fe1e6, 0x2e}, {0x2909fdd, 0x3b}, 0x1fbe3eee7ab8, {0x3a87db0, 0xec, 0xec}, {0xc2b933b7c5aefbcf, 0x8bb339f373, ...})
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2742 +0x510 fp=0x1fbe3ef27bf8 sp=0x1fbe3ef27b10 pc=0x802110
+testing.(*M).Run(0x1fbe3f2a3400)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2602 +0x6af fp=0x1fbe3ef27e38 sp=0x1fbe3ef27bf8 pc=0x800ccf
+main.main()
+	_testmain.go:518 +0x9b fp=0x1fbe3ef27eb8 sp=0x1fbe3ef27e38 pc=0x1158dbb
+runtime.main()
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:302 +0x427 fp=0x1fbe3ef27fe0 sp=0x1fbe3ef27eb8 pc=0x712be7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef27fe8 sp=0x1fbe3ef27fe0 pc=0x753e21
+
+goroutine 2 gp=0x1fbe3eed8d20 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3ef50fa8 sp=0x1fbe3ef50f88 pc=0x74ca4a
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.forcegchelper()
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:387 +0xb3 fp=0x1fbe3ef50fe0 sp=0x1fbe3ef50fa8 pc=0x712eb3
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef50fe8 sp=0x1fbe3ef50fe0 pc=0x753e21
+created by runtime.init.7 in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:375 +0x1a
+
+goroutine 3 gp=0x1fbe3eed92c0 m=nil [runnable]:
+runtime.goschedIfBusy()
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:426 +0x28 fp=0x1fbe3ef51788 sp=0x1fbe3ef51770 pc=0x712f68
+runtime.bgsweep(0x1fbe3ef7a000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgcsweep.go:320 +0x16a fp=0x1fbe3ef517c8 sp=0x1fbe3ef51788 pc=0x6fb6ea
+runtime.gcenable.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:214 +0x17 fp=0x1fbe3ef517e0 sp=0x1fbe3ef517c8 pc=0x7420f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef517e8 sp=0x1fbe3ef517e0 pc=0x753e21
+created by runtime.gcenable in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:214 +0x66
+
+goroutine 4 gp=0x1fbe3eed94a0 m=nil [runnable]:
+runtime.(*scavengerState).park(0x3b5a8e0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgcscavenge.go:419 +0x70 fp=0x1fbe3ef51fa8 sp=0x1fbe3ef51fa0 pc=0x6f91f0
+runtime.bgscavenge(0x1fbe3ef7a000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgcscavenge.go:658 +0x59 fp=0x1fbe3ef51fc8 sp=0x1fbe3ef51fa8 pc=0x6f9739
+runtime.gcenable.gowrap2()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:215 +0x17 fp=0x1fbe3ef51fe0 sp=0x1fbe3ef51fc8 pc=0x7420b7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef51fe8 sp=0x1fbe3ef51fe0 pc=0x753e21
+created by runtime.gcenable in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:215 +0xa5
+
+goroutine 5 gp=0x1fbe3eed9a40 m=nil [GOMAXPROCS updater (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3ef50788 sp=0x1fbe3ef50768 pc=0x74ca4a
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.updateMaxProcsGoroutine()
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:7146 +0xe7 fp=0x1fbe3ef507e0 sp=0x1fbe3ef50788 pc=0x7203c7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef507e8 sp=0x1fbe3ef507e0 pc=0x753e21
+created by runtime.defaultGOMAXPROCSUpdateEnable in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:7134 +0x37
+
+goroutine 6 gp=0x1fbe3f00c1e0 m=nil [finalizer wait]:
+runtime.gopark(0x0?, 0x36501c8?, 0x0?, 0x20?, 0x2000000020?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3ef52620 sp=0x1fbe3ef52600 pc=0x74ca4a
+runtime.runFinalizers()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mfinal.go:210 +0x107 fp=0x1fbe3ef527e0 sp=0x1fbe3ef52620 pc=0x6ec727
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef527e8 sp=0x1fbe3ef527e0 pc=0x753e21
+created by runtime.createfing in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mfinal.go:172 +0x3d
+
+goroutine 7 gp=0x1fbe3f00cf00 m=nil [cleanup wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3ef52f68 sp=0x1fbe3ef52f48 pc=0x74ca4a
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.(*cleanupQueue).dequeue(0x3b5af80)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcleanup.go:522 +0xd3 fp=0x1fbe3ef52fa0 sp=0x1fbe3ef52f68 pc=0x6e8cd3
+runtime.runCleanups()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcleanup.go:718 +0x45 fp=0x1fbe3ef52fe0 sp=0x1fbe3ef52fa0 pc=0x6e9345
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef52fe8 sp=0x1fbe3ef52fe0 pc=0x753e21
+created by runtime.(*cleanupQueue).createGs in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcleanup.go:672 +0xa5
+
+goroutine 271 gp=0x1fbe3f00d0e0 m=nil [select]:
+runtime.gopark(0x1fbe3efcb3e8?, 0x2?, 0xe0?, 0xd0?, 0x1fbe3efcb31c?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3efcb1a0 sp=0x1fbe3efcb180 pc=0x74ca4a
+runtime.selectgo(0x1fbe3efcb3e8, 0x1fbe3efcb318, 0x1fbe3efcb3a8?, 0x0, 0x1fbe3efcb318?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3efcb2e0 sp=0x1fbe3efcb1a0 pc=0x725157
+net/http.(*Transport).getConn(0x3a7da70, 0x1fbe3f2c2d70, {{}, 0x0, {0x28ea859, 0x5}, {0x1fbe3f10c470, 0xf}, 0x0})
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1619 +0x4b0 fp=0x1fbe3efcb4b8 sp=0x1fbe3efcb2e0 pc=0xa495b0
+net/http.(*Transport).roundTrip(0x3a7da70, 0x1fbe3f3bfb80)
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:714 +0xa99 fp=0x1fbe3efcb660 sp=0x1fbe3efcb4b8 pc=0xa452b9
+net/http.(*Transport).RoundTrip(0x1fbe3f400008?, 0x3638f88?)
+	/home/bunker-c686f0f2/tools/go/src/net/http/roundtrip.go:33 +0x18 fp=0x1fbe3efcb680 sp=0x1fbe3efcb660 pc=0xa582d8
+net/http.send(0x1fbe3f3bfb80, {0x3638f88, 0x3a7da70}, {0x1fbe3ef618d0?, 0x74f586?, 0x0?})
+	/home/bunker-c686f0f2/tools/go/src/net/http/client.go:266 +0x654 fp=0x1fbe3efcb848 sp=0x1fbe3efcb680 pc=0xa1c754
+net/http.(*Client).send(0x3b59410, 0x1fbe3f3bfb80, {0x293a9d8?, 0x1?, 0x0?})
+	/home/bunker-c686f0f2/tools/go/src/net/http/client.go:187 +0x250 fp=0x1fbe3efcb8e0 sp=0x1fbe3efcb848 pc=0xa1bf90
+net/http.(*Client).do(0x3b59410, 0x1fbe3f3bfb80)
+	/home/bunker-c686f0f2/tools/go/src/net/http/client.go:745 +0x9f7 fp=0x1fbe3efcbad8 sp=0x1fbe3efcb8e0 pc=0xa1e137
+net/http.(*Client).Do(...)
+	/home/bunker-c686f0f2/tools/go/src/net/http/client.go:604
+net/http.(*Client).Get(0x3b59410, {0x28ea859?, 0x78e69e?})
+	/home/bunker-c686f0f2/tools/go/src/net/http/client.go:491 +0x5f fp=0x1fbe3efcbb28 sp=0x1fbe3efcbad8 pc=0xa1d5df
+net/http.Get(...)
+	/home/bunker-c686f0f2/tools/go/src/net/http/client.go:460
+github.com/totalwindupflightsystems/musterflow/internal/cli.loadSpecData({0x28ea859?, 0x0?})
+	/home/bunker-c686f0f2/qa-musterflow/internal/cli/api.go:86 +0xa5 fp=0x1fbe3efcbba0 sp=0x1fbe3efcbb28 pc=0x10f19c5
+github.com/totalwindupflightsystems/musterflow/internal/cli.rebuildPlan(0x1fbe3f4544d0, {0x1fbe3f0f41b0, 0x2a})
+	/home/bunker-c686f0f2/qa-musterflow/internal/cli/api.go:404 +0x45 fp=0x1fbe3efcbcd8 sp=0x1fbe3efcbba0 pc=0x10f3865
+github.com/totalwindupflightsystems/musterflow/internal/cli.loadAPICommands(0x1fbe3f1b0008, 0x1fbe3f4544d0, {0x1fbe3f0f41b0, 0x2a}, {0x0, 0x0})
+	/home/bunker-c686f0f2/qa-musterflow/internal/cli/api.go:235 +0x59 fp=0x1fbe3efcbd20 sp=0x1fbe3efcbcd8 pc=0x10f2139
+github.com/totalwindupflightsystems/musterflow/internal/cli.ensureAPILoaded.func1()
+	/home/bunker-c686f0f2/qa-musterflow/internal/cli/api.go:202 +0x34 fp=0x1fbe3efcbd68 sp=0x1fbe3efcbd20 pc=0x1142274
+sync.(*Once).doSlow(0x34b5418?, 0x1fbe3f2c4690?)
+	/home/bunker-c686f0f2/tools/go/src/sync/once.go:78 +0xab fp=0x1fbe3efcbdc0 sp=0x1fbe3efcbd68 pc=0x75bd8b
+sync.(*Once).Do(...)
+	/home/bunker-c686f0f2/tools/go/src/sync/once.go:69
+github.com/totalwindupflightsystems/musterflow/internal/cli.ensureAPILoaded(0x1fbe3f1b0008, 0x1fbe3f4544d0, {0x1fbe3f0f41b0, 0x2a}, {0x0, 0x0})
+	/home/bunker-c686f0f2/qa-musterflow/internal/cli/api.go:201 +0x1ae fp=0x1fbe3efcbe48 sp=0x1fbe3efcbdc0 pc=0x10f206e
+github.com/totalwindupflightsystems/musterflow/internal/cli.createAPISubcommand.func3(0x1fbe3f1b0008, {0x3d8cfe0, 0x0, 0x0})
+	/home/bunker-c686f0f2/qa-musterflow/internal/cli/api.go:153 +0x50 fp=0x1fbe3efcbee0 sp=0x1fbe3efcbe48 pc=0x1141d30
+github.com/spf13/cobra.(*Command).Help(0x1fbe3f1b0008)
+	/home/bunker-c686f0f2/go/pkg/mod/github.com/spf13/cobra@v1.10.2/command.go:521 +0x33 fp=0x1fbe3efcbf10 sp=0x1fbe3efcbee0 pc=0xa6ef13
+github.com/totalwindupflightsystems/musterflow/internal/cli.TestCreateAPISubcommand(0x1fbe3f1a8488)
+	/home/bunker-c686f0f2/qa-musterflow/internal/cli/cli_test.go:843 +0x24f fp=0x1fbe3efcbf70 sp=0x1fbe3efcbf10 pc=0x110ea6f
+testing.tRunner(0x1fbe3f1a8488, 0x364fc10)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2195 +0xea fp=0x1fbe3efcbfc0 sp=0x1fbe3efcbf70 pc=0x7ffb4a
+testing.(*T).Run.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2260 +0x1b fp=0x1fbe3efcbfe0 sp=0x1fbe3efcbfc0 pc=0x805a5b
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3efcbfe8 sp=0x1fbe3efcbfe0 pc=0x753e21
+created by testing.(*T).Run in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2260 +0x4d4
+
+goroutine 54 gp=0x1fbe3f00d2c0 m=nil [select]:
+runtime.gopark(0x1fbe3ef4cf88?, 0x2?, 0x48?, 0xce?, 0x1fbe3ef4cf84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3ef4ce10 sp=0x1fbe3ef4cdf0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3ef4cf88, 0x1fbe3ef4cf80, 0x1fbe3f3e8180?, 0x0, 0x1?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3ef4cf50 sp=0x1fbe3ef4ce10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f44a340, {0x3643488, 0x1fbe3f444370})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3ef4cfb8 sp=0x1fbe3ef4cf50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3ef4cfe0 sp=0x1fbe3ef4cfb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3ef4cfe8 sp=0x1fbe3ef4cfe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 53
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 117 gp=0x1fbe3f390000 m=nil [select]:
+runtime.gopark(0x1fbe3f393f88?, 0x2?, 0x2?, 0x0?, 0x1fbe3f393f84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f393e10 sp=0x1fbe3f393df0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f393f88, 0x1fbe3f393f80, 0x1fbe3f393f88?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f393f50 sp=0x1fbe3f393e10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f16e820, {0x3643488, 0x1fbe3f3a47d0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f393fb8 sp=0x1fbe3f393f50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f393fe0 sp=0x1fbe3f393fb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f393fe8 sp=0x1fbe3f393fe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 116
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 35 gp=0x1fbe3f3901e0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f396740 sp=0x1fbe3f396720 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f3967c8 sp=0x1fbe3f396740 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f3967e0 sp=0x1fbe3f3967c8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3967e8 sp=0x1fbe3f3967e0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 36 gp=0x1fbe3f3903c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f396f40 sp=0x1fbe3f396f20 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f396fc8 sp=0x1fbe3f396f40 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f396fe0 sp=0x1fbe3f396fc8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f396fe8 sp=0x1fbe3f396fe0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 37 gp=0x1fbe3f3905a0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f397740 sp=0x1fbe3f397720 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f3977c8 sp=0x1fbe3f397740 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f3977e0 sp=0x1fbe3f3977c8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3977e8 sp=0x1fbe3f3977e0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 38 gp=0x1fbe3f390780 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188def0a8d70?, 0x3?, 0x2b?, 0xab?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f397f40 sp=0x1fbe3f397f20 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f397fc8 sp=0x1fbe3f397f40 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f397fe0 sp=0x1fbe3f397fc8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f397fe8 sp=0x1fbe3f397fe0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 39 gp=0x1fbe3f390960 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188deeff553a?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f398740 sp=0x1fbe3f398720 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f3987c8 sp=0x1fbe3f398740 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f3987e0 sp=0x1fbe3f3987c8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3987e8 sp=0x1fbe3f3987e0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 40 gp=0x1fbe3f390b40 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188dfed82d40?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f398f40 sp=0x1fbe3f398f20 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f398fc8 sp=0x1fbe3f398f40 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f398fe0 sp=0x1fbe3f398fc8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f398fe8 sp=0x1fbe3f398fe0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 41 gp=0x1fbe3f390d20 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188dfeda65e4?, 0x3?, 0xa3?, 0x8c?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f399740 sp=0x1fbe3f399720 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f3997c8 sp=0x1fbe3f399740 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f3997e0 sp=0x1fbe3f3997c8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3997e8 sp=0x1fbe3f3997e0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 42 gp=0x1fbe3f390f00 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188dfeda42f1?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f399f40 sp=0x1fbe3f399f20 pc=0x74ca4a
+runtime.gcBgMarkWorker(0x1fbe3f3b0000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x1fbe3f399fc8 sp=0x1fbe3f399f40 pc=0x6efb6b
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x1fbe3f399fe0 sp=0x1fbe3f399fc8 pc=0x7425f7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f399fe8 sp=0x1fbe3f399fe0 pc=0x753e21
+created by runtime.gcBgMarkStartWorkers in goroutine 34
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 59 gp=0x1fbe3f4243c0 m=nil [select]:
+runtime.gopark(0x1fbe3f392788?, 0x2?, 0x2?, 0x0?, 0x1fbe3f392784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f392610 sp=0x1fbe3f3925f0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f392788, 0x1fbe3f392780, 0x1fbe3f392788?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f392750 sp=0x1fbe3f392610 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f44add0, {0x3643488, 0x1fbe3f444410})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3927b8 sp=0x1fbe3f392750 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3927e0 sp=0x1fbe3f3927b8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3927e8 sp=0x1fbe3f3927e0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 58
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 164 gp=0x1fbe3ef8cd20 m=nil [select]:
+runtime.gopark(0x1fbe3f3e1f88?, 0x2?, 0xf0?, 0x7?, 0x1fbe3f3e1f84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3e1e10 sp=0x1fbe3f3e1df0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3e1f88, 0x1fbe3f3e1f80, 0x1fbe3f3e1fb0?, 0x0, 0x1fbe3f3fefc8?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3e1f50 sp=0x1fbe3f3e1e10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f1996c0, {0x3643488, 0x1fbe3f4448c0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3e1fb8 sp=0x1fbe3f3e1f50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3e1fe0 sp=0x1fbe3f3e1fb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3e1fe8 sp=0x1fbe3f3e1fe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 163
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 110 gp=0x1fbe3f391680 m=nil [select]:
+runtime.gopark(0x1fbe3f393788?, 0x2?, 0x2?, 0x0?, 0x1fbe3f393784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f393610 sp=0x1fbe3f3935f0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f393788, 0x1fbe3f393780, 0x1fbe3f393788?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f393750 sp=0x1fbe3f393610 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f38d930, {0x3643488, 0x1fbe3f3a4730})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3937b8 sp=0x1fbe3f393750 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3937e0 sp=0x1fbe3f3937b8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3937e8 sp=0x1fbe3f3937e0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 109
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 128 gp=0x1fbe3f391860 m=nil [select]:
+runtime.gopark(0x1fbe3f392f88?, 0x2?, 0x2?, 0x0?, 0x1fbe3f392f84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f392e10 sp=0x1fbe3f392df0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f392f88, 0x1fbe3f392f80, 0x1fbe3f392f88?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f392f50 sp=0x1fbe3f392e10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f12c000, {0x3643488, 0x1fbe3f3a4910})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f392fb8 sp=0x1fbe3f392f50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f392fe0 sp=0x1fbe3f392fb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f392fe8 sp=0x1fbe3f392fe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 127
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 104 gp=0x1fbe3f424780 m=nil [select]:
+runtime.gopark(0x1fbe3f3ddf88?, 0x2?, 0x2?, 0x0?, 0x1fbe3f3ddf84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3dde10 sp=0x1fbe3f3dddf0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3ddf88, 0x1fbe3f3ddf80, 0x1fbe3f3ddf88?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3ddf50 sp=0x1fbe3f3dde10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f38cc30, {0x3643488, 0x1fbe3f3a4690})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3ddfb8 sp=0x1fbe3f3ddf50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3ddfe0 sp=0x1fbe3f3ddfb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3ddfe8 sp=0x1fbe3f3ddfe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 103
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 63 gp=0x1fbe3f424960 m=nil [select]:
+runtime.gopark(0x1fbe3f3def88?, 0x2?, 0x2?, 0x0?, 0x1fbe3f3def84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3dee10 sp=0x1fbe3f3dedf0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3def88, 0x1fbe3f3def80, 0x1fbe3f3def88?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3def50 sp=0x1fbe3f3dee10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f44b930, {0x3643488, 0x1fbe3f4444b0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3defb8 sp=0x1fbe3f3def50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3defe0 sp=0x1fbe3f3defb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3defe8 sp=0x1fbe3f3defe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 62
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 132 gp=0x1fbe3f424b40 m=nil [select]:
+runtime.gopark(0x1fbe3f3df788?, 0x2?, 0x2?, 0x0?, 0x1fbe3f3df784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3df610 sp=0x1fbe3f3df5f0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3df788, 0x1fbe3f3df780, 0x1fbe3f3df788?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3df750 sp=0x1fbe3f3df610 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f275ba0, {0x3643488, 0x1fbe3f444550})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3df7b8 sp=0x1fbe3f3df750 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3df7e0 sp=0x1fbe3f3df7b8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3df7e8 sp=0x1fbe3f3df7e0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 131
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 137 gp=0x1fbe3f424d20 m=nil [select]:
+runtime.gopark(0x1fbe3f3dff88?, 0x2?, 0x2?, 0x0?, 0x1fbe3f3dff84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3dfe10 sp=0x1fbe3f3dfdf0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3dff88, 0x1fbe3f3dff80, 0x1fbe3f3dff88?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3dff50 sp=0x1fbe3f3dfe10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f2c1e10, {0x3643488, 0x1fbe3f4445f0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3dffb8 sp=0x1fbe3f3dff50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3dffe0 sp=0x1fbe3f3dffb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3dffe8 sp=0x1fbe3f3dffe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 136
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 143 gp=0x1fbe3f424f00 m=nil [select]:
+runtime.gopark(0x1fbe3f3e0788?, 0x2?, 0x2?, 0x0?, 0x1fbe3f3e0784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3e0610 sp=0x1fbe3f3e05f0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3e0788, 0x1fbe3f3e0780, 0x1fbe3f3e0788?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3e0750 sp=0x1fbe3f3e0610 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f198c30, {0x3643488, 0x1fbe3f444690})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3e07b8 sp=0x1fbe3f3e0750 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3e07e0 sp=0x1fbe3f3e07b8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3e07e8 sp=0x1fbe3f3e07e0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 142
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 72 gp=0x1fbe3f4250e0 m=nil [select]:
+runtime.gopark(0x1fbe3f3e0f88?, 0x2?, 0x2?, 0x0?, 0x1fbe3f3e0f84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3e0e10 sp=0x1fbe3f3e0df0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3e0f88, 0x1fbe3f3e0f80, 0x1fbe3f3e0f88?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3e0f50 sp=0x1fbe3f3e0e10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3efe2340, {0x3643488, 0x1fbe3f0820f0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3e0fb8 sp=0x1fbe3f3e0f50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3e0fe0 sp=0x1fbe3f3e0fb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3e0fe8 sp=0x1fbe3f3e0fe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 71
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 122 gp=0x1fbe3f4252c0 m=nil [select]:
+runtime.gopark(0x1fbe3f3e1788?, 0x2?, 0x2?, 0x0?, 0x1fbe3f3e1784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f3e1610 sp=0x1fbe3f3e15f0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f3e1788, 0x1fbe3f3e1780, 0x1fbe3f3e1788?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f3e1750 sp=0x1fbe3f3e1610 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f16edd0, {0x3643488, 0x1fbe3f3a4870})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f3e17b8 sp=0x1fbe3f3e1750 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f3e17e0 sp=0x1fbe3f3e17b8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3e17e8 sp=0x1fbe3f3e17e0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 121
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 242 gp=0x1fbe3f391a40 m=nil [select]:
+runtime.gopark(0x1fbe3f133788?, 0x2?, 0x2?, 0x0?, 0x1fbe3f133784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f133610 sp=0x1fbe3f1335f0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f133788, 0x1fbe3f133780, 0x1fbe3f133788?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f133750 sp=0x1fbe3f133610 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f44b040, {0x3643488, 0x1fbe3f3a45f0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f1337b8 sp=0x1fbe3f133750 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f1337e0 sp=0x1fbe3f1337b8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f1337e8 sp=0x1fbe3f1337e0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 241
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 236 gp=0x1fbe3f4254a0 m=nil [select]:
+runtime.gopark(0x1fbe3f132f88?, 0x2?, 0xf0?, 0x7?, 0x1fbe3f132f84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3f132e10 sp=0x1fbe3f132df0 pc=0x74ca4a
+runtime.selectgo(0x1fbe3f132f88, 0x1fbe3f132f80, 0x1fbe3f132fb0?, 0x0, 0x1fbe3f15a908?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x1fbe3f132f50 sp=0x1fbe3f132e10 pc=0x725157
+database/sql.(*DB).connectionOpener(0x1fbe3f07dd40, {0x3643488, 0x1fbe3f3a4550})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x1fbe3f132fb8 sp=0x1fbe3f132f50 pc=0xc31669
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x1fbe3f132fe0 sp=0x1fbe3f132fb8 pc=0xc368df
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f132fe8 sp=0x1fbe3f132fe0 pc=0x753e21
+created by database/sql.OpenDB in goroutine 235
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 257 gp=0x1fbe3f072780 m=5 mp=0x1fbe3ef88008 [stopping the world]:
+runtime.systemstack_switch()
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:481 +0x8 fp=0x1fbe3f3a0110 sp=0x1fbe3f3a0100 pc=0x7522e8
+runtime.gcStart({0x7d8430b944e8?, 0xcf9545c1d0b0260b?, 0x90e4d483?})
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:834 +0x476 fp=0x1fbe3f3a0228 sp=0x1fbe3f3a0110 pc=0x6ede76
+runtime.mallocgcSmallNoScanSC5(0x1fbe3f3fb320?, 0x1fbe3f3fb308?, 0x70?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/malloc_generated.go:1580 +0x21e fp=0x1fbe3f3a0280 sp=0x1fbe3f3a0228 pc=0x6e3ade
+crypto/internal/fips140/nistec.NewP384Point(...)
+	/home/bunker-c686f0f2/tools/go/src/crypto/internal/fips140/nistec/p384.go:31
+crypto/internal/fips140/nistec.(*P384Point).generatorTable.func1()
+	/home/bunker-c686f0f2/tools/go/src/crypto/internal/fips140/nistec/p384.go:399 +0x32b fp=0x1fbe3f3a0398 sp=0x1fbe3f3a0280 pc=0x118d5ab
+sync.(*Once).doSlow(0x6?, 0x20?)
+	/home/bunker-c686f0f2/tools/go/src/sync/once.go:78 +0xab fp=0x1fbe3f3a03f0 sp=0x1fbe3f3a0398 pc=0x75bd8b
+sync.(*Once).Do(...)
+	/home/bunker-c686f0f2/tools/go/src/sync/once.go:69
+crypto/internal/fips140/nistec.(*P384Point).generatorTable(0x20?)
+	/home/bunker-c686f0f2/tools/go/src/crypto/internal/fips140/nistec/p384.go:393 +0x2c fp=0x1fbe3f3a0410 sp=0x1fbe3f3a03f0 pc=0x1188f8c
+crypto/internal/fips140/nistec.(*P384Point).ScalarBaseMult(0x1fbe3f3e2f60, {0x1fbe3f4b5590, 0x1fbe3f117080?, 0x1fbe3f4b53b0?})
+	/home/bunker-c686f0f2/tools/go/src/crypto/internal/fips140/nistec/p384.go:416 +0x45 fp=0x1fbe3f3a05b8 sp=0x1fbe3f3a0410 pc=0x1189005
+crypto/internal/fips140/ecdsa.verifyGeneric[...](0x1fbe3f452bc0, 0x1fbe3f1f05a0, {0x1fbe3f4b53b0, 0x30, 0x30}, 0x1fbe3f3a0c50)
+	/home/bunker-c686f0f2/tools/go/src/crypto/internal/fips140/ecdsa/ecdsa.go:495 +0x44f fp=0x1fbe3f3a0ba0 sp=0x1fbe3f3a05b8 pc=0x119e30f
+crypto/internal/fips140/ecdsa.verify[...](...)
+	/home/bunker-c686f0f2/tools/go/src/crypto/internal/fips140/ecdsa/ecdsa_noasm.go:14
+crypto/internal/fips140/ecdsa.Verify[...](0x1fbe3f452bc0, 0x1fbe3f1f05a0, {0x1fbe3f4b53b0, 0x30, 0x30}, 0x1fbe3f3a0c50)
+	/home/bunker-c686f0f2/tools/go/src/crypto/internal/fips140/ecdsa/ecdsa.go:461 +0xe9 fp=0x1fbe3f3a0be8 sp=0x1fbe3f3a0ba0 pc=0x119de29
+crypto/ecdsa.verifyFIPS[...](0x1fbe3f452bc0, 0x1fbe3f1170e0, {0x1fbe3f4b53b0, 0x30, 0x30}, {0x1fbe3f2cbbde, 0x30?, 0x30?})
+	/home/bunker-c686f0f2/tools/go/src/crypto/ecdsa/ecdsa.go:546 +0x136 fp=0x1fbe3f3a0c90 sp=0x1fbe3f3a0be8 pc=0x918616
+crypto/ecdsa.VerifyASN1(0x1fbe3f1170e0, {0x1fbe3f4b53b0, 0x30, 0x30}, {0x1fbe3f2cbbde, 0x66, 0xa22})
+	/home/bunker-c686f0f2/tools/go/src/crypto/ecdsa/ecdsa.go:529 +0x209 fp=0x1fbe3f3a0cf0 sp=0x1fbe3f3a0c90 pc=0x917169
+crypto/x509.checkSignature(0xb, {0x1fbe3f2cb962?, 0x26d?, 0xc9e?}, {0x1fbe3f2cbbde, 0x66, 0xa22}, {0x340c730?, 0x1fbe3f1170e0}, 0x0)
+	/home/bunker-c686f0f2/tools/go/src/crypto/x509/x509.go:1103 +0x906 fp=0x1fbe3f3a0e90 sp=0x1fbe3f3a0cf0 pc=0x9730e6
+crypto/x509.(*Certificate).CheckSignatureFrom(0x1fbe3f2fc008?, 0x1fbe3f44c1a0?)
+	/home/bunker-c686f0f2/tools/go/src/crypto/x509/x509.go:1018 +0xd4 fp=0x1fbe3f3a0ef0 sp=0x1fbe3f3a0e90 pc=0x972414
+crypto/x509.(*Certificate).buildChains.func1(...)
+	/home/bunker-c686f0f2/tools/go/src/crypto/x509/verify.go:756
+crypto/x509.(*Certificate).buildChains(0x1fbe3f0a3808, {0x1fbe3f44c1a0, 0x2, 0x2}, 0x1fbe3efb9060, 0x1fbe3f3a14d0)
+	/home/bunker-c686f0f2/tools/go/src/crypto/x509/verify.go:802 +0x358 fp=0x1fbe3f3a1108 sp=0x1fbe3f3a0ef0 pc=0x96da78
+crypto/x509.(*Certificate).buildChains.func1(...)
+	/home/bunker-c686f0f2/tools/go/src/crypto/x509/verify.go:788
+crypto/x509.(*Certificate).buildChains(0x1fbe3f0a3208, {0x1fbe3f422050, 0x1, 0x1}, 0x0, 0x1fbe3f3a14d0)
+	/home/bunker-c686f0f2/tools/go/src/crypto/x509/verify.go:802 +0x73e fp=0x1fbe3f3a1320 sp=0x1fbe3f3a1108 pc=0x96de5e
+crypto/x509.(*Certificate).Verify(0x1fbe3f0a3208, {{0x1fbe3f10c470, 0xb}, 0x1fbe3f449290, 0x1fbe3f449350, {0xc2b93321d5ef0a1a, 0x10b091c8, 0x3b5a640}, {0x0, 0x0, ...}, ...})
+	/home/bunker-c686f0f2/tools/go/src/crypto/x509/verify.go:608 +0x36f fp=0x1fbe3f3a14d0 sp=0x1fbe3f3a1320 pc=0x96cd6f
+crypto/tls.(*Conn).verifyServerCertificate(0x1fbe3f12a808, {0x1fbe3f2ae660, 0x4, 0x4})
+	/home/bunker-c686f0f2/tools/go/src/crypto/tls/handshake_client.go:1164 +0xbef fp=0x1fbe3f3a1888 sp=0x1fbe3f3a14d0 pc=0x9a266f
+crypto/tls.(*clientHandshakeStateTLS13).readServerCertificate(0x1fbe3f3a1c80)
+	/home/bunker-c686f0f2/tools/go/src/crypto/tls/handshake_client_tls13.go:636 +0x2c5 fp=0x1fbe3f3a1ab0 sp=0x1fbe3f3a1888 pc=0x9a6c45
+crypto/tls.(*clientHandshakeStateTLS13).handshake(0x1fbe3f3a1c80)
+	/home/bunker-c686f0f2/tools/go/src/crypto/tls/handshake_client_tls13.go:137 +0x78c fp=0x1fbe3f3a1b70 sp=0x1fbe3f3a1ab0 pc=0x9a3cec
+crypto/tls.(*Conn).clientHandshake(0x1fbe3f12a808, {0x3643488, 0x1fbe3f3a4af0})
+	/home/bunker-c686f0f2/tools/go/src/crypto/tls/handshake_client.go:340 +0x85f fp=0x1fbe3f3a1d88 sp=0x1fbe3f3a1b70 pc=0x99d7df
+crypto/tls.(*Conn).clientHandshake-fm({0x3643488?, 0x1fbe3f3a4af0?})
+	<autogenerated>:1 +0x2a fp=0x1fbe3f3a1db0 sp=0x1fbe3f3a1d88 pc=0x9c9b6a
+crypto/tls.(*Conn).handshakeContext(0x1fbe3f12a808, {0x3643488, 0x1fbe3f2c2dc0})
+	/home/bunker-c686f0f2/tools/go/src/crypto/tls/conn.go:1561 +0x32e fp=0x1fbe3f3a1f70 sp=0x1fbe3f3a1db0 pc=0x998ace
+crypto/tls.(*Conn).HandshakeContext(...)
+	/home/bunker-c686f0f2/tools/go/src/crypto/tls/conn.go:1515
+net/http.(*persistConn).addTLS.func2()
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1803 +0x6e fp=0x1fbe3f3a1fe0 sp=0x1fbe3f3a1f70 pc=0xa562ce
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3f3a1fe8 sp=0x1fbe3f3a1fe0 pc=0x753e21
+created by net/http.(*persistConn).addTLS in goroutine 272
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1799 +0x329
+
+goroutine 272 gp=0x1fbe3f072d20 m=nil [chan receive]:
+runtime.gopark(0x1fbe3efcd7a8?, 0x750e10?, 0x10?, 0xe?, 0x10189051d48197?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x1fbe3efcd758 sp=0x1fbe3efcd738 pc=0x74ca4a
+runtime.chanrecv(0x1fbe3f0a0d20, 0x1fbe3efcd928, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/chan.go:667 +0x4ae fp=0x1fbe3efcd7d0 sp=0x1fbe3efcd758 pc=0x6d88ce
+runtime.chanrecv1(0x38?, 0x35e8f80?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/chan.go:509 +0x12 fp=0x1fbe3efcd7f8 sp=0x1fbe3efcd7d0 pc=0x6d83f2
+net/http.(*persistConn).addTLS(0x1fbe3f3bfcc0, {0x3643488, 0x1fbe3f2c2dc0}, {0x1fbe3f10c470, 0xb}, 0x0)
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1809 +0x347 fp=0x1fbe3efcd950 sp=0x1fbe3efcd7f8 pc=0xa4a747
+net/http.(*Transport).dialConn(0x3a7da70, {0x3643488, 0x1fbe3f2c2dc0}, {{}, 0x0, {0x28ea859, 0x5}, {0x1fbe3f10c470, 0xf}, 0x0}, ...)
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1930 +0xb7e fp=0x1fbe3efcdf08 sp=0x1fbe3efcd950 pc=0xa4b57e
+net/http.(*Transport).dialConnFor(0x3a7da70, 0x1fbe3f454580)
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1715 +0x8e fp=0x1fbe3efcdf90 sp=0x1fbe3efcdf08 pc=0xa49eae
+net/http.(*Transport).startDialConnForLocked.func1()
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1696 +0x35 fp=0x1fbe3efcdfe0 sp=0x1fbe3efcdf90 pc=0xa56135
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x1fbe3efcdfe8 sp=0x1fbe3efcdfe0 pc=0x753e21
+created by net/http.(*Transport).startDialConnForLocked in goroutine 271
+	/home/bunker-c686f0f2/tools/go/src/net/http/transport.go:1695 +0x11c
+
+rax    0x0
+rbx    0x5fc0e
+rcx    0x7d843089ebec
+rdx    0x6
+rdi    0x5fbce
+rsi    0x5fc0e
+rbp    0x7d83d09f9d80
+rsp    0x7d83d09f9d40
+r8     0x0
+r9     0x0
+r10    0x8
+r11    0x246
+r12    0x6
+r13    0x1fbe3f16a1e0
+r14    0x16
+r15    0xffffffffffffffff
+rip    0x7d843089ebec
+rflags 0x246
+cs     0x33
+fs     0x0
+gs     0x0
+FAIL	github.com/totalwindupflightsystems/musterflow/internal/cli	0.529s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/completion	0.006s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/config	0.021s
+2026/11/23 15:00:23 Starlark failed to allocate 4GB address space: cannot allocate memory. Integer performance may suffer.
+WARNING: dashboard auth disabled — set dashboard_token to require a bearer token
+WARNING: dashboard auth disabled — set dashboard_token to require a bearer token
+WARNING: dashboard auth disabled — set dashboard_token to require a bearer token
+WARNING: dashboard auth disabled — set dashboard_token to require a bearer token
+WARNING: dashboard auth disabled — set dashboard_token to require a bearer token
+WARNING: dashboard auth disabled — set dashboard_token to require a bearer token
+terminate called after throwing an instance of 'St9bad_alloc'
+  what():  std::bad_alloc
+signal: aborted (core dumped)
+FAIL	github.com/totalwindupflightsystems/musterflow/internal/dashboard	0.615s
+--- FAIL: TestToolRegistry_DynamicTools (0.04s)
+    server_test.go:302: expected listPets after first refresh, got: []
+⚠ tolerated: 1 cosmetic spec defect(s) tolerated while loading MCP tools
+--- FAIL: TestRefresh_CollidingOperationIDs_NoDuplicateNames (0.03s)
+    toolnames_test.go:152: expected 2 tools (one namespaced per API), got []
+--- FAIL: TestExecute_CollidingOperationIDs_RoutesPerAPI (0.02s)
+    toolnames_test.go:194: Execute(api-a__listWidgets): tool "api-a__listWidgets" not found
+--- FAIL: TestExecute_BareNameRoutingWhenUnique (0.02s)
+    toolnames_test.go:242: expected tool "api-a__listWidgets", got []
+    toolnames_test.go:242: expected tool "api-b__listGadgets", got []
+    toolnames_test.go:242: expected tool "listWidgets", got []
+    toolnames_test.go:242: expected tool "listGadgets", got []
+    toolnames_test.go:246: expected 4 tools, got []
+    toolnames_test.go:260: Execute(listWidgets): tool "listWidgets" not found
+fatal error: runtime: cannot allocate memory
+
+runtime stack:
+runtime.throw({0x25a435c?, 0xfffffffffffff800?})
+	/home/bunker-c686f0f2/tools/go/src/runtime/panic.go:1245 +0x48 fp=0x7544b8afa338 sp=0x7544b8afa308 pc=0x74c488
+runtime.persistentalloc1(0x1200, 0x1?, 0x3686ce0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/malloc.go:2363 +0x265 fp=0x7544b8afa390 sp=0x7544b8afa338 pc=0x6e10e5
+runtime.persistentalloc.func1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/malloc.go:2316 +0x28 fp=0x7544b8afa3c0 sp=0x7544b8afa390 pc=0x7416c8
+runtime.systemstack(0x800000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:531 +0x4a fp=0x7544b8afa3d0 sp=0x7544b8afa3c0 pc=0x751bca
+
+goroutine 144 gp=0x252f62130960 m=4 mp=0x252f620f1808 [running]:
+runtime.systemstack_switch()
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:481 +0x8 fp=0x252f62100b90 sp=0x252f62100b80 pc=0x751b68
+runtime.persistentalloc(0x800?, 0x40?, 0x3686ce0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/malloc.go:2315 +0x45 fp=0x252f62100bd8 sp=0x252f62100b90 pc=0x6e0e65
+runtime.(*spanSetBlockAlloc).alloc(0x252f625e1240?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mspanset.go:338 +0x49 fp=0x252f62100c00 sp=0x252f62100bd8 pc=0x709e49
+runtime.(*spanSet).push(0x3469180, 0x7544b805e688)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mspanset.go:134 +0x11d fp=0x252f62100c68 sp=0x252f62100c00 pc=0x709add
+runtime.(*mcentral).uncacheSpan(0x252f622c45a0?, 0x42?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcentral.go:245 +0x9e fp=0x252f62100c90 sp=0x252f62100c68 pc=0x6e751e
+runtime.(*mcache).refill(0x754500f932f8, 0xc)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcache.go:182 +0xbf fp=0x252f62100cd0 sp=0x252f62100c90 pc=0x6e697f
+runtime.(*mcache).nextFree(0x754500f932f8, 0xc)
+	/home/bunker-c686f0f2/tools/go/src/runtime/malloc.go:1006 +0x7e fp=0x252f62100d08 sp=0x252f62100cd0 pc=0x6dfb7e
+runtime.mallocgcSmallScanNoHeaderSC6(0x40, 0x2f54b90, 0x20?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/malloc_generated.go:838 +0x108 fp=0x252f62100d70 sp=0x252f62100d08 pc=0x6e24a8
+github.com/totalwindupflightsystems/musterflow/internal/app.NewRegistry(...)
+	/home/bunker-c686f0f2/qa-musterflow/internal/app/registry.go:46
+github.com/totalwindupflightsystems/musterflow/internal/mcp.df039Registry(0x252f622ad688)
+	/home/bunker-c686f0f2/qa-musterflow/internal/mcp/toolnames_test.go:104 +0x93 fp=0x252f62100e08 sp=0x252f62100d70 pc=0xe12733
+github.com/totalwindupflightsystems/musterflow/internal/mcp.TestRefresh_DisconnectKeepsRouting(0x252f622ad688)
+	/home/bunker-c686f0f2/qa-musterflow/internal/mcp/toolnames_test.go:282 +0x125 fp=0x252f62100f70 sp=0x252f62100e08 pc=0xe14a65
+testing.tRunner(0x252f622ad688, 0x2fb1bd8)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2195 +0xea fp=0x252f62100fc0 sp=0x252f62100f70 pc=0x7f41ea
+testing.(*T).Run.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2260 +0x1b fp=0x252f62100fe0 sp=0x252f62100fc0 pc=0x7f9fdb
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f62100fe8 sp=0x252f62100fe0 pc=0x7536a1
+created by testing.(*T).Run in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2260 +0x4d4
+
+goroutine 1 gp=0x252f6207e1e0 m=nil [chan receive]:
+runtime.gopark(0x754500f932f8?, 0x7544b8174160?, 0x60?, 0x41?, 0x6?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f6259f908 sp=0x252f6259f8e8 pc=0x74c5aa
+runtime.chanrecv(0x252f622cc480, 0x252f6259f9ef, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/chan.go:667 +0x4ae fp=0x252f6259f980 sp=0x252f6259f908 pc=0x6d884e
+runtime.chanrecv1(0x18?, 0x2f39f08?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/chan.go:509 +0x12 fp=0x252f6259f9a8 sp=0x252f6259f980 pc=0x6d8372
+testing.(*T).Run(0x252f62352488, {0x25a77c4?, 0x252f624dfaa0?}, 0x2fb1bd8)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2268 +0x4f2 fp=0x252f6259fa80 sp=0x252f6259f9a8 pc=0x7f4752
+testing.runTests.func1(0x252f62352488)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2744 +0x37 fp=0x252f6259fac0 sp=0x252f6259fa80 pc=0x7fa257
+testing.tRunner(0x252f62352488, 0x252f624dfbc8)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2195 +0xea fp=0x252f6259fb10 sp=0x252f6259fac0 pc=0x7f41ea
+testing.runTests({0x25b2046, 0x2e}, {0x25b94ac, 0x3b}, 0x252f6208d7b8, {0x33db320, 0x29, 0x29}, {0xc2b933b7c635807e, 0x8bb3a9ee8a, ...})
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2742 +0x510 fp=0x252f6259fbf8 sp=0x252f6259fb10 pc=0x7f67b0
+testing.(*M).Run(0x252f623952c0)
+	/home/bunker-c686f0f2/tools/go/src/testing/testing.go:2602 +0x6af fp=0x252f6259fe38 sp=0x252f6259fbf8 pc=0x7f536f
+main.main()
+	_testmain.go:128 +0x9b fp=0x252f6259feb8 sp=0x252f6259fe38 pc=0xe1c9bb
+runtime.main()
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:302 +0x427 fp=0x252f6259ffe0 sp=0x252f6259feb8 pc=0x712867
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6259ffe8 sp=0x252f6259ffe0 pc=0x7536a1
+
+goroutine 2 gp=0x252f6207ed20 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f620ecfa8 sp=0x252f620ecf88 pc=0x74c5aa
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.forcegchelper()
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:387 +0xb3 fp=0x252f620ecfe0 sp=0x252f620ecfa8 pc=0x712b33
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f620ecfe8 sp=0x252f620ecfe0 pc=0x7536a1
+created by runtime.init.7 in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:375 +0x1a
+
+goroutine 3 gp=0x252f6207f2c0 m=nil [GC sweep wait]:
+runtime.gopark(0x1?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f620ed788 sp=0x252f620ed768 pc=0x74c5aa
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.bgsweep(0x252f620fe000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgcsweep.go:324 +0x151 fp=0x252f620ed7c8 sp=0x252f620ed788 pc=0x6fb351
+runtime.gcenable.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:214 +0x17 fp=0x252f620ed7e0 sp=0x252f620ed7c8 pc=0x741c57
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f620ed7e8 sp=0x252f620ed7e0 pc=0x7536a1
+created by runtime.gcenable in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:214 +0x66
+
+goroutine 4 gp=0x252f6207f4a0 m=nil [GC scavenge wait]:
+runtime.gopark(0x10000?, 0x25d6978?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f620edf78 sp=0x252f620edf58 pc=0x74c5aa
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.(*scavengerState).park(0x344c240)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgcscavenge.go:425 +0x49 fp=0x252f620edfa8 sp=0x252f620edf78 pc=0x6f8e49
+runtime.bgscavenge(0x252f620fe000)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgcscavenge.go:658 +0x59 fp=0x252f620edfc8 sp=0x252f620edfa8 pc=0x6f93b9
+runtime.gcenable.gowrap2()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:215 +0x17 fp=0x252f620edfe0 sp=0x252f620edfc8 pc=0x741c17
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f620edfe8 sp=0x252f620edfe0 pc=0x7536a1
+created by runtime.gcenable in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:215 +0xa5
+
+goroutine 5 gp=0x252f6207fa40 m=nil [GOMAXPROCS updater (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f620ec788 sp=0x252f620ec768 pc=0x74c5aa
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.updateMaxProcsGoroutine()
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:7146 +0xe7 fp=0x252f620ec7e0 sp=0x252f620ec788 pc=0x720047
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f620ec7e8 sp=0x252f620ec7e0 pc=0x7536a1
+created by runtime.defaultGOMAXPROCSUpdateEnable in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:7134 +0x37
+
+goroutine 6 gp=0x252f621301e0 m=nil [finalizer wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f620ee620 sp=0x252f620ee600 pc=0x74c5aa
+runtime.runFinalizers()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mfinal.go:210 +0x107 fp=0x252f620ee7e0 sp=0x252f620ee620 pc=0x6ec3a7
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f620ee7e8 sp=0x252f620ee7e0 pc=0x7536a1
+created by runtime.createfing in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mfinal.go:172 +0x3d
+
+goroutine 7 gp=0x252f62130780 m=nil [cleanup wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f620eef68 sp=0x252f620eef48 pc=0x74c5aa
+runtime.goparkunlock(...)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:480
+runtime.(*cleanupQueue).dequeue(0x344c740)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcleanup.go:522 +0xd3 fp=0x252f620eefa0 sp=0x252f620eef68 pc=0x6e8953
+runtime.runCleanups()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcleanup.go:718 +0x45 fp=0x252f620eefe0 sp=0x252f620eefa0 pc=0x6e8fc5
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f620eefe8 sp=0x252f620eefe0 pc=0x7536a1
+created by runtime.(*cleanupQueue).createGs in goroutine 1
+	/home/bunker-c686f0f2/tools/go/src/runtime/mcleanup.go:672 +0xa5
+
+goroutine 40 gp=0x252f621310e0 m=nil [select]:
+runtime.gopark(0x252f620ef788?, 0x2?, 0xf0?, 0x7?, 0x252f620ef784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f620ef610 sp=0x252f620ef5f0 pc=0x74c5aa
+runtime.selectgo(0x252f620ef788, 0x252f620ef780, 0x252f620ef7b0?, 0x0, 0x252f62352d88?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x252f620ef750 sp=0x252f620ef610 pc=0x724dd7
+database/sql.(*DB).connectionOpener(0x252f6236fd40, {0x2fab6f8, 0x252f623b2730})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x252f620ef7b8 sp=0x252f620ef750 pc=0xc6d9c9
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x252f620ef7e0 sp=0x252f620ef7b8 pc=0xc72c3f
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f620ef7e8 sp=0x252f620ef7e0 pc=0x7536a1
+created by database/sql.OpenDB in goroutine 39
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 46 gp=0x252f621312c0 m=nil [select]:
+runtime.gopark(0x252f6248c788?, 0x2?, 0x2?, 0x0?, 0x252f6248c784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f6248c610 sp=0x252f6248c5f0 pc=0x74c5aa
+runtime.selectgo(0x252f6248c788, 0x252f6248c780, 0x252f6248c788?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x252f6248c750 sp=0x252f6248c610 pc=0x724dd7
+database/sql.(*DB).connectionOpener(0x252f623ce820, {0x2fab6f8, 0x252f623b27d0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x252f6248c7b8 sp=0x252f6248c750 pc=0xc6d9c9
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x252f6248c7e0 sp=0x252f6248c7b8 pc=0xc72c3f
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248c7e8 sp=0x252f6248c7e0 pc=0x7536a1
+created by database/sql.OpenDB in goroutine 45
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 55 gp=0x252f625423c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x4?, 0x252f623c98e0?, 0xb?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f6248df40 sp=0x252f6248df20 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f6248dfc8 sp=0x252f6248df40 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f6248dfe0 sp=0x252f6248dfc8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248dfe8 sp=0x252f6248dfe0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 56 gp=0x252f625425a0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f6248e740 sp=0x252f6248e720 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f6248e7c8 sp=0x252f6248e740 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f6248e7e0 sp=0x252f6248e7c8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248e7e8 sp=0x252f6248e7e0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 57 gp=0x252f62542780 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x252f6248f1c8?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f6248ef40 sp=0x252f6248ef20 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f6248efc8 sp=0x252f6248ef40 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f6248efe0 sp=0x252f6248efc8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248efe8 sp=0x252f6248efe0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 58 gp=0x252f62542960 m=nil [GC worker (idle)]:
+runtime.gopark(0x2?, 0x252f6239c430?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f6248f740 sp=0x252f6248f720 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f6248f7c8 sp=0x252f6248f740 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f6248f7e0 sp=0x252f6248f7c8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248f7e8 sp=0x252f6248f7e0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 59 gp=0x252f62542b40 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f6248ff40 sp=0x252f6248ff20 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f6248ffc8 sp=0x252f6248ff40 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f6248ffe0 sp=0x252f6248ffc8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248ffe8 sp=0x252f6248ffe0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 60 gp=0x252f62542d20 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188df752cf69?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f62488740 sp=0x252f62488720 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f624887c8 sp=0x252f62488740 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f624887e0 sp=0x252f624887c8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f624887e8 sp=0x252f624887e0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 61 gp=0x252f62542f00 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188df754358b?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f62488f40 sp=0x252f62488f20 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f62488fc8 sp=0x252f62488f40 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f62488fe0 sp=0x252f62488fc8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f62488fe8 sp=0x252f62488fe0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 62 gp=0x252f625430e0 m=nil [GC worker (idle)]:
+runtime.gopark(0x10188df752f7ff?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f62489740 sp=0x252f62489720 pc=0x74c5aa
+runtime.gcBgMarkWorker(0x252f621259d0)
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1807 +0xeb fp=0x252f624897c8 sp=0x252f62489740 pc=0x6ef7eb
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0x17 fp=0x252f624897e0 sp=0x252f624897c8 pc=0x742157
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f624897e8 sp=0x252f624897e0 pc=0x7536a1
+created by runtime.gcBgMarkStartWorkers in goroutine 54
+	/home/bunker-c686f0f2/tools/go/src/runtime/mgc.go:1711 +0xfc
+
+goroutine 145 gp=0x252f625e21e0 m=nil [runnable]:
+net/http/httptest.(*Server).goServe.func1()
+	/home/bunker-c686f0f2/tools/go/src/net/http/httptest/server.go:584 fp=0x252f6248a7e0 sp=0x252f6248a7d8 pc=0xe09980
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248a7e8 sp=0x252f6248a7e0 pc=0x7536a1
+created by net/http/httptest.(*Server).goServe in goroutine 144
+	/home/bunker-c686f0f2/tools/go/src/net/http/httptest/server.go:584 +0x92
+
+goroutine 146 gp=0x252f625e25a0 m=nil [runnable]:
+net/http/httptest.(*Server).goServe.func1()
+	/home/bunker-c686f0f2/tools/go/src/net/http/httptest/server.go:584 fp=0x252f6248afe0 sp=0x252f6248afd8 pc=0xe09980
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f6248afe8 sp=0x252f6248afe0 pc=0x7536a1
+created by net/http/httptest.(*Server).goServe in goroutine 144
+	/home/bunker-c686f0f2/tools/go/src/net/http/httptest/server.go:584 +0x92
+
+goroutine 27 gp=0x252f62404d20 m=nil [select]:
+runtime.gopark(0x252f621ec788?, 0x2?, 0xf0?, 0x7?, 0x252f621ec784?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f621ec610 sp=0x252f621ec5f0 pc=0x74c5aa
+runtime.selectgo(0x252f621ec788, 0x252f621ec780, 0x252f621ec7b0?, 0x0, 0x252f623526c8?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x252f621ec750 sp=0x252f621ec610 pc=0x724dd7
+database/sql.(*DB).connectionOpener(0x252f621896c0, {0x2fab6f8, 0x252f623b2140})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x252f621ec7b8 sp=0x252f621ec750 pc=0xc6d9c9
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x252f621ec7e0 sp=0x252f621ec7b8 pc=0xc72c3f
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f621ec7e8 sp=0x252f621ec7e0 pc=0x7536a1
+created by database/sql.OpenDB in goroutine 26
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+
+goroutine 33 gp=0x252f624050e0 m=nil [select]:
+runtime.gopark(0x252f621ecf88?, 0x2?, 0x2?, 0x0?, 0x252f621ecf84?)
+	/home/bunker-c686f0f2/tools/go/src/runtime/proc.go:474 +0xca fp=0x252f621ece10 sp=0x252f621ecdf0 pc=0x74c5aa
+runtime.selectgo(0x252f621ecf88, 0x252f621ecf80, 0x252f621ecf88?, 0x0, 0x0?, 0x1)
+	/home/bunker-c686f0f2/tools/go/src/runtime/select.go:351 +0xa97 fp=0x252f621ecf50 sp=0x252f621ece10 pc=0x724dd7
+database/sql.(*DB).connectionOpener(0x252f622a6340, {0x2fab6f8, 0x252f623b22d0})
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:1266 +0x89 fp=0x252f621ecfb8 sp=0x252f621ecf50 pc=0xc6d9c9
+database/sql.OpenDB.gowrap1()
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x1f fp=0x252f621ecfe0 sp=0x252f621ecfb8 pc=0xc72c3f
+runtime.goexit({})
+	/home/bunker-c686f0f2/tools/go/src/runtime/asm_amd64.s:1264 +0x1 fp=0x252f621ecfe8 sp=0x252f621ecfe0 pc=0x7536a1
+created by database/sql.OpenDB in goroutine 32
+	/home/bunker-c686f0f2/tools/go/src/database/sql/sql.go:846 +0x135
+FAIL	github.com/totalwindupflightsystems/musterflow/internal/mcp	0.497s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/specfix	0.039s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/wasm	1.733s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/workflow	1.273s
+FAIL

@@ -80,3 +80,11 @@
 - **Artifacts:** `docs/dogfood/2026-11-23-integration.md`, `docs/dogfood/diagnostics.md` (round-8 section), `.coding-hermes/evidence/2026-11-23-dogfood-r8/` (raw HTTP/MCP captures + probe backend script).
 - **Environment notes:** scratch HOME + `--data-dir` in `~/.hermes/cache/scratch/mf-dog-20261123`; dashboard :20981 bearer token (scratch-only throwaway). Real `~/.musterflow` untouched. One harness bug fixed in-flight (probe query parser crashed on empty query → product's 3× retry read as EOF before any product arm ran); disclosed in evidence INDEX.
 
+## 2026-11-23 — install-leg round-out (same tick, battery collected)
+
+- Tick: musterflow-dogfood-2026-11-23-14-15-27 (collector leg of the round-8 fire)
+- **Install verdict: RAN, not SKIPPED** — the round-6/7-era "no active server" state ended. bunker-qa.sh launch on bunker-mvp → agent c686f0f2, full battery completed and collected the same tick. Clean-machine grades: fresh-install OK (go build ./... after go 1.27.4 bootstrap), lint/go vet OK, tests OK, docker_build OK, chaos-corruption OK — at HEAD d49da36 (the parked tree the launcher synced, same commit the round-8 use-run drove).
+- **Not clean, attributed:** ci-pass FAIL = act dies pre-job on this host (preflight `act=no`; known bunker-mvp limitation, harness leg not product); compose_config FAIL = the repo's own fail-closed `${MUSTERFLOW_DASHBOARD_TOKEN:?}` meeting a token-less cell env (correct strictness, cell-env gap); docker-deploy + chaos-shutdown SKIPPED by the harness safety gate (controller is the live Hermes host); ui-probe + chaos-errorpath INFO = harness expectation artifacts (start ran under the battery's invocation shape); chaos-resource UNVERIFIED = ulimit cap killed the suite (cap artifact, not a repo verdict).
+- **DF-043:** blocker resolved by infra, evidence note added; boardctl refuses terminal status without a gitreins evidence-run-id (TR-251) and this battery is not a gitreins run — status left to the foreman deliberately.
+- **Evidence:** `.coding-hermes/evidence/qa-20261123T151132Z/` (28 persisted rows, EVIDENCE-SHA256=3c7db51cbb42dc1881e821ede22d70d4b3913de2aa0108491b50fbc267d04a54).
+

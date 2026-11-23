@@ -1,0 +1,12 @@
+ok  	github.com/totalwindupflightsystems/musterflow/cmd/musterflow	2.029s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/app	1.249s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/auth	0.169s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/catalog	0.066s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/cli	3.207s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/completion	0.062s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/config	0.095s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/dashboard	1.895s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/mcp	0.956s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/specfix	0.080s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/wasm	1.866s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/workflow	1.326s

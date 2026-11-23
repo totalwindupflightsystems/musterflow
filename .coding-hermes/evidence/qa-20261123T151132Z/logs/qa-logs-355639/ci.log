@@ -1,0 +1,28 @@
+QA-6 hygiene: removed stale agent-workspace venv (/home/bunker-c686f0f2/qa-musterflow/.venv) before act replay
+time="2026-11-23T14:58:46Z" level=info msg="Using docker host 'unix:///run/bunker/c686f0f2/docker.sock', and daemon socket 'unix:///run/bunker/c686f0f2/docker.sock'"
+[ci/ci] ⭐ Run Set up job
+[ci/ci] 🚀  Start image=catthehacker/ubuntu:act-latest
+[ci/ci]   🐳  docker pull image=catthehacker/ubuntu:act-latest platform= username= forcePull=true
+[ci/ci]   🐳  docker create image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[] network="host"
+[ci/ci]   🐳  docker run image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[] network="host"
+[ci/ci]   🐳  docker exec cmd=[node --no-warnings -e console.log(process.execPath)] user= workdir=
+[ci/ci]   ✅  Success - Set up job
+[ci/ci]   ☁  git clone 'https://github.com/actions/checkout' # ref=v4
+[ci/ci]   ☁  git clone 'https://github.com/actions/setup-go' # ref=v5
+[ci/ci]   ☁  git clone 'https://github.com/golangci/golangci-lint-action' # ref=v7
+[ci/ci] ⭐ Run Main Checkout musterflow
+[ci/ci]   🐳  docker cp src=/home/bunker-c686f0f2/qa-musterflow/. dst=/home/bunker-c686f0f2/qa-musterflow
+[ci/ci]   ✅  Success - Main Checkout musterflow [299.414788ms]
+[ci/ci] ⭐ Run Main Checkout muster engine
+[ci/ci]   🐳  docker cp src=/home/bunker-c686f0f2/.cache/act/actions-checkout@v4/ dst=/var/run/act/actions/actions-checkout@v4/
+[ci/ci]   🐳  docker exec cmd=[/opt/acttoolcache/node/24.22.3/x64/bin/node /var/run/act/actions/actions-checkout@v4/dist/index.js] user= workdir=
+[ci/ci]   ❗  ::error::Input required and not supplied: token
+[ci/ci]   ❌  Failure - Main Checkout muster engine [391.205069ms]
+[ci/ci] exitcode '1': failure
+[ci/ci] ⭐ Run Post Checkout muster engine
+[ci/ci]   🐳  docker exec cmd=[/opt/acttoolcache/node/24.22.3/x64/bin/node /var/run/act/actions/actions-checkout@v4/dist/index.js] user= workdir=
+[ci/ci]   ✅  Success - Post Checkout muster engine [142.929012ms]
+[ci/ci] ⭐ Run Complete job
+[ci/ci]   ✅  Success - Complete job
+[ci/ci] 🏁  Job failed
+Error: Job 'ci' failed

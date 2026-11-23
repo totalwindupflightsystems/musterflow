@@ -1,0 +1,13 @@
+NETWORK_CUT_APPLIED
+ok  	github.com/totalwindupflightsystems/musterflow/cmd/musterflow	0.025s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/app	1.291s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/auth	0.052s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/catalog	0.037s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/cli	3.145s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/completion	0.006s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/config	0.020s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/dashboard	1.297s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/mcp	1.231s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/specfix	0.046s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/wasm	1.865s
+ok  	github.com/totalwindupflightsystems/musterflow/internal/workflow	1.292s

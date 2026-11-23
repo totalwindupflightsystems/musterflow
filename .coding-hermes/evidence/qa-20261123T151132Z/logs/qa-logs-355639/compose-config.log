@@ -1,0 +1,1 @@
+error while interpolating services.musterflow.environment.MUSTERFLOW_DASHBOARD_TOKEN: required variable MUSTERFLOW_DASHBOARD_TOKEN is missing a value: set MUSTERFLOW_DASHBOARD_TOKEN to a bearer token before starting the container
