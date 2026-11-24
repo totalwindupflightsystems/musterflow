@@ -27,8 +27,8 @@ type Config struct {
 	// (PERF-001). Zero (unset) keeps engine behavior: no override, so the
 	// engine default (30 s per attempt, up to 3 attempts) applies and
 	// MUSTER_HTTP_TIMEOUT stays the operator override.
-	Timeout         int                   `yaml:"timeout,omitempty"`
-	Auth            map[string]AuthConfig `yaml:"auth,omitempty"`
+	Timeout int                   `yaml:"timeout,omitempty"`
+	Auth    map[string]AuthConfig `yaml:"auth,omitempty"`
 
 	// fileDashboardToken is the token as it exists in config.yaml, and
 	// dashboardTokenFromEnv records that the environment overrode it. Together
