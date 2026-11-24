@@ -203,6 +203,26 @@ the CLI uses to find a running dashboard, and metrics carry counters, not regist
 A missing or wrong token answers `401 {"error":"unauthorized"}` — no flow, definition or
 registry data is returned.
 
+**The CLI must present the token too.** Every CLI command that routes through the dashboard —
+`list`, `connect`, `disconnect`, `refresh`, the `flow`/`catalog`/`mcp` commands, and each
+generated API subcommand — must run with the same token: export the environment variable
+(`export MUSTERFLOW_DASHBOARD_TOKEN=…`) or set the config key (`musterflow config set
+dashboard_token …`) in the config the CLI itself loads. Without it the dashboard rejects the
+call, and instead of a misleading "unknown command" or an empty-registry fallback the CLI fails
+naming the cause (verified against a tokened dashboard):
+
+```bash
+export MUSTERFLOW_DASHBOARD_TOKEN="<the token the dashboard runs with>"
+musterflow --dashboard-addr 127.0.0.1:9876 list
+```
+
+With the token exported, `list` prints `Connected APIs (N)…` (exit 0); without it, the command
+exits 1 with:
+
+```
+Error: dashboard authentication failed (HTTP 401): the CLI must present the dashboard token — export MUSTERFLOW_DASHBOARD_TOKEN or set dashboard_token in the config, then retry
+```
+
 **Fail closed on exposure.** With no token configured the server refuses to start on a
 non-loopback address (`0.0.0.0`, `::`, a specific external IP) and tells you to set
 `dashboard_token` or bind loopback. On loopback it starts and prints

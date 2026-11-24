@@ -25,6 +25,22 @@ requires `Authorization: Bearer <token>` on `/api/*`, `/mcp` and `/hooks/*`; a r
 request answers `401 {"error":"unauthorized"}` with no registry or flow data. `/api/health`
 and `/metrics` stay open so probes keep working.
 
+**The CLI presents the same token.** CLI commands that route through the dashboard (`list`,
+`connect`, `refresh`, `flow`, and every generated API subcommand) must run with the token as
+well: `export MUSTERFLOW_DASHBOARD_TOKEN=…` or `musterflow config set dashboard_token …` in
+the config the CLI loads. Without it the dashboard rejects every routed call, and the CLI
+fails naming authentication and the token variable instead of masking the failure as an
+unknown command or dropping back to a (usually empty) local registry. Verified example —
+with the token exported the command lists the dashboard's connections, without it the command
+exits 1 with `Error: dashboard authentication failed (HTTP 401): the CLI must present the
+dashboard token — export MUSTERFLOW_DASHBOARD_TOKEN or set dashboard_token in the config,
+then retry`:
+
+```bash
+export MUSTERFLOW_DASHBOARD_TOKEN="<the token the dashboard runs with>"
+musterflow --dashboard-addr 127.0.0.1:9876 list
+```
+
 With no token configured the daemon starts on loopback and prints one line —
 `WARNING: dashboard auth disabled — set dashboard_token to require a bearer token` — but
 **refuses to start on a non-loopback address**, naming both remedies. That is the fail-closed

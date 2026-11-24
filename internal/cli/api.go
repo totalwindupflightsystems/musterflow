@@ -37,6 +37,9 @@ var apiCommandsMu sync.Mutex
 // (dashboard died between detection and command build) the function logs a
 // warning to stderr and falls back to registry.List(); if the registry is also
 // empty, no API commands are registered (matching the pre-existing behavior).
+// A dashboard AUTH rejection (HTTP 401/403, DF-052) is the exception: no
+// fallback runs and the rejection is recorded for ResolveExecutionError so
+// every failing invocation names authentication instead of the command tree.
 //
 // dataDir is where each connection's cached command plan lives (PERF-002).
 func loadAPISubcommands(root *cobra.Command, registry *app.Registry) {
@@ -44,6 +47,19 @@ func loadAPISubcommands(root *cobra.Command, registry *app.Registry) {
 	if dashboardBaseURL != "" {
 		fetched, err := fetchAPIsFromDashboard()
 		if err != nil {
+			if isDashboardAuthError(err) {
+				// DF-052: a tokened dashboard rejecting the CLI (HTTP
+				// 401/403) is not a transient fetch failure, so the local
+				// registry fallback must not run — in the routed mode that
+				// fallback is empty anyway (the dashboard holds the DuckDB
+				// lock) and every generated command would degrade into
+				// `unknown command "<api>"`, hiding the auth cause. The
+				// rejection is recorded (dashboardAuthError sets it), so
+				// main's ResolveExecutionError turns that unknown-command
+				// shape into the auth message, and listViaDashboard fails
+				// with the same text.
+				return
+			}
 			fmt.Fprintf(os.Stderr, "Warning: could not fetch APIs from dashboard (%s): %v; falling back to local registry\n", dashboardBaseURL, err)
 		} else {
 			conns = fetched
@@ -68,7 +84,7 @@ func fetchAPIsFromDashboard() ([]*app.APIConnection, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+		return nil, dashboardStatusError(resp.StatusCode)
 	}
 
 	var result struct {
