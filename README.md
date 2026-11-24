@@ -34,6 +34,15 @@ The `github.com/wojons/muster` engine is a published Go module, so the build pul
 ```bash
 git clone https://github.com/totalwindupflightsystems/musterflow.git
 cd musterflow
+make build          # canonical target; stamps --version with the HEAD commit
+./bin/musterflow --version
+```
+
+The Makefile wraps the go invocations: `build` (binary in `bin/musterflow`,
+version-stamped via ldflags), `test`, `vet`, `fmt`. A direct build works
+too — it just carries the default `0.1.0` version string:
+
+```bash
 go build -o musterflow ./cmd/musterflow/
 ```
 
