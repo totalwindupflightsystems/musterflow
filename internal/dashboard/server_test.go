@@ -470,3 +470,91 @@ func TestServer_CatalogSearch_UnclassifiedError_Stays500(t *testing.T) {
 		})
 	}
 }
+
+// --- REVIEW-MUSTERFLOW-20261121-API-CATCHALL: unmatched /api/* must answer a
+// JSON 404, not the dashboard HTML ---
+//
+// The "/" catch-all also covers /api/* paths, so previously any misspelled or
+// unknown API path returned the dashboard HTML with content-type text/html —
+// masking the 404 from API clients (scripts parsing the body got HTML, and
+// generic JSON clients could not distinguish "route missing" from a reply).
+// The fix registers a /api/ catch-all (and an exact /api) that always answers
+// the repo's standard JSON error shape.
+
+// TestServer_UnmatchedAPIPath_Json404 is the acceptance: any unmatched path
+// whose first segment is api returns 404 with application/json, and none of
+// them returns text/html. /api/apis/x/y/z is served by the existing /api/apis/
+// subtree handler, which already answered JSON — the assertion pins it so the
+// fix cannot leak it back to HTML either.
+func TestServer_UnmatchedAPIPath_Json404(t *testing.T) {
+	s, _, _ := df029NewServer(t)
+
+	tests := []struct {
+		name      string
+		path      string
+		wantError string // exact "error" field; "" = any JSON error value
+	}{
+		{name: "unknown api endpoint", path: "/api/nope", wantError: "not found"},
+		{name: "bare /api", path: "/api", wantError: "not found"},
+		{name: "deep path under known subtree", path: "/api/apis/x/y/z", wantError: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			rec := httptest.NewRecorder()
+			s.Handler().ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Errorf("%s: expected 404, got %d (body: %s)", tt.path, rec.Code, rec.Body.String())
+			}
+			ct := rec.Header().Get("Content-Type")
+			if strings.Contains(ct, "text/html") {
+				t.Errorf("%s: must not return the dashboard HTML, got content-type %q", tt.path, ct)
+			}
+			if !strings.Contains(ct, "application/json") {
+				t.Errorf("%s: expected application/json, got %q", tt.path, ct)
+			}
+			var body map[string]string
+			if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+				t.Errorf("%s: body is not JSON: %v (%q)", tt.path, err, rec.Body.String())
+				return
+			}
+			if tt.wantError != "" && body["error"] != tt.wantError {
+				t.Errorf("%s: expected stable error body {\"error\":%q}, got %v", tt.path, tt.wantError, body)
+			}
+		})
+	}
+}
+
+// TestServer_DashboardPaths_Unchanged pins the other arm: "/" and unknown
+// non-API paths still serve the dashboard HTML exactly as before.
+func TestServer_DashboardPaths_Unchanged(t *testing.T) {
+	s, _, _ := df029NewServer(t)
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{name: "root", path: "/"},
+		{name: "unknown non-api path", path: "/some/unknown/path"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			rec := httptest.NewRecorder()
+			s.Handler().ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("%s: expected 200, got %d", tt.path, rec.Code)
+			}
+			if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "text/html") {
+				t.Errorf("%s: expected text/html, got %q", tt.path, ct)
+			}
+			if !strings.Contains(rec.Body.String(), "<html") {
+				t.Errorf("%s: expected dashboard HTML body", tt.path)
+			}
+		})
+	}
+}
