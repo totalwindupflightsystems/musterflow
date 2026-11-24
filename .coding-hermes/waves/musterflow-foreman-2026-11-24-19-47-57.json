@@ -1,0 +1,48 @@
+{
+  "scheduler_tick_id": "musterflow-foreman-2026-11-24-19-47-57",
+  "project": "musterflow",
+  "composed_at": "2026-11-24T19:55:00Z",
+  "cos_ruling": "CHANGES applied: gate-arm 3 rows (audit 38->35 failing, 11 passing), DF-022+DF-044 blocked_reason synced to DEFERRED, all worktrees re-cut from origin/master c61bd90 (worktree.sh origin/main preference hit stale Oct-4 ref)",
+  "plan_review": "fresh COS ruling proc_31638acd08bc 2026-11-24T19:52Z; ruling text posted on goal card t_55821043",
+  "wave_budget": 3,
+  "workers_dispatched": 3,
+  "worker_model": "glm-5.3-flash",
+  "worker_provider": "ollama-cloud",
+  "base": "origin/master",
+  "base_sha": "c61bd90",
+  "workers": [
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261121-API-CATCHALL",
+      "priority": "P2",
+      "worktree": "/home/kara/worktrees/musterflow-REVIEW-MUSTERFLOW-20261121-API-CATCHALL",
+      "branch": "wt/REVIEW-MUSTERFLOW-20261121-API-CATCHALL",
+      "brief": "/tmp/mf-tick194757-brief-API-CATCHALL.md",
+      "surface": "internal/dashboard/server.go + server_test.go only"
+    },
+    {
+      "task_id": "DF-052",
+      "priority": "P2",
+      "worktree": "/home/kara/worktrees/musterflow-DF-052",
+      "branch": "wt/DF-052",
+      "brief": "/tmp/mf-tick194757-brief-DF-052.md",
+      "surface": "internal/cli/api.go + register.go + docs/integration-guide.md + docs/operations.md + tests"
+    },
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261121-BUILD-TARGET",
+      "priority": "P3",
+      "worktree": "/home/kara/worktrees/musterflow-REVIEW-MUSTERFLOW-20261121-BUILD-TARGET",
+      "branch": "wt/REVIEW-MUSTERFLOW-20261121-BUILD-TARGET",
+      "brief": "/tmp/mf-tick194757-brief-BUILD-TARGET.md",
+      "surface": "Makefile (new) + cmd/musterflow/main.go + README build section"
+    }
+  ],
+  "independence_notes": "dashboard server vs cli+docs vs build/tooling: disjoint file sets, no depends_on edges (verified from tasks.jsonl). FLOWERR-PATHLEAK held (dashboard overlap), DOC-11 held (docs overlap), INT-CI-204 owner-gated, MUSTERFLOW-OPS-003 host-routed.",
+  "not_dispatched_this_tick": {
+    "INT-CI-204": "owner-gated: repo Settings>Actions workflow permissions read->read+write or packages:write PAT; fresh probe 2026-11-24 default_workflow_permissions=read",
+    "MUSTERFLOW-OPS-003": "host-routed ops lane (backup producer mount guard)",
+    "DOC-11": "docs overlap with DF-052 dispatch; next tick",
+    "FLOWERR-PATHLEAK": "internal/dashboard overlap with API-CATCHALL; next tick",
+    "AC-AUDIT": "board-track criteria repair vehicle per COS reviewer notes; next tick board work"
+  },
+  "crash_attribution": "11-23 05:28 wave (DF-022 re-dispatch, API-CATCHALL, DOC-11): branches zero-ahead at d49da36, worktrees clean, no live procs — scheduler-restart strand (clause 8/15); rows re-dispatched from c61bd90; prior worktree evidence removed (branch -D after ANCESTOR-OK merge-base check)"
+}

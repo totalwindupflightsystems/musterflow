@@ -1,0 +1,54 @@
+{
+  "scheduler_tick_id": "musterflow-foreman-2026-11-23-05-28-41",
+  "project": "musterflow",
+  "composed_at": "2026-11-23T05:45:00Z",
+  "wave_budget": 3,
+  "workers_dispatched": 3,
+  "worker_model": "glm-5.3-flash",
+  "worker_provider": "zai-glm",
+  "base": "origin/master",
+  "base_sha": "d49da36",
+  "workers": [
+    {
+      "task_id": "DF-022",
+      "priority": "P2",
+      "complexity": 4,
+      "worktree": "/home/kara/worktrees/musterflow-DF-022",
+      "branch": "wt/DF-022",
+      "brief": "/tmp/mf-tick0528-brief-DF022.md",
+      "gitreins": "created+started",
+      "surface": "internal/cli/api.go (leaf flag hygiene), internal/cli tests"
+    },
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261121-API-CATCHALL",
+      "priority": "P2",
+      "complexity": 3,
+      "worktree": "/home/kara/worktrees/musterflow-REVIEW-MUSTERFLOW-20261121-API-CATCHALL",
+      "branch": "wt/REVIEW-MUSTERFLOW-20261121-API-CATCHALL",
+      "brief": "/tmp/mf-tick0528-brief-API-CATCHALL.md",
+      "gitreins": "created+started",
+      "surface": "internal/dashboard/server.go + internal/dashboard/server_test.go"
+    },
+    {
+      "task_id": "DOC-11",
+      "priority": "P2",
+      "complexity": 2,
+      "worktree": "/home/kara/worktrees/musterflow-DOC-11",
+      "branch": "wt/DOC-11",
+      "brief": "/tmp/mf-tick0528-brief-DOC11.md",
+      "gitreins": "created+started",
+      "surface": "README.md + docs/integration-guide.md (narrowed scope; auth: map already documented)"
+    }
+  ],
+  "independence_notes": "DF-022 touches internal/cli only; API-CATCHALL touches internal/dashboard only; DOC-11 touches README/docs only. Disjoint file sets. All three rows have empty/null depends_on (verified from tasks.jsonl).",
+  "not_dispatched_this_tick": {
+    "INT-CI-203": "docker workflow red root cause re-diagnosed: push step fails 'permission_denied: read_package' on the EXISTING ghcr.io/totalwindupflightsystems/musterflow package; workflow already uses GITHUB_TOKEN with packages:write (GH_PAT already removed). Residual fix = GHCR package->repo Actions link (owner-gated GitHub package settings; needs delete:packages or package admin). Evidence: job log run 45020077216. No dispatchable code fix.",
+    "INT-CI-003 + CI-ENGINE-001 + CI-004": "STALE: ci workflow is green on the last 3 master runs (45020077199, 45013455235, 44962625745). Closeout with evidence this tick.",
+    "DF-044 + PERF-001": "engine-repo rows (github.com/wojons/muster pkg/request per 2026-11-21 manifest); /home/kara/muster/pkg/request absent on disk; deferred, not musterflow-repo work",
+    "QA-MUSTERFLOW-1-R14 + 2-R14 + 3-R10": "host-routed (bunker-qa.sh lives in ~/.hermes/scripts, bunker registry is bunker-ops domain) per 2026-11-20 wave precedent",
+    "MUSTERFLOW-OPS-003": "host-routed backup-producer mount guard; ops lane product",
+    "E2E-001": "recurring battery ran 2026-11-22T11:45Z (33/33 at 641cc7d); ~3 of 5-10 tick window elapsed; not due",
+    "DOC-11 narrowed": "auth: map documentation already landed (README L259+, guide L767+); brief covers only --no-dashboard escape hatch, port auto-discovery range [port, port+9] (config.go:206), config show auth behavior verification"
+  },
+  "foreman_verification": "per-merge: gofmt -l, go build ./..., go vet ./..., go test ./... -count=1 on merged master, push origin master (remote switched to SSH this tick - workflow-scope push block from INFRA-GH-002 bypassed); DOC-11 live-verified against built binary by the worker"
+}
