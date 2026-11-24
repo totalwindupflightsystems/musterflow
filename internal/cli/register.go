@@ -48,11 +48,7 @@ func connectViaDashboard(specURL, baseURL, nameInput, authType string) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
-		msg := errResult.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("connect via dashboard: %s", msg)
+		return dashboardActionError("connect via dashboard", resp.StatusCode, errResult.Error)
 	}
 
 	var result struct {
@@ -96,11 +92,7 @@ func disconnectViaDashboard(apiID string) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&result)
-		msg := result.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("disconnect via dashboard: %s", msg)
+		return dashboardActionError("disconnect via dashboard", resp.StatusCode, result.Error)
 	}
 
 	fmt.Printf("✓ Disconnected: %s\n", apiID)
@@ -117,7 +109,7 @@ func listViaDashboard() error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+		return dashboardStatusError(resp.StatusCode)
 	}
 
 	var result struct {
@@ -162,10 +154,15 @@ func catalogSearchViaDashboard(query string) ([]catalog.CatalogEntry, error) {
 		// through verbatim — e.g. "catalog backend not available (HTTP 404):
 		// repo … absent or private", which is also the local-mode text).
 		// Same decode-and-relay shape as refreshViaDashboard/connectViaDashboard.
+		// A dashboard auth rejection (401/403, DF-052) is the exception: the
+		// relayed body is attached to the auth message instead of replacing it.
 		var errResult struct {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
+		if isDashboardAuthStatus(resp.StatusCode) {
+			return nil, dashboardAuthError(resp.StatusCode, errResult.Error)
+		}
 		if errResult.Error != "" {
 			return nil, errors.New(errResult.Error)
 		}
@@ -197,11 +194,7 @@ func refreshViaDashboard(apiID string) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
-		msg := errResult.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("refresh via dashboard: %s", msg)
+		return dashboardActionError("refresh via dashboard", resp.StatusCode, errResult.Error)
 	}
 
 	var result struct {
@@ -243,11 +236,7 @@ func pushViaDashboard(apiID string) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errBody)
-		msg := errBody.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("get api via dashboard: %s", msg)
+		return dashboardActionError("get api via dashboard", resp.StatusCode, errBody.Error)
 	}
 
 	var conn app.APIConnection
@@ -307,11 +296,7 @@ func pullViaDashboard(cmd *cobra.Command, apiID string) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
-		msg := errResult.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("pull via dashboard: %s", msg)
+		return dashboardActionError("pull via dashboard", resp.StatusCode, errResult.Error)
 	}
 
 	var result struct {
@@ -340,7 +325,7 @@ func flowListViaDashboard() error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+		return dashboardStatusError(resp.StatusCode)
 	}
 
 	var result struct {
@@ -402,11 +387,7 @@ func flowCreateViaDashboard(name, source, description string, webhook bool) erro
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
-		msg := errResult.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("create flow via dashboard: %s", msg)
+		return dashboardActionError("create flow via dashboard", resp.StatusCode, errResult.Error)
 	}
 
 	var result struct {
@@ -465,11 +446,7 @@ func flowRunViaDashboard(name string, payload map[string]interface{}) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
-		msg := errResult.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("run flow via dashboard: %s", msg)
+		return dashboardActionError("run flow via dashboard", resp.StatusCode, errResult.Error)
 	}
 
 	var result struct {
@@ -497,7 +474,7 @@ func mcpViaDashboard() error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("dashboard returned HTTP %d", resp.StatusCode)
+		return dashboardStatusError(resp.StatusCode)
 	}
 
 	var result struct {
@@ -551,11 +528,7 @@ func exportViaDashboard(path string) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errBody)
-		msg := errBody.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("export via dashboard: %s", msg)
+		return dashboardActionError("export via dashboard", resp.StatusCode, errBody.Error)
 	}
 
 	f, err := os.Create(path)
@@ -602,11 +575,7 @@ func importViaDashboard(path string) error {
 			Error string `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&errResult)
-		msg := errResult.Error
-		if msg == "" {
-			msg = fmt.Sprintf("dashboard returned HTTP %d", resp.StatusCode)
-		}
-		return fmt.Errorf("import via dashboard: %s", msg)
+		return dashboardActionError("import via dashboard", resp.StatusCode, errResult.Error)
 	}
 
 	var result struct {

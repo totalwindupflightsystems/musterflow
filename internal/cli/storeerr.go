@@ -74,18 +74,23 @@ func lockConflictError(lock *app.StoreLock) error {
 	return errors.New(b.String())
 }
 
-// ResolveExecutionError replaces cobra's "unknown command" error with the
-// store error when the registry is unusable. With no registry the per-API
-// subcommands are never registered, so every generated command collapses into
-// `unknown command "<api>" for "musterflow"` — the symptom, not the cause
-// (DF-045). Unknown subcommands of real commands (e.g. `config bogus`) are
-// left alone: they are not registry-dependent.
+// ResolveExecutionError replaces cobra's "unknown command" error with the real
+// cause when a recorded failure explains why the command could not exist. The
+// registry-open failure (DF-045, storeOpenErr) and the dashboard authentication
+// rejection (DF-052, dashboardAuthErr) both prevent the per-API subcommands
+// from being registered, so every generated command collapses into
+// `unknown command "<api>" for "musterflow"` — the symptom, not the cause.
+// Unknown subcommands of real commands (e.g. `config bogus`) are left alone:
+// they are not registry-dependent.
 func ResolveExecutionError(execErr error) error {
-	if execErr == nil || storeOpenErr == nil {
+	if execErr == nil {
 		return execErr
 	}
 	msg := execErr.Error()
 	if strings.HasPrefix(msg, "unknown command ") && strings.Contains(msg, `for "musterflow"`) {
+		if authErr := DashboardAuthError(); authErr != nil {
+			return authErr
+		}
 		if err := StoreUnavailable(); err != nil {
 			return err
 		}
