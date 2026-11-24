@@ -124,7 +124,22 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/mcp", s.requireAuth(s.handleMCP))
 	s.mux.HandleFunc("/hooks/", s.requireAuth(s.handleWebhook))
 	s.mux.HandleFunc("/metrics", s.metrics.HandleMetrics)
+	// REVIEW-MUSTERFLOW-20261121-API-CATCHALL: any unmatched /api/* path must
+	// answer a stable JSON 404 instead of falling through to the "/" catch-all
+	// and serving dashboard HTML to API clients. The "/api" exact pattern also
+	// lands here so a bare /api gets the JSON 404 (without it, ServeMux would
+	// redirect /api to /api/). More specific registrations above (e.g.
+	// /api/health, /api/apis/) always win over these subtree patterns.
+	s.mux.HandleFunc("/api", s.handleAPINotFound)
+	s.mux.HandleFunc("/api/", s.handleAPINotFound)
 	s.mux.HandleFunc("/", serveIndex)
+}
+
+// handleAPINotFound answers requests to /api paths that match no registered
+// API route with the same JSON error shape the other handlers use
+// ({"error": "..."} via writeJSON), never the dashboard HTML.
+func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
 }
 
 // baseURL is the address the dashboard's own flows call back on (webhook URLs,
