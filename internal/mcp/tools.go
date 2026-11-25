@@ -350,7 +350,7 @@ func (tr *ToolRegistry) Execute(ctx context.Context, name string, args map[strin
 		return nil, fmt.Errorf("tool %q not found", name)
 	}
 
-	result, err := musterMcp.ExecuteHTTP(config.BaseURL, config.Method, config.Path, args)
+	result, err := executeHTTPUnderRetryPin(config, args)
 	if err != nil {
 		return nil, err
 	}

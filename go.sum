@@ -115,8 +115,8 @@ github.com/tetratelabs/wazero v1.12.0 h1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZ
 github.com/tetratelabs/wazero v1.12.0/go.mod h1:LvKtzl2RqO4gyF27BiXU+nKAjcV8f38U+kP/q2vgxh0=
 github.com/twpayne/go-geom v1.7.0 h1:zMHTHNlenoHAc2ZSiHFh7SMoG0Wdw8gF0orBnrBhfjE=
 github.com/twpayne/go-geom v1.7.0/go.mod h1:y9Q2YcKKaC2PHXwtRvwEunOPx5Oa+U8aAxPmFvscROk=
-github.com/wojons/muster v0.1.2-0.20261117020333-c64dc501ec58 h1:xZBJytitRkr/vi+SZR2hp0Gt2AMQsUawcBpAp96rciY=
-github.com/wojons/muster v0.1.2-0.20261117020333-c64dc501ec58/go.mod h1:O8bAXsn6vtTREG7sBQxFlG95vPjouYzSk6aPZ20hRWY=
+github.com/wojons/muster v0.1.2-0.20261125025543-20f6287d4465 h1:tGAiIlWCNKa9ODBr2ZFbZM9tPwmEWAApr8jxBsV57pQ=
+github.com/wojons/muster v0.1.2-0.20261125025543-20f6287d4465/go.mod h1:m8hdfzq3hhCpSeN28UCm/2l4CY/m7BxYA8Snsa1BMlI=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb h1:zGWFAtiMcyryUHoUjUJX0/lt1H2+i2Ka2n+D3DImSNo=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=

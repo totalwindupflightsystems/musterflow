@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/wojons/muster/pkg/response"
 
 	"github.com/totalwindupflightsystems/musterflow/internal/auth"
+	"github.com/totalwindupflightsystems/musterflow/internal/retrypin"
 )
 
 // ExecuteOptions configures an API call from CLI flags.
@@ -38,8 +40,15 @@ type ExecuteOptions struct {
 	// today's engine behavior (30 s per attempt, up to 3 attempts).
 	TimeoutSeconds int
 	// Auto-resolved auth
-	AuthManager *auth.Manager // auth manager for auto-resolving credentials
+	AuthManager *auth.Manager // auth manager for auto-resolved credentials
 	APIID       string        // API ID for credential lookup
+	// Retries resolves the retry policy for this call (DF-044): nil = not
+	// set — writes (POST/PATCH) send exactly one request and idempotent
+	// methods keep the engine's default attempt ceiling; 0 hard-disables
+	// retries for every method; N >= 2 is the explicit opt-in that lets
+	// writes replay (which may duplicate a write on a backend that
+	// commits-then-errors). See internal/retrypin.
+	Retries *int
 }
 
 // BuildRequest constructs an *http.Request from ExecuteOptions and cobra command flags.
@@ -126,7 +135,7 @@ func ExecuteAndFormat(cmd *cobra.Command, builder *request.Builder, opts Execute
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(opts.TimeoutSeconds)*time.Second)
 		defer cancel()
 	}
-	resp, err := builder.Execute(ctx)
+	resp, err := executeUnderRetryPin(builder, opts, ctx)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return interruptedError()
@@ -334,6 +343,33 @@ var applyBuilderTimeout = func(b *request.Builder, secs int) {
 // interruptedError names an abort caused by SIGINT/SIGTERM.
 func interruptedError() error {
 	return fmt.Errorf("canceled: interrupted by SIGINT before the upstream answered")
+}
+
+// executeUnderRetryPin sends the request with the DF-044 retry pin applied:
+// internal/retrypin holds MUSTER_MAX_RETRIES around builder.Execute (the
+// engine resolves the attempt ceiling from the environment per call) so that
+// POST/PATCH default to exactly one attempt and --retries drives everything
+// else. The variable is restored before this returns. The method comes from
+// the options when set; callers that carry it only on the builder (the
+// historical ExecuteAndFormat contract) fall back to builder.Method.
+func executeUnderRetryPin(builder *request.Builder, opts ExecuteOptions, ctx context.Context) (*http.Response, error) {
+	retries := retrypin.NotSet
+	if opts.Retries != nil {
+		retries = *opts.Retries
+	}
+	method := opts.Method
+	if method == "" {
+		method = builder.Method
+	}
+	var resp *http.Response
+	var err error
+	if pinErr := retrypin.Around(method, retries, func() error {
+		resp, err = builder.Execute(ctx)
+		return err
+	}); pinErr != nil && err == nil {
+		return nil, pinErr
+	}
+	return resp, err
 }
 
 // timedOutError names a config-timeout exhaustion on a stalled upstream.

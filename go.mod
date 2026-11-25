@@ -7,7 +7,7 @@ require (
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/parquet-go/parquet-go v0.32.1
 	github.com/spf13/cobra v1.10.2
-	github.com/wojons/muster v0.1.2-0.20261117020333-c64dc501ec58
+	github.com/wojons/muster v0.1.2-0.20261125025543-20f6287d4465
 	go.starlark.net v0.0.0-20261021141710-4f4267fb140d
 	golang.org/x/term v0.48.0
 	gopkg.in/yaml.v3 v3.0.1

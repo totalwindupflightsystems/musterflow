@@ -161,6 +161,40 @@ Example — one object defines the entire body:
 musterflow swagger-petstore-openapi-3-0 pet add-pet -b '{"name":"rex","id":7}'
 ```
 
+### Retry Policy (`--retries`)
+
+Every generated operation command sends its request through the engine's
+retry-aware client, whose attempt ceiling is set by the `MUSTER_MAX_RETRIES`
+variable (default: 3 attempts — the first try plus up to two retries on
+429/500/502/503/504, or transport errors). Since DF-044 the two request
+families do not share that default:
+
+- **Writes (POST, PATCH) send exactly one request.** A retry can only replay
+  the same write, and a backend that applies the write and then answers 5xx
+  (the commit-then-fail shape behind the duplicate rows in the
+  2026-11-16 dogfood report) would produce duplicate rows. The engine's own
+  MF-044 note says it plainly: "a generated write that must not duplicate
+  needs MUSTER_MAX_RETRIES=0" — musterflow now holds that around every write
+  sent on your behalf (CLI operation commands and MCP tool calls).
+- **Reads (GET/HEAD/OPTIONS/TRACE/DELETE/PUT) keep the engine default**: up
+  to 3 attempts on transient failures. Replaying an idempotent method cannot
+  duplicate anything.
+
+`--retries N` (a root-level flag, accepted on any operation command) changes
+this per call:
+
+| Value | Effect |
+|-------|--------|
+| *(absent)* | Default policy — reads retry, writes send one request |
+| `0` | Hard-disable: exactly one attempt for every method |
+| `1` | Exactly one attempt for every method (not an opt-in to write replay) |
+| `N >= 2` | Read attempts ceiling N, **and explicitly unlocks POST/PATCH replay** |
+
+`--retries N >= 2` on a write is the documented opt-in: if the backend
+applies the write and then errors, the same write is sent again and may
+duplicate rows. Only pass it upstream of a server whose writes are
+deduplicated or idempotent.
+
 ---
 
 ## Dashboard HTTP API
@@ -772,7 +806,7 @@ auto_completion: true
 # dashboard_token: <32-byte hex>
 ```
 
-`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path. `dashboard_token` is settable with `musterflow config set dashboard_token <value>` (masked in `config show`, and the `set` confirmation prints it masked) or injected with `MUSTERFLOW_DASHBOARD_TOKEN`, which wins over the file. `timeout` is a positive integer of seconds (`musterflow config set timeout 5`, rejected for `0`, negatives and non-numbers) and caps ONE generated CLI API call end to end: a stalled upstream — a peer that accepts TCP but never answers — is aborted within that window instead of hanging for the unconfigured engine default of 3 × 30 s. When the key is set, musterflow also translates it into `MUSTER_HTTP_TIMEOUT` (per-attempt cap) unless that variable was already exported by the operator, whose value keeps precedence.
+`data_dir` is written as a resolved absolute path with no trailing slash; a `~` you set yourself is not expanded, so always pass an absolute path. `dashboard_token` is settable with `musterflow config set dashboard_token <value>` (masked in `config show`, and the `set` confirmation prints it masked) or injected with `MUSTERFLOW_DASHBOARD_TOKEN`, which wins over the file. `timeout` is a positive integer of seconds (`musterflow config set timeout 5`, rejected for `0`, negatives and non-numbers) and caps ONE generated CLI API call end to end: a stalled upstream — a peer that accepts TCP but never answers — is aborted within that window instead of hanging for the unconfigured engine default of 3 × 30 s. When the key is set, musterflow also translates it into `MUSTER_HTTP_TIMEOUT` (per-attempt cap) unless that variable was already exported by the operator, whose value keeps precedence. The `MUSTER_MAX_RETRIES` variable still sets the attempt ceiling for idempotent reads, but DF-044 pins writes (POST/PATCH) to a single attempt regardless of it — see [Retry Policy (`--retries`)](#retry-policy---retries).
 
 **Data directory** (`~/.musterflow/` by default, overridable with `--data-dir`):
 

@@ -410,15 +410,29 @@ func executeLeaf(target *cobra.Command, remaining []string) error {
 	// the parent's RunE to root's ExecuteContext).
 	target.SilenceUsage = true
 	target.SilenceErrors = true
+	// Pre-parse the leaf arguments so the inherited --retries flag is readable
+	// before the DF-044 pin decision runs: the engine resolves the attempt
+	// ceiling from MUSTER_MAX_RETRIES inside the HTTP call, which happens
+	// before target.Execute's own flag parsing. Errors are ignored here — the
+	// real parse (and its error reporting) is target.Execute's, and the
+	// interception path may re-parse its own rewritten args.
+	target.SetArgs(remaining)
+	_ = target.ParseFlags(remaining)
 	if stop := armOperationWatchdog(target); stop != nil {
 		defer stop()
 	}
-	intercepted, err := interceptOutput(target, remaining)
-	if intercepted {
-		return err
-	}
-	target.SetArgs(remaining)
-	return target.Execute()
+	// DF-044: run the leaf under the write-retry pin — the engine reads
+	// MUSTER_MAX_RETRIES per request and replays POST/PATCH whenever the
+	// ceiling is above one attempt, so the pin (which honors the inherited
+	// --retries opt-in) wraps both interception paths and the direct run.
+	return executeLeafUnderRetryPin(target, func() error {
+		intercepted, err := interceptOutput(target, remaining)
+		if intercepted {
+			return err
+		}
+		target.SetArgs(remaining)
+		return target.Execute()
+	})
 }
 
 // rebuildPlan re-reads and re-parses the connection's source spec, under the

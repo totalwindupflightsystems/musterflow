@@ -94,6 +94,10 @@ musterflow swagger-petstore-openapi-3-0 pet add-pet --title ignored -b '{"name":
 
 Details: [Raw Request Bodies (`--body`)](docs/integration-guide.md#raw-request-bodies---body).
 
+**Retry policy (DF-044):** writes (POST/PATCH) send exactly one request by default and reads (GET/…) keep the engine's 3-attempt retry on transient failures. `--retries 0` hard-disables retries for every method, and `--retries N >= 2` explicitly unlocks POST/PATCH replay (which may duplicate a write on a backend that commits-then-errors).
+
+Details: [Retry Policy (`--retries`)](docs/integration-guide.md#retry-policy---retries).
+
 ### 🤖 MCP Server — AI Agent Integration
 
 Every connected API is registered as an MCP tool served over HTTP. AI agents discover and call them via JSON-RPC:

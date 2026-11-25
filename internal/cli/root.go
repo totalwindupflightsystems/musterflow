@@ -24,6 +24,7 @@ import (
 	"github.com/totalwindupflightsystems/musterflow/internal/auth"
 	"github.com/totalwindupflightsystems/musterflow/internal/catalog"
 	"github.com/totalwindupflightsystems/musterflow/internal/config"
+	"github.com/totalwindupflightsystems/musterflow/internal/retrypin"
 	"github.com/totalwindupflightsystems/musterflow/internal/workflow"
 )
 
@@ -126,6 +127,7 @@ Workflow:   musterflow flow create`,
 	root.AddCommand(newTransformCommand())
 
 	root.PersistentFlags().StringVar(&outputFlag, "output-file", "", "Output file path (format auto-detected from extension)")
+	root.PersistentFlags().Int(retriesFlagName, retrypin.NotSet, retriesFlagUsage)
 
 	loadAPISubcommands(root, registry)
 
