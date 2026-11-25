@@ -15,7 +15,10 @@ package workflow
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,7 +125,11 @@ func (e *Engine) List() ([]Flow, error) {
 
 	entries, err := os.ReadDir(e.dir)
 	if err != nil {
-		return nil, fmt.Errorf("read flows dir: %w", err)
+		// FLOWERR-PATHLEAK: do not echo the raw ReadDir error (its text
+		// carries the absolute flows directory). Log it, return a stable
+		// path-free message (GET /api/flows serializes this at 500).
+		log.Printf("list flows: %v", err)
+		return nil, fmt.Errorf("list flows: flows directory is not readable")
 	}
 
 	var flows []Flow
@@ -166,7 +173,21 @@ func (e *Engine) Run(name string, triggerPayload map[string]interface{}) (string
 	flowPath := filepath.Join(e.dir, name+".star")
 	source, err := os.ReadFile(flowPath)
 	if err != nil {
-		return "", fmt.Errorf("read flow %s: %w", name, err)
+		// REVIEW-MUSTERFLOW-20261121-FLOWERR-PATHLEAK: the raw *fs.PathError
+		// embeds the absolute data-dir path (flowPath), which the dashboard
+		// handlers serialize verbatim to clients. Return stable, path-free
+		// errors so no response body can disclose where flows live on disk.
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			return "", fmt.Errorf("flow %q not found", name)
+		case errors.Is(err, os.ErrPermission):
+			return "", fmt.Errorf("flow %q unreadable (permission denied)", name)
+		default:
+			// Unexpected IO error: do not %w the raw PathError (its text
+			// carries the absolute path). Log it internally instead.
+			log.Printf("flow %q read failed: %v", name, err)
+			return "", fmt.Errorf("flow %q could not be read", name)
+		}
 	}
 
 	interp := dsl.NewInterpreter(nil)
