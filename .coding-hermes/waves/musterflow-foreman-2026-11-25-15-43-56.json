@@ -1,0 +1,28 @@
+{
+  "scheduler_tick_id": "musterflow-foreman-2026-11-25-15-43-56",
+  "project": "musterflow",
+  "composed_at": "2026-11-25T15:55:00Z",
+  "wave_budget": 3,
+  "workers_dispatched": 1,
+  "foreman_direct_rows": [
+    {
+      "task_id": "WT-BASE-20261124",
+      "why": "trivial one-file fix (foreman-direct exception): default_base() in ~/.hermes/scripts/worktree.sh now resolves origin/HEAD symbolic-ref first, then origin/master; bash -n exit 0 (GATE ARM); live repo test + synthetic both-refs fixture both resolve origin/master; AC2 evidence pre-recorded in manifest musterflow-foreman-2026-11-24-19-47-57 (worktrees re-cut from origin/master c61bd90)",
+      "note": "script lives in ~/.hermes/scripts (not a git repo) — fix cannot be a musterflow commit; row closes on the tick's board commit"
+    }
+  ],
+  "worker_model": "glm-5.3-flash",
+  "worker_provider": "ollama-cloud",
+  "workers": [
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261111",
+      "priority": "P4",
+      "worktree": "/home/kara/worktrees/musterflow-REVIEW-MUSTERFLOW-20261111",
+      "branch": "wt/REVIEW-MUSTERFLOW-20261111",
+      "base": "origin/master",
+      "base_sha": "afab6d0",
+      "brief": "/tmp/mf-tick251543-brief-REVIEW-MUSTERFLOW-20261111.md"
+    }
+  ],
+  "independence_notes": "REVIEW-MUSTERFLOW-20261111 (review reconciliation + live verification) and WT-BASE-20261124 (worktree.sh fix, foreman-direct) touch disjoint surfaces; no depends_on edges either side (verified from tasks.jsonl both rows show empty depends_on)."
+}
