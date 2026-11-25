@@ -1,0 +1,25 @@
+{
+  "tick": "musterflow-foreman-2026-11-25-07-22-17",
+  "wave_budget": 3,
+  "wave_size": 1,
+  "wave_kind": "serial-of-one",
+  "reasoning": "Only ONE ready row (REVIEW-MUSTERFLOW-20261121-FLOWERR-PATHLEAK) is genuinely worker-dispatchable repo code: INT-CI-204 premise reconciled stale (residual = GHCR owner action); MUSTERFLOW-OPS-003 is host infra (foreman-direct); AC-AUDIT is verification (foreman-direct); WT-BASE-20261124 is cross-project fleet tooling; E2E-001/NEVER-DONE are process rows now routed. Foreman lane rule caps at one worker per tick. Manifest written at closeout time (honest disclosure: it was not written before dispatch).",
+  "workers": [
+    {
+      "task_id": "REVIEW-MUSTERFLOW-20261121-FLOWERR-PATHLEAK",
+      "worktree": "/home/kara/worktrees/musterflow-FLOWERR-PATHLEAK",
+      "branch": "wt/FLOWERR-PATHLEAK",
+      "base_sha_recorded_by_worktree.sh": "1bbcf7a (origin/main)",
+      "base_hazard": "WT-BASE-20261124 LIVE: origin/main resolved first and is 188 commits behind origin/master; foreman re-based the branch to 886edc0 (origin/master tip) BEFORE dispatch",
+      "model": "glm-5.3-flash",
+      "provider": "ollama-cloud",
+      "worker_commit": "afb90cf",
+      "merge_commit": "486114d"
+    }
+  ],
+  "foreman_direct": [
+    "MUSTERFLOW-OPS-003 (host systemd + docs commit 69f5f5b)",
+    "REVIEW-MUSTERFLOW-20261121-AC-AUDIT (verification census; E2E-001 + NEVER-DONE routed)",
+    "INT-CI-204 (premise reconciliation, owner-gated defer)"
+  ]
+}
