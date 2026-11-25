@@ -221,6 +221,13 @@ one-off/on-demand path, not the only path:
   systemctl --user start musterflow-backup.service    # run one out of band
   journalctl --user -u musterflow-backup.service -n 20
   ```
+- **Mount guard (fail closed):** `$HOME/backups` is a symlink into the USB archive disk
+  mounted at `/mnt/bulk`, which mounts with `nofail`. If that disk is absent the producer no
+  longer silently archives `~/.musterflow` onto the root filesystem: `musterflow-backup.sh`
+  resolves the destination and refuses to write (exit 1) unless the resolved path sits on a
+  filesystem other than `/`'s, and `musterflow-backup.service` additionally declares
+  `RequiresMountsFor=/mnt/bulk`. A guard-triggered run prints an ABORT line naming the
+  unmounted archive root `/mnt/bulk` and never creates an archive.
 - **Contents:** each archive is the whole `~/.musterflow` tree, including `musterflow.db`
   *and* its uncheckpointed `musterflow.db.wal`, so the DB restores consistently rather than
   as a `-wal`-less snapshot.
