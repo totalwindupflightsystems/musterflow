@@ -301,6 +301,56 @@ func TestRun_NonexistentFlow(t *testing.T) {
 	if !strings.Contains(err.Error(), "nonexistent") {
 		t.Errorf("error = %v, want mention of nonexistent", err)
 	}
+
+	// FLOWERR-PATHLEAK: the error must not disclose the absolute data-dir
+	// path (the old *fs.PathError wrapped it verbatim and dashboard
+	// handlers serialized it to clients).
+	if strings.Contains(err.Error(), dir) {
+		t.Errorf("error leaks data dir %q: %v", dir, err)
+	}
+	if strings.Contains(err.Error(), "/tmp") || strings.Contains(err.Error(), "/home") {
+		t.Errorf("error leaks an absolute path: %v", err)
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error = %v, want stable 'not found' wording", err)
+	}
+}
+
+// TestRun_UnreadableFlow covers permission-denied: the error must name the
+// flow without echoing the absolute data-dir path.
+func TestRun_UnreadableFlow(t *testing.T) {
+	dir := t.TempDir()
+	name := "secret-flow"
+	path := filepath.Join(dir, name+".star")
+	if err := os.WriteFile(path, []byte("print('x')"), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.Chmod(path, 0o000); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) }) // allow TempDir cleanup
+
+	// Running as root bypasses file permissions; skip rather than assert
+	// against an OS that ignores the mode bits.
+	if os.Getuid() == 0 {
+		t.Skip("running as root: permission errors are not reproducible")
+	}
+
+	e := NewEngine(dir, "http://localhost:9876")
+	_, err := e.Run(name, nil)
+	if err == nil {
+		t.Fatal("expected error for unreadable flow")
+	}
+	if !strings.Contains(err.Error(), name) {
+		t.Errorf("error = %v, want mention of %q", err, name)
+	}
+	if strings.Contains(err.Error(), dir) ||
+		strings.Contains(err.Error(), "/tmp") || strings.Contains(err.Error(), "/home") {
+		t.Errorf("error leaks an absolute path: %v", err)
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Errorf("error = %v, want 'permission denied' wording", err)
+	}
 }
 
 func TestRun_WithTriggerPayload(t *testing.T) {

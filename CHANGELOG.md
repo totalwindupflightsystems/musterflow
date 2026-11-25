@@ -19,6 +19,7 @@ All notable changes to MusterFlow will be documented in this file.
 
 ### Fixed
 - DuckDB lock conflict between CLI and dashboard (TASK-026)
+- Dashboard no longer discloses the server's absolute flows directory in flow-not-found / unreadable errors (`POST /api/flows/<name>/run`, `POST /hooks/<name>`): missing and permission-denied flows now return stable, path-free messages while keeping the existing `{"error": ...}` body and 404 status
 - CLI-dashboard routing for all 17 subcommands
 - MCP routing and completion prompt blocking
 - `start` now matches the documented port auto-discovery (GAP-018): a foreign process on the configured port is survived by serving on the next free port in `[port, port+9]` and printing which one it chose; a port held by another MusterFlow dashboard is refused instead of silently starting a second dashboard on another port

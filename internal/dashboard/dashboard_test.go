@@ -868,7 +868,8 @@ func TestServer_FlowRun_Success(t *testing.T) {
 }
 
 func TestServer_FlowRun_Nonexistent(t *testing.T) {
-	s := newServerWithFlowsDir(t, t.TempDir())
+	dir := t.TempDir()
+	s := newServerWithFlowsDir(t, dir)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/flows/nonexistent/run", nil)
 	rec := httptest.NewRecorder()
@@ -876,6 +877,16 @@ func TestServer_FlowRun_Nonexistent(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// FLOWERR-PATHLEAK: the body must never carry the server's absolute
+	// flows directory (the engine error used to wrap the raw *fs.PathError).
+	if body := rec.Body.String(); strings.Contains(body, dir) ||
+		strings.Contains(body, "/tmp") || strings.Contains(body, "/home") {
+		t.Errorf("response body leaks an absolute path: %s", body)
+	}
+	if body := rec.Body.String(); !strings.Contains(body, "not found") {
+		t.Errorf("expected stable 'not found' wording, got: %s", body)
 	}
 }
 
