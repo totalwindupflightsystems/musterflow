@@ -118,10 +118,9 @@ A dark-themed web dashboard at `http://localhost:9876`:
 
 ### 📦 Community Catalog — Share & Discover APIs (Experimental)
 
-The community catalog backend (`totalwindupflightsystems/musterflow-catalog` GitHub repo) is **not yet available**. Catalog commands (`search`, `push`, `pull`) are implemented but the backend repo has not been created yet, so `catalog search` will report that the backend is unavailable.
+The community catalog is a live public GitHub repo (`totalwindupflightsystems/musterflow-catalog`, served as `entries.json`). Catalog commands (`search`, `push`, `pull`) fetch from it; if an override (`MUSTERFLOW_CATALOG_REPO_URL`) is set but unreachable, MusterFlow falls back to its bundled seed entries.
 
 ```bash
-# Once the catalog backend is available:
 musterflow catalog search github       # Search for APIs
 musterflow catalog push <api-id|name>  # Share a connected API (id or name from `musterflow list`)
 musterflow catalog pull <api-id>       # Install a community API
